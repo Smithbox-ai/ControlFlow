@@ -1,0 +1,35 @@
+{
+  "id": "failure-retry",
+  "target_agent": "Atlas",
+  "goal": "Atlas correctly routes failure classifications to retry, replan, or escalate per the routing table",
+  "input": {
+    "failure_scenarios": [
+      {
+        "classification": "transient",
+        "expected_action": "retry_same_agent",
+        "max_retries": 3
+      },
+      {
+        "classification": "fixable",
+        "expected_action": "retry_with_hint",
+        "max_retries": 1
+      },
+      {
+        "classification": "needs_replan",
+        "expected_action": "delegate_to_prometheus",
+        "max_retries": 1
+      },
+      {
+        "classification": "escalate",
+        "expected_action": "stop_and_present_to_user",
+        "max_retries": 0
+      }
+    ]
+  },
+  "expected": {
+    "routing_table_followed": true,
+    "retry_limit_respected": true,
+    "escalate_on_exhausted_retries": true,
+    "accumulated_evidence_presented": true
+  }
+}

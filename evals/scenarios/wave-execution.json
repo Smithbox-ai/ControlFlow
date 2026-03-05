@@ -1,0 +1,23 @@
+{
+  "id": "wave-execution",
+  "target_agent": "Atlas",
+  "goal": "Atlas executes phases in correct wave order, respects parallelism limits, and waits for wave completion before advancing",
+  "input": {
+    "plan": {
+      "phases": [
+        {"id": "P1", "wave": 1, "title": "Schema extensions"},
+        {"id": "P2", "wave": 2, "title": "Agent A", "dependencies": ["P1"]},
+        {"id": "P3", "wave": 2, "title": "Agent B", "dependencies": ["P1"]},
+        {"id": "P4", "wave": 3, "title": "Integration", "dependencies": ["P2", "P3"]}
+      ],
+      "max_parallel_agents": 3
+    }
+  },
+  "expected": {
+    "wave_order_respected": true,
+    "parallel_within_wave": true,
+    "no_wave_advance_on_incomplete": true,
+    "batch_approval_per_wave": true,
+    "batch_approval_exception_on_destructive": true
+  }
+}

@@ -47,6 +47,7 @@
           "phase_id",
           "title",
           "objective",
+          "wave",
           "files",
           "tests",
           "steps",
@@ -57,6 +58,32 @@
           "phase_id": { "type": "integer", "minimum": 1 },
           "title": { "type": "string", "minLength": 3 },
           "objective": { "type": "string", "minLength": 5 },
+          "wave": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Execution wave for parallel dispatch. Phases in the same wave run in parallel. Wave N+1 waits for wave N to complete."
+          },
+          "dependencies": {
+            "type": "array",
+            "items": { "type": "integer", "minimum": 1 },
+            "description": "Phase IDs that must complete before this phase can start."
+          },
+          "failure_expectations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["scenario", "classification", "mitigation"],
+              "properties": {
+                "scenario": { "type": "string" },
+                "classification": {
+                  "type": "string",
+                  "enum": ["transient", "fixable", "needs_replan", "escalate"]
+                },
+                "mitigation": { "type": "string" }
+              }
+            }
+          },
           "files": {
             "type": "array",
             "items": {
@@ -90,6 +117,28 @@
           }
         }
       }
+    },
+    "contracts": {
+      "type": "array",
+      "description": "Inter-phase contracts defining producer/consumer relationships between dependent phases.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["from_phase", "to_phase", "interface", "format"],
+        "properties": {
+          "from_phase": { "type": "integer", "minimum": 1, "description": "Producer phase ID" },
+          "to_phase": { "type": "integer", "minimum": 1, "description": "Consumer phase ID" },
+          "interface": { "type": "string", "description": "What the producer provides to the consumer" },
+          "format": { "type": "string", "description": "Data format, schema, or contract specification" }
+        }
+      }
+    },
+    "max_parallel_agents": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10,
+      "default": 10,
+      "description": "Maximum number of subagents Atlas may dispatch in parallel within a single wave."
     },
     "open_questions": {
       "type": "array",

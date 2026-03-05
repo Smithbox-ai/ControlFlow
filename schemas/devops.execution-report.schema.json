@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://copilot-atlas.local/schemas/sisyphus.execution-report.schema.json",
-  "title": "SisyphusExecutionReport",
+  "$id": "https://copilot-atlas.local/schemas/devops.execution-report.schema.json",
+  "title": "DevOpsExecutionReport",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -12,6 +12,9 @@
     "abstain",
     "scope",
     "changes",
+    "health_checks",
+    "deployment_details",
+    "approval_gates_passed",
     "tests",
     "build",
     "lint",
@@ -21,9 +24,14 @@
   ],
   "properties": {
     "schema_version": { "type": "string", "const": "1.0.0" },
-    "agent": { "type": "string", "const": "Sisyphus-subagent" },
+    "agent": { "type": "string", "const": "DevOps-subagent" },
     "status": { "type": "string", "enum": ["COMPLETE", "NEEDS_INPUT", "FAILED", "ABSTAIN"] },
     "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "failure_classification": {
+      "type": "string",
+      "enum": ["transient", "fixable", "needs_replan", "escalate"],
+      "description": "Required when status is FAILED or NEEDS_INPUT. Classifies the failure type for Atlas retry/escalation logic."
+    },
     "abstain": {
       "type": "object",
       "additionalProperties": false,
@@ -52,6 +60,62 @@
           "file": { "type": "string" },
           "action": { "type": "string", "enum": ["create", "modify", "delete"] },
           "summary": { "type": "string" }
+        }
+      }
+    },
+    "health_checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["service", "state"],
+        "properties": {
+          "service": { "type": "string" },
+          "state": { "type": "string", "enum": ["HEALTHY", "UNHEALTHY", "NOT_AVAILABLE"] },
+          "details": { "type": "string" }
+        }
+      }
+    },
+    "resource_usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cpu": { "type": "string" },
+        "memory": { "type": "string" },
+        "disk": { "type": "string" },
+        "details": { "type": "string" }
+      }
+    },
+    "deployment_details": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["environment", "state"],
+      "properties": {
+        "environment": { "type": "string", "enum": ["development", "staging", "production"] },
+        "state": { "type": "string", "enum": ["DEPLOYED", "ROLLED_BACK", "FAILED", "NOT_APPLICABLE"] },
+        "version": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "details": { "type": "string" }
+      }
+    },
+    "approval_gates_passed": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["production_approval", "security_approval", "none_required"]
+      }
+    },
+    "rollback_steps_taken": {
+      "type": "array",
+      "description": "Required when status is FAILED. Lists steps taken to revert environment to pre-deployment state.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["step", "result"],
+        "properties": {
+          "step": { "type": "string" },
+          "result": { "type": "string", "enum": ["SUCCESS", "FAILED", "SKIPPED"] },
+          "details": { "type": "string" }
         }
       }
     },
@@ -104,11 +168,6 @@
         "unchecked_items": { "type": "array", "items": { "type": "string" } }
       }
     },
-    "next_steps": { "type": "array", "items": { "type": "string" } },
-    "failure_classification": {
-      "type": "string",
-      "enum": ["transient", "fixable", "needs_replan", "escalate"],
-      "description": "Required when status is FAILED or NEEDS_INPUT. Classifies the failure type for Atlas routing."
-    }
+    "next_steps": { "type": "array", "items": { "type": "string" } }
   }
 }

@@ -72,9 +72,11 @@ Use `plans/project-context.md` when present as stable reference for conventions.
 ### State Tracking
 Maintain awareness of current orchestration state at all times:
 - **Current State:** Which state machine node is active (`PLANNING`, `WAITING_APPROVAL`, `ACTING`, `REVIEWING`, `COMPLETE`).
-- **Plan Progress:** Phase {N} of {Total} — title of current phase.
+- **Plan Progress:** Phase {N} of {Total} — title of current phase. Wave {W} of {Total Waves}.
+- **Active Agents:** List of agents currently executing (for parallel wave execution).
 - **Last Action:** What was the last significant action taken.
 - **Next Action:** What the immediate next step is.
+- **Failure Retries:** Count of retries per classification for current phase (if any).
 - Use the `#todos` tool to maintain a visible, structured task list tracking phase progress.
 
 ## Resources
@@ -85,6 +87,7 @@ Maintain awareness of current orchestration state at all times:
 - `schemas/atlas.gate-event.schema.json`
 - `schemas/code-review.verdict.schema.json`
 - `schemas/prometheus.plan.schema.json`
+- `schemas/atlas.delegation-protocol.schema.json` (on-demand — load only when constructing delegation calls)
 - `plans/project-context.md` (if present)
 - Plan artifacts directory: `plans/` (default location for all plan and completion files)
 
@@ -151,9 +154,39 @@ When delegating, specify the subagent and its expected deliverable:
 - **Explorer** — Discovery: return file maps, dependency graphs, usage patterns.
 - **Sisyphus** — Backend implementation: return execution report with changed files and test results.
 - **Frontend-Engineer** — UI implementation: return execution report with accessibility/responsive verification.
+- **DevOps** — Infrastructure: return execution report with health checks, rollback steps, and deployment details.
+- **DocWriter** — Documentation: return execution report with parity verification and coverage percentage.
+- **BrowserTester** — E2E Testing: return execution report with health-first gate, scenario results, and accessibility audit.
 - **Code-Review** — Verification: return schema-compliant verdict with gate results.
 
 Each delegation must include: scope description, expected output format, and relevant context references.
+
+For detailed per-agent parameter shapes and required/optional fields, load `schemas/atlas.delegation-protocol.schema.json` on-demand. Do NOT load it into context preemptively — reference it only when constructing a delegation call.
+
+### Wave-Aware Execution
+When the plan (from Prometheus) contains `wave` fields on phases:
+1. Group phases by wave number (ascending).
+2. Within a wave, execute independent phases in parallel (up to `max_parallel_agents` limit).
+3. Wait for ALL phases in a wave to complete before advancing to the next wave.
+4. If any phase in a wave fails, evaluate via Failure Classification Handling before advancing.
+
+### Failure Classification Handling
+When a subagent returns a `failure_classification`, Atlas routes automatically:
+| Classification | Action | Max Retries |
+|---|---|---|
+| `transient` | Retry the same agent with identical scope | 3 |
+| `fixable` | Retry the same agent with fix hint from failure reason | 1 |
+| `needs_replan` | Delegate to Prometheus for targeted replan of failed phase | 1 |
+| `escalate` | STOP — transition to `WAITING_APPROVAL`, present to user | 0 |
+
+If retry limit is exhausted, escalate to user with accumulated failure evidence.
+
+### Batch Approval
+To reduce approval fatigue on multi-phase plans:
+- Present ONE approval request per wave (not per phase).
+- Summarize all phases in the wave with scope, risk level, and agents involved.
+- **Exception:** If any phase in the wave contains destructive or production operations, require per-phase approval for that wave.
+- Standard approval prompt: "Wave {N}: {phase count} phases, agents: [{agent list}]. Approve all? (y/n/details)"
 
 ## Output Requirements
 

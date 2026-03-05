@@ -124,6 +124,11 @@
         "unchecked_items": { "type": "array", "items": { "type": "string" } }
       }
     },
-    "next_steps": { "type": "array", "items": { "type": "string" } }
+    "next_steps": { "type": "array", "items": { "type": "string" } },
+    "failure_classification": {
+      "type": "string",
+      "enum": ["transient", "fixable", "needs_replan", "escalate"],
+      "description": "Required when status is FAILED or NEEDS_INPUT. Classifies the failure type for Atlas routing."
+    }
   }
 }

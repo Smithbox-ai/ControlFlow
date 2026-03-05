@@ -27,6 +27,13 @@ Implement scoped UI/frontend tasks with deterministic quality gates: tests, buil
 - Status enum: `COMPLETE | NEEDS_INPUT | FAILED | ABSTAIN`.
 - If UX ambiguity blocks safe implementation, return `NEEDS_INPUT` with options.
 
+### Failure Classification
+When status is `FAILED` or `NEEDS_INPUT`, include `failure_classification`:
+- `transient` — Flaky render test, browser timeout, temporary asset loading failure.
+- `fixable` — CSS typo, missing prop, incorrect selector.
+- `needs_replan` — Component architecture mismatch, design system gap.
+- `escalate` — Accessibility violation with no clear fix, security-sensitive UI pattern.
+
 ### Planning vs Acting Split
 - Execute only assigned implementation task.
 - Do not replan global workflow; escalate uncertainties.

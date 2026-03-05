@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://copilot-atlas.local/schemas/atlas.delegation-protocol.schema.json",
+  "title": "AtlasDelegationProtocol",
+  "description": "Defines the structured parameters Atlas must provide when delegating to each subagent. Loaded on demand to avoid context bloat in Atlas prompt.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "agents"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "agents": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "Explorer-subagent",
+        "Oracle-subagent",
+        "Prometheus",
+        "Sisyphus-subagent",
+        "Frontend-Engineer-subagent",
+        "DevOps-subagent",
+        "DocWriter-subagent",
+        "BrowserTester-subagent",
+        "Code-Review-subagent"
+      ],
+      "properties": {
+        "Explorer-subagent": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["scope_description"],
+          "properties": {
+            "scope_description": { "type": "string", "minLength": 5 },
+            "focus_areas": { "type": "array", "items": { "type": "string" } },
+            "conventions_requested": { "type": "boolean" }
+          }
+        },
+        "Oracle-subagent": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["research_query"],
+          "properties": {
+            "research_query": { "type": "string", "minLength": 5 },
+            "focus_areas": { "type": "array", "items": { "type": "string" } },
+            "complexity": { "type": "string", "enum": ["simple", "medium", "complex"] }
+          }
+        },
+        "Prometheus": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["task_description"],
+          "properties": {
+            "task_description": { "type": "string", "minLength": 10 },
+            "constraints": { "type": "array", "items": { "type": "string" } },
+            "context_refs": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "Sisyphus-subagent": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["task_id", "phase_id", "task_definition"],
+          "properties": {
+            "task_id": { "type": "string" },
+            "phase_id": { "type": "integer", "minimum": 1 },
+            "task_definition": { "type": "string", "minLength": 10 },
+            "context_files": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "Frontend-Engineer-subagent": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["task_id", "phase_id", "task_definition"],
+          "properties": {
+            "task_id": { "type": "string" },
+            "phase_id": { "type": "integer", "minimum": 1 },
+            "task_definition": { "type": "string", "minLength": 10 },
+            "design_refs": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "DevOps-subagent": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["task_id", "phase_id", "environment"],
+          "properties": {
+            "task_id": { "type": "string" },
+            "phase_id": { "type": "integer", "minimum": 1 },
+            "task_definition": { "type": "string" },
+            "environment": { "type": "string", "enum": ["development", "staging", "production"] },
+            "requires_approval": { "type": "boolean" },
+            "security_sensitive": { "type": "boolean" }
+          }
+        },
+        "DocWriter-subagent": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["task_id", "phase_id", "task_type"],
+          "properties": {
+            "task_id": { "type": "string" },
+            "phase_id": { "type": "integer", "minimum": 1 },
+            "task_type": { "type": "string", "enum": ["documentation", "walkthrough", "update"] },
+            "audience": { "type": "string", "enum": ["developers", "end_users", "stakeholders"] },
+            "coverage_matrix": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "BrowserTester-subagent": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["task_id", "phase_id"],
+          "properties": {
+            "task_id": { "type": "string" },
+            "phase_id": { "type": "integer", "minimum": 1 },
+            "target_url": { "type": "string" },
+            "health_endpoint": { "type": "string" },
+            "validation_matrix": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["scenario", "expected_result"],
+                "properties": {
+                  "scenario": { "type": "string" },
+                  "steps": { "type": "array", "items": { "type": "string" } },
+                  "expected_result": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "Code-Review-subagent": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["phase_id", "changed_files"],
+          "properties": {
+            "phase_id": { "type": "integer", "minimum": 1 },
+            "changed_files": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+            "review_depth": { "type": "string", "enum": ["full", "standard", "lightweight"] },
+            "security_sensitive": { "type": "boolean" }
+          }
+        }
+      }
+    }
+  }
+}

@@ -103,6 +103,11 @@
       "type": "array",
       "minItems": 1,
       "items": { "type": "string" }
+    },
+    "failure_classification": {
+      "type": "string",
+      "enum": ["transient", "fixable", "needs_replan", "escalate"],
+      "description": "Required when status is NEEDS_REVISION or FAILED. Classifies the failure type for Atlas routing."
     }
   }
 }

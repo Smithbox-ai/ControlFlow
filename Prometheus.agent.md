@@ -107,15 +107,23 @@ The markdown plan file must follow this structure:
 
 #### Phase 1 — {Phase Title}
 - **Objective:** What this phase accomplishes.
-- **Dependencies:** Prerequisites (files, decisions, prior phases).
+- **Wave:** Execution wave number (phases in the same wave run in parallel).
+- **Dependencies:** Prerequisites (files, decisions, prior phases by ID).
 - **Files:** Files to create/modify.
 - **Tests:** Tests to add or update.
+- **Failure Expectations:** Likely failure modes with classification (transient/fixable/needs_replan/escalate) and mitigation.
 - **Steps:**
   1. Step description in prose (no code blocks in plan).
   2. ...
 
 #### Phase 2 — {Phase Title}
 ...
+
+### Inter-Phase Contracts
+Define data and interface contracts between phases that have dependencies:
+- **From Phase → To Phase:** Description of interface/data contract.
+- **Format:** Expected output format from the upstream phase.
+- **Validation:** How the downstream phase verifies the contract is met.
 
 ### Open Questions
 - Items requiring clarification before or during execution.
@@ -128,7 +136,10 @@ The markdown plan file must follow this structure:
 
 ### Notes for Atlas
 - Recommended execution order and parallelization opportunities.
+- Wave assignments and dependency graph.
 - Subagent delegation suggestions per phase.
+- Max parallel agents recommendation (default: 10, reduce if resource-intensive phases).
+- Failure expectations summary per wave.
 ```
 
 ### Plan Quality Standards
@@ -139,6 +150,8 @@ Every plan must satisfy:
 3. **Specific** — File paths, function names, and change descriptions are concrete.
 4. **Testable** — Success criteria are objectively verifiable.
 5. **Practical** — Phase count is 3–10; decompose further if exceeding 10.
+6. **Parallelizable** — Phases that can run independently MUST be assigned the same wave number. Sequential-only when there is a real data dependency.
+7. **Failure-aware** — Each phase includes failure expectations with classification and mitigation strategies.
 
 ### Research Scaling
 

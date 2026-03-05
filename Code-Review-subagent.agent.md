@@ -25,6 +25,13 @@ Validate implementation correctness, quality, reliability, and safety before pro
 - Status must be one of: `APPROVED`, `NEEDS_REVISION`, `FAILED`, `ABSTAIN`.
 - If verification evidence is missing, do not approve.
 
+### Failure Classification
+When status is `NEEDS_REVISION` or `FAILED`, include `failure_classification`:
+- `transient` — Flaky test in CI, temporary build environment issue.
+- `fixable` — Code quality issue, missing test case, lint violation.
+- `needs_replan` — Fundamental approach is wrong, architecture needs redesign.
+- `escalate` — Security vulnerability, data exposure risk, policy violation.
+
 ### Mandatory Verification Gates
 Before setting `APPROVED`:
 1. `problems` check on modified files.

@@ -25,6 +25,13 @@ Execute scoped implementation tasks from the conductor using strict TDD and dete
 - Status enum: `COMPLETE | NEEDS_INPUT | FAILED | ABSTAIN`.
 - If blocked by missing requirement/context, return `NEEDS_INPUT` or `ABSTAIN` with reasons.
 
+### Failure Classification
+When status is `FAILED` or `NEEDS_INPUT`, include `failure_classification`:
+- `transient` — Flaky test, network timeout, temporary tool unavailability.
+- `fixable` — Typo, missing import, incorrect config value.
+- `needs_replan` — Architecture mismatch, missing API/dependency not in plan.
+- `escalate` — Security vulnerability, data integrity risk, ambiguous requirement with high impact.
+
 ### Planning vs Acting Split
 - This agent executes only acting tasks.
 - If plan ambiguity is detected, do not replan globally; request targeted clarification.

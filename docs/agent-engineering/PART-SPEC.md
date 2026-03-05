@@ -10,6 +10,13 @@ P.A.R.T is mandatory for all core agents:
 - `Explorer-subagent.agent.md`
 - `Code-Review-subagent.agent.md`
 
+P.A.R.T is mandatory for all implementation agents:
+- `Sisyphus-subagent.agent.md`
+- `Frontend-Engineer-subagent.agent.md`
+- `DevOps-subagent.agent.md`
+- `DocWriter-subagent.agent.md`
+- `BrowserTester-subagent.agent.md`
+
 ## Section Order (MANDATORY)
 1. `## Prompt`
 2. `## Archive`

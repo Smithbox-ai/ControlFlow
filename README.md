@@ -7,11 +7,14 @@ A multi-agent orchestration system for VS Code Copilot. This fork replaces vibe-
 ## Key Features
 
 - **Context Conservation** — agents summarize and compress context at delegation boundaries to stay within token limits.
-- **Parallel Agent Execution** — Atlas dispatches independent subagents in parallel when tasks have no dependencies.
-- **Structured Planning** — Prometheus produces phased plans with explicit task IDs, dependencies, and acceptance criteria before any code is written.
+- **Parallel Agent Execution** — Atlas dispatches independent subagents in parallel when tasks have no dependencies, using wave-based execution from Prometheus plans.
+- **Structured Planning** — Prometheus produces phased plans with explicit task IDs, dependencies, wave assignments, inter-phase contracts, and failure expectations before any code is written.
 - **Deterministic Handoffs** — every subagent returns a structured JSON report; Atlas validates schema compliance before accepting results.
 - **Reliability Gates** — PreFlect (pre-execution review), human approval gates for destructive operations, and explicit abstention when confidence is low.
 - **TDD Integration** — Code-Review and implementation agents enforce test-first methodology.
+- **Failure Taxonomy** — all agents classify failures (`transient`, `fixable`, `needs_replan`, `escalate`) enabling automated retry and routing by Atlas.
+- **Batch Approval** — Atlas requests one approval per execution wave to reduce approval fatigue, with per-phase approval for destructive operations.
+- **Health-First Testing** — BrowserTester verifies application health before running E2E scenarios to eliminate false positives.
 
 ## Agent Architecture
 
@@ -31,6 +34,9 @@ A multi-agent orchestration system for VS Code Copilot. This fork replaces vibe-
 | **Code-Review** | `Code-Review-subagent.agent.md` | GPT-5.3-Codex | Verification, safety gate reviewer |
 | **Sisyphus** | `Sisyphus-subagent.agent.md` | Claude Sonnet 4.6 | Implementation with execution reports |
 | **Frontend-Engineer** | `Frontend-Engineer-subagent.agent.md` | Gemini 3.1 Pro | Frontend implementation with execution reports |
+| **DevOps** | `DevOps-subagent.agent.md` | Claude Sonnet 4.6 | CI/CD, containers, infrastructure deployment |
+| **DocWriter** | `DocWriter-subagent.agent.md` | Gemini 3.1 Pro | Documentation, diagrams, code-doc parity |
+| **BrowserTester** | `BrowserTester-subagent.agent.md` | Gemini 3 Flash | E2E browser testing, accessibility audits |
 
 ## Reliability Model
 
@@ -40,6 +46,7 @@ Contracts are aligned to four dimensions:
 2. **Robustness** — graceful behavior under paraphrase and naming drift.
 3. **Predictability** — explicit abstention when confidence or evidence is low.
 4. **Safety** — mandatory human approval gates for destructive and irreversible operations.
+5. **Failure Taxonomy** — all agents classify failures as `transient`, `fixable`, `needs_replan`, or `escalate` for automated routing by Atlas.
 
 Reference: `docs/agent-engineering/RELIABILITY-GATES.md`.
 
@@ -65,13 +72,29 @@ For fast codebase discovery, invoke Explorer. It performs parallel searches and 
 
 ```
 User Request
-    └── Prometheus (creates phased plan)
-         └── Atlas (orchestrates execution)
-              ├── Explorer (codebase discovery)
-              ├── Oracle (research & evidence)
-              ├── Sisyphus (implementation)
-              ├── Frontend-Engineer (UI implementation)
-              └── Code-Review (verification & safety)
+    └── Prometheus (creates phased plan with waves)
+         └── Atlas (orchestrates wave-based execution)
+              ├── Wave 1: Foundation
+              │    └── Explorer / Oracle (discovery & research)
+              ├── Wave 2: Implementation (parallel)
+              │    ├── Sisyphus (backend implementation)
+              │    ├── Frontend-Engineer (UI implementation)
+              │    └── DevOps (infrastructure deployment)
+              ├── Wave 3: Verification
+              │    ├── Code-Review (verification & safety)
+              │    └── BrowserTester (E2E & accessibility)
+              └── Wave 4: Documentation
+                   └── DocWriter (docs & diagrams)
+```
+
+### Failure Routing
+
+```
+Subagent returns failure_classification
+    ├── transient → Atlas retries same agent (max 3x)
+    ├── fixable → Atlas retries with fix hint (max 1x)
+    ├── needs_replan → Atlas delegates to Prometheus
+    └── escalate → Atlas stops and presents to user
 ```
 
 ## Installation
@@ -126,6 +149,16 @@ Every custom agent should include:
 - Added stopping rules and best practices for Sisyphus and Frontend-Engineer.
 - Strengthened Code-Review verdict schema with explicit approval/rejection criteria.
 
+### Ecosystem Modernization
+
+- Added 3 new specialized agents: DevOps, DocWriter, BrowserTester.
+- Wave-aware parallel execution in Atlas (batch approval per wave).
+- Failure taxonomy across all agents (`transient`, `fixable`, `needs_replan`, `escalate`).
+- Inter-phase contracts and failure expectations in Prometheus plans.
+- External delegation protocol schema to reduce Atlas context bloat.
+- Health-first gate for BrowserTester to prevent false-positive E2E failures.
+- Rollback protocol mandate for DevOps agent.
+
 ### New Artifacts
 
 **Governance docs:**
@@ -135,12 +168,16 @@ Every custom agent should include:
 
 **Schema contracts:**
 - `schemas/atlas.gate-event.schema.json`
+- `schemas/atlas.delegation-protocol.schema.json`
 - `schemas/prometheus.plan.schema.json`
 - `schemas/oracle.research-findings.schema.json`
 - `schemas/explorer.discovery.schema.json`
 - `schemas/code-review.verdict.schema.json`
 - `schemas/sisyphus.execution-report.schema.json`
 - `schemas/frontend.execution-report.schema.json`
+- `schemas/devops.execution-report.schema.json`
+- `schemas/docwriter.execution-report.schema.json`
+- `schemas/browser-tester.execution-report.schema.json`
 
 **Eval fixtures:**
 - `evals/README.md`
@@ -150,14 +187,20 @@ Every custom agent should include:
 - `evals/scenarios/safety-approval-gate.json`
 - `evals/scenarios/sisyphus-contract.json`
 - `evals/scenarios/frontend-contract.json`
+- `evals/scenarios/devops-contract.json`
+- `evals/scenarios/docwriter-contract.json`
+- `evals/scenarios/browser-tester-contract.json`
+- `evals/scenarios/wave-execution.json`
+- `evals/scenarios/failure-retry.json`
 
 ## Migration Status
 
-Complete. All 7 agents have:
+Complete. All 10 agents have:
 - P.A.R.T instruction architecture
 - JSON Schema 2020-12 output contracts
 - PreFlect and human approval gates
 - Explicit abstention paths for low confidence
+- Failure classification taxonomy for automated routing
 - Non-Negotiable Rules (no fabrication, no code generation without evidence)
 
 > Core contracts prioritize strict schema outputs. This is a controlled breaking change for consumers expecting free-form output. See `docs/agent-engineering/MIGRATION-CORE-FIRST.md`.

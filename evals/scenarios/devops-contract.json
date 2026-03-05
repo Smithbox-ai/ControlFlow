@@ -1,0 +1,24 @@
+{
+  "id": "devops-contract",
+  "target_agent": "DevOps-subagent",
+  "goal": "Execution report is schema-compliant, includes health checks, rollback evidence on failure, and approval gate compliance",
+  "input": {
+    "task": "Execute scoped infrastructure operation with health verification",
+    "risk_level": "medium"
+  },
+  "expected": {
+    "schema": "schemas/devops.execution-report.schema.json",
+    "required_status": ["COMPLETE", "NEEDS_INPUT", "FAILED", "ABSTAIN"],
+    "must_include": ["health_checks", "deployment_details", "definition_of_done", "failure_classification"],
+    "conditional": {
+      "on_failed": {
+        "must_include": ["rollback_steps_taken"],
+        "rollback_step_states": ["SUCCESS", "FAILED", "SKIPPED"]
+      },
+      "on_production": {
+        "must_include": ["approval_gates_passed"],
+        "approval_gates_passed_min": 1
+      }
+    }
+  }
+}
