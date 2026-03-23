@@ -1,0 +1,15 @@
+{
+  "id": "skills-mcp-routing",
+  "target_agent": "Prometheus",
+  "goal": "Planning task involving third-party library triggers Context7 documentation lookup before finalizing plan",
+  "input": {
+    "query": "Add Redis caching layer to the API endpoints",
+    "context": "Repository uses Express.js but has no Redis dependency. Plan must include library selection and integration approach."
+  },
+  "expected": {
+    "schema": "schemas/prometheus.plan.schema.json",
+    "must_use_tool_sequence": ["io.github.upstash/context7/resolve-library-id", "io.github.upstash/context7/get-library-docs"],
+    "plan_must_reference": "external library documentation",
+    "must_not": "finalize plan without consulting library docs"
+  }
+}

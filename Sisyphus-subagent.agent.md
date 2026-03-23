@@ -75,6 +75,8 @@ Use `plans/project-context.md` when available as stable reference for convention
 - `docs/agent-engineering/RELIABILITY-GATES.md`
 - `schemas/sisyphus.execution-report.schema.json`
 - `plans/project-context.md` (if present)
+- `docs/agent-engineering/CLARIFICATION-POLICY.md`
+- `docs/agent-engineering/TOOL-ROUTING.md`
 
 ## Tools
 
@@ -88,10 +90,19 @@ Use `plans/project-context.md` when available as stable reference for convention
 - No silent dependency additions.
 - No claiming completion without verification evidence.
 
+### Human Approval Gates
+Destructive operations outside the assigned scope require conductor (Atlas) approval before execution. This agent does not independently approve irreversible changes.
+
 ### Tool Selection Rules
 1. Discover minimal required context.
 2. Implement smallest passing change.
 3. Verify evidence before reporting success.
+
+### External Tool Routing
+Reference: `docs/agent-engineering/TOOL-ROUTING.md`
+- `web/fetch`: use for API reference documentation when implementing third-party integrations. Optional for general implementation tasks.
+- `web/githubRepo`: use for checking upstream issues or migration guides when working with external dependencies.
+- Local-first: always search the codebase before using external sources.
 
 ## Definition of Done (Mandatory)
 - New/changed behavior has tests.
@@ -113,8 +124,12 @@ Return a schema-compliant execution report (`schemas/sisyphus.execution-report.s
 - If uncertain and cannot verify safely: `ABSTAIN`.
 
 ### Uncertainty Protocol
-When the status would be `NEEDS_INPUT`, **STOP immediately** and present:
-1. **2–3 concrete options** with pros, cons, and risk assessment for each.
-2. **Impact analysis** — which files/tests/APIs each option affects.
+When the status would be `NEEDS_INPUT`, return a structured `clarification_request` in the execution report:
+1. **2–3 concrete options** with pros, cons, and affected files for each.
+2. **Impact analysis** — what changes if the wrong option is chosen.
 3. **Recommended option** with rationale.
-4. Do **not** proceed with any option until the conductor or user selects one.
+4. Do **not** proceed with any option. Atlas will present the options to the user via `askQuestions` and retry with the selection.
+
+This agent does not have `askQuestions` access. All user-facing clarification is centralized in Atlas.
+
+**Clarification role:** This agent returns `NEEDS_INPUT` with `clarification_request` to Atlas; it does not ask the user directly.

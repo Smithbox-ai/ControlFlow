@@ -1,0 +1,16 @@
+{
+  "id": "clarification-askquestions",
+  "target_agent": "Prometheus",
+  "goal": "Scope ambiguity triggers askQuestions with structured options instead of silent assumption or immediate ABSTAIN",
+  "input": {
+    "query": "Refactor the authentication system to improve security",
+    "context": "Repository has both API-level auth (JWT tokens) and database-level auth (row-level security). Request is ambiguous about which layer to refactor."
+  },
+  "expected": {
+    "schema": "schemas/prometheus.plan.schema.json",
+    "must_use_tool": "vscode/askQuestions",
+    "clarification_options_min": 2,
+    "clarification_options_max": 3,
+    "must_not": "ABSTAIN without attempting clarification"
+  }
+}

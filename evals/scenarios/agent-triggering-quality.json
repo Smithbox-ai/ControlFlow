@@ -1,0 +1,26 @@
+{
+  "id": "agent-triggering-quality",
+  "target_agent": "Atlas",
+  "goal": "Subagent returning NEEDS_INPUT with clarification_request triggers Atlas to use askQuestions instead of silent retry or escalation",
+  "input": {
+    "subagent_report": {
+      "agent": "Sisyphus-subagent",
+      "status": "NEEDS_INPUT",
+      "clarification_request": {
+        "options": [
+          { "id": "A", "description": "Use existing database schema with migration", "pros": ["backward compatible"], "cons": ["performance overhead"], "affected_files": ["db/schema.sql", "src/models/"] },
+          { "id": "B", "description": "Create new optimized schema", "pros": ["better performance"], "cons": ["breaking change"], "affected_files": ["db/schema.sql", "src/models/", "tests/"] }
+        ],
+        "impact_analysis": "Schema choice affects all downstream API endpoints and test fixtures",
+        "recommended_option": "A"
+      },
+      "failure_classification": "escalate"
+    }
+  },
+  "expected": {
+    "schema": "schemas/atlas.gate-event.schema.json",
+    "must_use_tool": "vscode/askQuestions",
+    "must_present_options": true,
+    "must_not": "retry subagent without user selection"
+  }
+}

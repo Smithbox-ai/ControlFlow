@@ -11,6 +11,9 @@ This folder contains scenario fixtures used to validate reliability for core age
 6. Failure taxonomy routing (transient, fixable, needs_replan, escalate).
 7. Wave-based execution ordering and batch approval.
 8. Agent-specific contracts (DevOps rollback, BrowserTester health-first, DocWriter parity).
+9. Clarification triggering via askQuestions for enumerated ambiguity classes.
+10. Tool routing compliance (Context7/MCP usage when third-party docs are needed).
+11. NEEDS_INPUT routing from subagents through Atlas to user via askQuestions.
 
 ## Suggested execution flow
 1. Run each scenario against the corresponding agent contract.
@@ -36,3 +39,8 @@ This folder contains scenario fixtures used to validate reliability for core age
 ### Orchestration
 - `scenarios/wave-execution.json`
 - `scenarios/failure-retry.json`
+
+### Clarification and routing
+- `scenarios/clarification-askquestions.json`
+- `scenarios/skills-mcp-routing.json`
+- `scenarios/agent-triggering-quality.json`

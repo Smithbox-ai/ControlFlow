@@ -69,3 +69,30 @@ Any success/failure claim must include evidence references:
 - schema fields
 - gate decisions
 - validation result summary
+
+## 5) Clarification Reliability
+Goal: ensure agents ask for clarification when ambiguity would materially change the output.
+
+Required controls:
+- Positive trigger list for known ambiguity classes.
+- Threshold rule: clarification required only for decisions with material output impact.
+- Structured clarification payloads when returning `NEEDS_INPUT`.
+
+Acceptance gate:
+- When presented with enumerated ambiguity classes, agents with `askQuestions` use it proactively.
+- Agents without `askQuestions` return `NEEDS_INPUT` with structured `clarification_request`.
+- Clarification does not fire for questions answerable from codebase evidence.
+
+## 6) Tool Routing Reliability
+Goal: agents use the correct knowledge source for their role.
+
+Required controls:
+- Local-first rule: prefer codebase search before external sources.
+- External-doc rule: when task depends on third-party APIs, frameworks, or current best practices, use external tools before finalizing output.
+- MCP/Context7 rule: when granted, use for library documentation resolution before planning around third-party behavior.
+- No phantom grants: tools in frontmatter must have body-level routing rules.
+
+Acceptance gate:
+- Agents with external tools use them when the task domain requires external knowledge.
+- Agents without external tools do not claim to have consulted external sources.
+- No tool listed in frontmatter goes unreferenced in body instructions.

@@ -66,6 +66,21 @@ Required content:
   - Prefer just-in-time retrieval over bulk loading.
 - Human approval gate triggers for high-risk actions.
 
+## 5) Clarification Triggers (NEW)
+Required for agents with `askQuestions` or user-interaction tools:
+- Positive trigger list: enumerate ambiguity classes that REQUIRE user clarification.
+- Threshold rule: clarification is mandatory only when ambiguity would materially change the output.
+- Do not frame clarification as a pre-ABSTAIN fallback only.
+
+Required for agents WITHOUT user-interaction tools:
+- Explicit statement that clarification is delegated to the conductor via structured `NEEDS_INPUT` status.
+
+## 6) Tool Routing Rules (NEW)
+Required when agent has access to external knowledge tools (fetch, githubRepo, Context7/MCP):
+- Deterministic routing rules for when to use local search vs external sources.
+- Explicit statement of which tools are mandatory, optional, or disallowed for the agent's role.
+- If MCP tools are granted in frontmatter, body instructions must reference them with usage rules.
+
 ## Prompt Altitude Rules
 - Avoid vague directives (e.g., “do your best”).
 - Avoid brittle micro-steps tied to one exact environment.
@@ -96,4 +111,6 @@ Examples:
 - [ ] Compaction and memory policies exist
 - [ ] Schema-governed output is mandatory
 - [ ] Abstention rule implemented
-- [ ] Human approval gates implemented
+- [ ] Human approval gates implemented (or explicitly stated as N/A with reason)
+- [ ] Clarification triggers defined (positive triggers for askQuestions; or NEEDS_INPUT delegation stated)
+- [ ] Tool routing rules defined for all granted external-knowledge tools

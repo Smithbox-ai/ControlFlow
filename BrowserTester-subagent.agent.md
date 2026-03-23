@@ -103,6 +103,8 @@ Use `plans/project-context.md` when available as stable reference for convention
 - `docs/agent-engineering/RELIABILITY-GATES.md`
 - `schemas/browser-tester.execution-report.schema.json`
 - `plans/project-context.md` (if present)
+- `docs/agent-engineering/CLARIFICATION-POLICY.md`
+- `docs/agent-engineering/TOOL-ROUTING.md`
 
 ## Tools
 
@@ -117,10 +119,18 @@ Use `plans/project-context.md` when available as stable reference for convention
 - No infrastructure operations.
 - No claiming completion without health check evidence.
 
+### Human Approval Gates
+Approval gates: delegated to conductor (Atlas) for escalation of critical accessibility violations or security findings. BrowserTester does not independently approve remediation actions.
+
 ### Tool Selection Rules
 1. Health check first — always verify application health before testing.
 2. Use accessibility snapshots over screenshots for element identification.
 3. Capture evidence only on failures to minimize noise.
+
+### External Tool Routing
+Reference: `docs/agent-engineering/TOOL-ROUTING.md`
+- `web/fetch`: use for test framework documentation or accessibility standard references (WCAG).
+- Local-first: always search the codebase before using external sources.
 
 ## Definition of Done (Mandatory)
 - Health check passed before scenario execution.
@@ -144,8 +154,12 @@ Return a schema-compliant execution report (`schemas/browser-tester.execution-re
 - If uncertain and cannot verify safely: `ABSTAIN`.
 
 ### Uncertainty Protocol
-When the status would be `NEEDS_INPUT`, **STOP immediately** and present:
-1. **What is blocking** — specific environment, configuration, or access issues.
-2. **Options** — possible workarounds with reliability implications.
-3. **Recommended approach** with rationale.
-4. Do **not** proceed until the conductor or user provides resolution.
+When the status would be `NEEDS_INPUT`, return a structured `clarification_request` in the execution report:
+1. **2–3 concrete options** with pros, cons, and affected files for each.
+2. **Impact analysis** — what changes if the wrong option is chosen.
+3. **Recommended option** with rationale.
+4. Do **not** proceed with any option. Atlas will present the options to the user via `askQuestions` and retry with the selection.
+
+This agent does not have `askQuestions` access. All user-facing clarification is centralized in Atlas.
+
+**Clarification role:** This agent returns `NEEDS_INPUT` with `clarification_request` to Atlas; it does not ask the user directly.

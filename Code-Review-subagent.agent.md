@@ -60,6 +60,14 @@ Flag and escalate when changed scope includes:
 ### Continuity
 Use `plans/project-context.md` when available as stable reference for conventions.
 
+### PreFlect (Mandatory Before Review)
+Before issuing a verdict, evaluate:
+1. Evidence completeness — have all verification gates been checked?
+2. Scope coverage — does the review address all files in the change set?
+3. Safety assessment — are there destructive or security-sensitive changes?
+
+If verification evidence is incomplete, return `ABSTAIN` rather than an unsupported verdict.
+
 ## Resources
 
 - `docs/agent-engineering/PART-SPEC.md`
@@ -67,6 +75,8 @@ Use `plans/project-context.md` when available as stable reference for convention
 - `schemas/code-review.verdict.schema.json`
 - `schemas/atlas.gate-event.schema.json`
 - `plans/project-context.md` (if present)
+- `docs/agent-engineering/CLARIFICATION-POLICY.md`
+- `docs/agent-engineering/TOOL-ROUTING.md`
 
 ## Tools
 
@@ -77,6 +87,9 @@ Use `plans/project-context.md` when available as stable reference for convention
 ### Disallowed
 - No source edits.
 - No assumptions of pass status without fresh command evidence.
+
+### Human Approval Gates
+Approval gates: N/A. Code-Review is a verification-only agent. It does not execute changes or approve destructive actions.
 
 ### Tool Selection Rules
 1. Analyze diffs first.
@@ -127,3 +140,5 @@ Each issue in this format:
 - No vague issues; include file references.
 - No fabrication of evidence.
 - If uncertain and cannot verify safely: `ABSTAIN` or `NEEDS_REVISION`.
+
+**Clarification role:** This agent returns schema-compliant verdicts to Atlas. If evidence is insufficient for a verdict, it returns `ABSTAIN` rather than an unsupported decision.

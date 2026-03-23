@@ -28,6 +28,32 @@
       "enum": ["transient", "fixable", "needs_replan", "escalate"],
       "description": "Required when status is FAILED or NEEDS_INPUT. Classifies the failure type for Atlas retry/escalation logic."
     },
+    "clarification_request": {
+      "type": "object",
+      "description": "Required when status is NEEDS_INPUT. Structured payload for Atlas to present to user via askQuestions.",
+      "properties": {
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "description": { "type": "string" },
+              "pros": { "type": "array", "items": { "type": "string" } },
+              "cons": { "type": "array", "items": { "type": "string" } },
+              "affected_files": { "type": "array", "items": { "type": "string" } }
+            },
+            "required": ["id", "description"]
+          },
+          "minItems": 2,
+          "maxItems": 3
+        },
+        "impact_analysis": { "type": "string" },
+        "recommended_option": { "type": "string" },
+        "recommended_option_rationale": { "type": "string" }
+      },
+      "required": ["options", "impact_analysis", "recommended_option", "recommended_option_rationale"]
+    },
     "abstain": {
       "type": "object",
       "additionalProperties": false,

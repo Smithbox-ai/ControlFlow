@@ -50,6 +50,15 @@ Require explicit user confirmation for:
 - Bulk contract rewrites.
 - Any step that can cause data loss or broad side effects.
 
+### Clarification Triggers
+Reference: `docs/agent-engineering/CLARIFICATION-POLICY.md`
+
+Use `vscode/askQuestions` directly when:
+- A mandatory clarification class is detected during orchestration (scope ambiguity, architecture fork, user preference, destructive-risk approval, repository structure change).
+- A subagent returns `NEEDS_INPUT` with `clarification_request` (see NEEDS_INPUT Routing below).
+
+Do NOT use `vscode/askQuestions` for questions answerable from codebase evidence or subagent reports.
+
 ## Archive
 
 ### Context Compaction Policy
@@ -88,6 +97,8 @@ Maintain awareness of current orchestration state at all times:
 - `schemas/code-review.verdict.schema.json`
 - `schemas/prometheus.plan.schema.json`
 - `schemas/atlas.delegation-protocol.schema.json` (on-demand — load only when constructing delegation calls)
+- `docs/agent-engineering/CLARIFICATION-POLICY.md`
+- `docs/agent-engineering/TOOL-ROUTING.md`
 - `plans/project-context.md` (if present)
 - Plan artifacts directory: `plans/` (default location for all plan and completion files)
 
@@ -107,6 +118,12 @@ Maintain awareness of current orchestration state at all times:
 1. Prefer read-only discovery first.
 2. Prefer subagent delegation for heavy exploration/implementation.
 3. Use just-in-time retrieval; avoid loading unrelated files.
+
+### External Tool Routing
+Reference: `docs/agent-engineering/TOOL-ROUTING.md`
+
+- `web/fetch` and `web/githubRepo`: use for orchestration-level context when subagent research is insufficient. Prefer delegating deep research to Oracle or Explorer.
+- `vscode/askQuestions`: use for mandatory clarification classes and NEEDS_INPUT routing from subagents.
 
 ## Execution Protocol
 
@@ -180,6 +197,18 @@ When a subagent returns a `failure_classification`, Atlas routes automatically:
 | `escalate` | STOP — transition to `WAITING_APPROVAL`, present to user | 0 |
 
 If retry limit is exhausted, escalate to user with accumulated failure evidence.
+
+### NEEDS_INPUT Routing (Mandatory)
+When a subagent returns `status: "NEEDS_INPUT"` with a `clarification_request` object:
+1. Extract the `clarification_request` from the subagent report.
+2. Use `vscode/askQuestions` to present the options to the user, including:
+   - Each option with pros, cons, and affected files.
+   - The subagent's recommended option with rationale.
+   - The impact analysis.
+3. Wait for user selection.
+4. Retry the subagent with the user's selection added to the scope context.
+
+This is a **separate routing path** from `failure_classification`. A `NEEDS_INPUT` status with `clarification_request` always routes through user clarification, regardless of `failure_classification` value.
 
 ### Batch Approval
 To reduce approval fatigue on multi-phase plans:

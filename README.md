@@ -38,6 +38,12 @@ A multi-agent orchestration system for VS Code Copilot. This fork replaces vibe-
 | **DocWriter** | `DocWriter-subagent.agent.md` | Gemini 3.1 Pro | Documentation, diagrams, code-doc parity |
 | **BrowserTester** | `BrowserTester-subagent.agent.md` | Gemini 3 Flash | E2E browser testing, accessibility audits |
 
+### Clarification & Tool Routing
+
+Prometheus and Atlas own user-facing clarification via `askQuestions`. Acting subagents (Sisyphus, Frontend-Engineer, DevOps, DocWriter, BrowserTester) return structured `NEEDS_INPUT` with `clarification_request` when they encounter ambiguity. Read-only agents (Oracle, Explorer, Code-Review) return findings, verdicts, or `ABSTAIN` — they do not interact with the user directly.
+
+Each agent has role-specific routing rules for external tools. See `docs/agent-engineering/TOOL-ROUTING.md` and `docs/agent-engineering/CLARIFICATION-POLICY.md`.
+
 ## Reliability Model
 
 Contracts are aligned to four dimensions:
@@ -47,6 +53,8 @@ Contracts are aligned to four dimensions:
 3. **Predictability** — explicit abstention when confidence or evidence is low.
 4. **Safety** — mandatory human approval gates for destructive and irreversible operations.
 5. **Failure Taxonomy** — all agents classify failures as `transient`, `fixable`, `needs_replan`, or `escalate` for automated routing by Atlas.
+6. **Clarification Reliability** — agents with `askQuestions` use it proactively for enumerated ambiguity classes; agents without it return structured `NEEDS_INPUT` for conductor routing.
+7. **Tool Routing** — deterministic rules for local search vs external fetch vs Context7/MCP, with no phantom grants.
 
 Reference: `docs/agent-engineering/RELIABILITY-GATES.md`.
 
@@ -165,6 +173,9 @@ Every custom agent should include:
 - `docs/agent-engineering/PART-SPEC.md`
 - `docs/agent-engineering/RELIABILITY-GATES.md`
 - `docs/agent-engineering/MIGRATION-CORE-FIRST.md`
+- `docs/agent-engineering/CLARIFICATION-POLICY.md`
+- `docs/agent-engineering/TOOL-ROUTING.md`
+- `docs/agent-engineering/COMPLIANCE-GAPS.md`
 
 **Schema contracts:**
 - `schemas/atlas.gate-event.schema.json`
@@ -192,16 +203,27 @@ Every custom agent should include:
 - `evals/scenarios/browser-tester-contract.json`
 - `evals/scenarios/wave-execution.json`
 - `evals/scenarios/failure-retry.json`
+- `evals/scenarios/clarification-askquestions.json`
+- `evals/scenarios/skills-mcp-routing.json`
+- `evals/scenarios/agent-triggering-quality.json`
 
 ## Migration Status
 
-Complete. All 10 agents have:
-- P.A.R.T instruction architecture
+P.A.R.T migration complete. Full compliance revision applied. All 10 agents now have:
+- P.A.R.T instruction architecture (section order compliant)
 - JSON Schema 2020-12 output contracts
-- PreFlect and human approval gates
 - Explicit abstention paths for low confidence
 - Failure classification taxonomy for automated routing
 - Non-Negotiable Rules (no fabrication, no code generation without evidence)
+- PreFlect checkpoints (8/8 subagents + Atlas + Prometheus)
+- Human approval gates (explicit or delegated statements in all 10 agents)
+- Clarification triggers aligned to `CLARIFICATION-POLICY.md` (5 mandatory classes)
+- External tool routing rules aligned to `TOOL-ROUTING.md` (role-specific for all agents with external tools)
+- Centralized clarification ownership (Prometheus/Atlas own `askQuestions`; subagents return `NEEDS_INPUT` or `ABSTAIN`)
+
+Phase 4 (repo-local skills) was evaluated and skipped — Phases 1–3b reduced cross-agent duplication to manageable levels. The one remaining verbatim shared block (Uncertainty Protocol across 5 acting agents) is intentional policy alignment, not redundancy.
+
+See `docs/agent-engineering/COMPLIANCE-GAPS.md` for the original audit baseline.
 
 > Core contracts prioritize strict schema outputs. This is a controlled breaking change for consumers expecting free-form output. See `docs/agent-engineering/MIGRATION-CORE-FIRST.md`.
 

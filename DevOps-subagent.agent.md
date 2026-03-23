@@ -103,6 +103,8 @@ Use `plans/project-context.md` when available as stable reference for convention
 - `docs/agent-engineering/RELIABILITY-GATES.md`
 - `schemas/devops.execution-report.schema.json`
 - `plans/project-context.md` (if present)
+- `docs/agent-engineering/CLARIFICATION-POLICY.md`
+- `docs/agent-engineering/TOOL-ROUTING.md`
 
 ## Tools
 
@@ -122,6 +124,12 @@ Use `plans/project-context.md` when available as stable reference for convention
 1. Verify environment state before any changes.
 2. Execute smallest idempotent operations first.
 3. Verify health and resource state after each operation.
+
+### External Tool Routing
+Reference: `docs/agent-engineering/TOOL-ROUTING.md`
+- `web/fetch`: use for cloud provider documentation, CI/CD platform references, or container registry APIs.
+- `web/githubRepo`: use for checking upstream infrastructure tool issues, release notes, or migration guides.
+- Local-first: always search the codebase and existing config before using external sources.
 
 ## Definition of Done (Mandatory)
 - Infrastructure is in the target state.
@@ -146,8 +154,12 @@ Return a schema-compliant execution report (`schemas/devops.execution-report.sch
 - If uncertain and cannot verify safely: `ABSTAIN`.
 
 ### Uncertainty Protocol
-When the status would be `NEEDS_INPUT`, **STOP immediately** and present:
-1. **2–3 concrete options** with infrastructure impact assessment for each.
-2. **Rollback implications** — what happens if each option fails.
+When the status would be `NEEDS_INPUT`, return a structured `clarification_request` in the execution report:
+1. **2–3 concrete options** with pros, cons, and affected files for each.
+2. **Impact analysis** — what changes if the wrong option is chosen.
 3. **Recommended option** with rationale.
-4. Do **not** proceed with any option until the conductor or user selects one.
+4. Do **not** proceed with any option. Atlas will present the options to the user via `askQuestions` and retry with the selection.
+
+This agent does not have `askQuestions` access. All user-facing clarification is centralized in Atlas.
+
+**Clarification role:** This agent returns `NEEDS_INPUT` with `clarification_request` to Atlas; it does not ask the user directly.

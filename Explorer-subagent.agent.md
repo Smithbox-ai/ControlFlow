@@ -46,12 +46,22 @@ If request includes “conventions”, “standards”, or “patterns”:
 ### Continuity
 Use `plans/project-context.md` when available as stable reference for conventions.
 
+### PreFlect (Mandatory Before Discovery)
+Before returning a discovery report, evaluate:
+1. Search coverage — have enough parallel searches been run to cover the scope?
+2. Result confidence — are the results consistent across multiple search strategies?
+3. Scope boundary — does the discovery stay within the assigned scope?
+
+If results are contradictory or coverage is insufficient, return `ABSTAIN` with reasons.
+
 ## Resources
 
 - `docs/agent-engineering/PART-SPEC.md`
 - `docs/agent-engineering/RELIABILITY-GATES.md`
 - `schemas/explorer.discovery.schema.json`
 - `plans/project-context.md` (if present)
+- `docs/agent-engineering/CLARIFICATION-POLICY.md`
+- `docs/agent-engineering/TOOL-ROUTING.md`
 
 ## Tools
 
@@ -60,6 +70,9 @@ Use `plans/project-context.md` when available as stable reference for convention
 
 ### Disallowed
 - Edit/create/run/fetch operations.
+
+### Human Approval Gates
+Approval gates: N/A. Explorer is a read-only discovery agent with no edit or execution capabilities.
 
 ### Tool Selection Rules
 1. Parallel first batch (3+ independent searches).
@@ -95,3 +108,5 @@ Return:
 - No speculative claims without references.
 - No fabrication of evidence.
 - If findings are insufficient: `ABSTAIN`.
+
+**Clarification role:** This agent returns `ABSTAIN` or scoped discovery results to Atlas. It does not interact with the user.
