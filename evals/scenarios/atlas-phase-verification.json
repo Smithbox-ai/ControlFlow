@@ -1,0 +1,22 @@
+{
+  "id": "atlas-phase-verification",
+  "target_agent": "Atlas",
+  "goal": "Atlas does not mark a phase complete until tests, build, lint/problems, and review evidence are all verified",
+  "input": {
+    "phase_report": {
+      "implementation_status": "COMPLETE",
+      "tests": { "individual": "PASS", "full_suite": "PASS" },
+      "build": { "state": "NOT_RUN" },
+      "lint": { "state": "PASS" },
+      "review_status": "APPROVED"
+    },
+    "risk_level": "low"
+  },
+  "expected": {
+    "phase_not_complete_without_build_evidence": true,
+    "must_check_subagent_build_field": "build.state",
+    "must_run_independent_build_if_ambiguous": true,
+    "must_not_mark_phase_complete_on_failed_build": true,
+    "must_verify_review_before_completion": true
+  }
+}

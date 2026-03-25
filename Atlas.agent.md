@@ -1,6 +1,6 @@
 ---
 description: 'Orchestrates Planning, Implementation, and Review cycle for complex tasks'
-tools: ['vscode/getProjectSetupInfo', 'vscode/installExtension', 'vscode/newWorkspace', 'vscode/openSimpleBrowser', 'vscode/runCommand', 'vscode/askQuestions', 'vscode/vscodeAPI', 'vscode/extensions', 'execute/runNotebookCell', 'execute/testFailure', 'execute/getTerminalOutput', 'execute/awaitTerminal', 'execute/killTerminal', 'execute/createAndRunTask', 'execute/runInTerminal', 'execute/runTests', 'read/problems', 'read/readFile', 'read/terminalSelection', 'read/terminalLastCommand', 'agent', 'edit/createDirectory', 'edit/createFile', 'edit/createJupyterNotebook', 'edit/editFiles', 'edit/editNotebook', 'search/changes', 'search/codebase', 'search/fileSearch', 'search/listDirectory', 'search/searchResults', 'search/textSearch', 'search/usages', 'web/fetch', 'web/githubRepo', 'todo']
+tools: ['vscode/getProjectSetupInfo', 'vscode/installExtension', 'vscode/newWorkspace', 'vscode/runCommand', 'vscode/askQuestions', 'vscode/vscodeAPI', 'vscode/extensions', 'execute/runNotebookCell', 'execute/testFailure', 'execute/getTerminalOutput', 'execute/awaitTerminal', 'execute/killTerminal', 'execute/createAndRunTask', 'execute/runInTerminal', 'read/problems', 'read/readFile', 'read/terminalSelection', 'read/terminalLastCommand', 'agent', 'edit/createDirectory', 'edit/createFile', 'edit/createJupyterNotebook', 'edit/editFiles', 'edit/editNotebook', 'search/changes', 'search/codebase', 'search/fileSearch', 'search/listDirectory', 'search/textSearch', 'search/usages', 'web/fetch', 'web/githubRepo', 'todo']
 agents: ["*"]
 model: Claude Sonnet 4.6 (copilot)
 ---
@@ -86,7 +86,11 @@ Maintain awareness of current orchestration state at all times:
 - **Last Action:** What was the last significant action taken.
 - **Next Action:** What the immediate next step is.
 - **Failure Retries:** Count of retries per classification for current phase (if any).
-- Use the `#todos` tool to maintain a visible, structured task list tracking phase progress.
+- Todo Management Protocol:
+   - At plan start, create a todo item for each phase using the format `Phase {N} — {Title}`.
+   - At phase completion, mark the corresponding todo item as completed immediately after the phase review gate passes.
+   - At wave completion, verify all todo items for that wave are marked completed before advancing.
+   - At plan completion, verify all phase todo items are marked completed during the Completion Gate.
 
 ## Resources
 
@@ -142,12 +146,24 @@ Reference: `docs/agent-engineering/TOOL-ROUTING.md`
    - Run PreFlect gate.
    - Delegate implementation.
    - Delegate review.
+   - Verification Build Gate: after the implementation subagent reports completion, verify build success. Either confirm the execution report includes `build.state: PASS`, or if build evidence is absent or ambiguous, run the project's build command directly. If the build fails, route through Failure Classification Handling before proceeding.
    - If review status is not `APPROVED`, loop with targeted revision context.
    - Pause for user commit/continue approval.
+   - Mark the completed phase's todo item as completed using the `#todos` tool.
 
 5. **Completion Gate**
    - Run cross-phase consistency review.
+   - Verify all phase todo items are marked completed. If any are not, reconcile them before producing the completion summary.
    - Produce completion summary.
+
+### Phase Verification Checklist (Mandatory)
+Before marking any phase as complete, Atlas MUST verify:
+1. Tests pass — evidence from the subagent report or an independent run.
+2. Build passes — evidence from the subagent report (`build.state: PASS`) or an independent run.
+3. Lint/problems are clean — verify via `read/problems` or equivalent validation evidence.
+4. Review status is `APPROVED`.
+
+If any check fails, the phase is not complete and must route through Failure Classification Handling.
 
 ### Delegation Heuristics
 Decide whether to handle directly or delegate based on:
@@ -321,4 +337,5 @@ Rules:
 - No speculative success claims without evidence.
 - No fabrication of evidence.
 - No silent destructive action.
+- No phase may be marked complete without verified build evidence. Accepting a subagent completion claim without checking build and test evidence is non-compliant.
 - If uncertain and cannot verify safely: `ABSTAIN`.

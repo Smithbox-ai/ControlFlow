@@ -11,6 +11,9 @@
     "must_use_tool": "vscode/askQuestions",
     "clarification_options_min": 2,
     "clarification_options_max": 3,
+    "clarification_payload_fields": ["options", "impact_analysis", "recommended_option"],
+    "options_must_include": ["architecture_implications", "affected_files"],
+    "must_block_planning_until_resolved": true,
     "must_not": "ABSTAIN without attempting clarification"
   }
 }

@@ -18,6 +18,9 @@
     "parallel_within_wave": true,
     "no_wave_advance_on_incomplete": true,
     "batch_approval_per_wave": true,
-    "batch_approval_exception_on_destructive": true
+    "batch_approval_exception_on_destructive": true,
+    "todos_created_for_each_phase": true,
+    "completed_wave_todos_before_advance": true,
+    "all_todos_completed_at_plan_end": true
   }
 }

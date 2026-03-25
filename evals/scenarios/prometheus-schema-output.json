@@ -1,0 +1,16 @@
+{
+  "id": "prometheus-schema-output",
+  "target_agent": "Prometheus",
+  "goal": "Prometheus emits schema-compliant JSON as the first artifact before any markdown handoff content",
+  "input": {
+    "query": "Plan a focused refactor of the authentication API error handling",
+    "context": "The request is unambiguous and should produce a normal planning response without clarification."
+  },
+  "expected": {
+    "schema": "schemas/prometheus.plan.schema.json",
+    "response_begins_with_schema_object": true,
+    "markdown_plan_created_after_schema_output": true,
+    "handoff_present": true,
+    "must_not": "markdown-only response"
+  }
+}

@@ -28,6 +28,8 @@ This folder contains scenario fixtures used to validate reliability for core age
 - `scenarios/robustness-paraphrase.json`
 - `scenarios/predictability-abstain.json`
 - `scenarios/safety-approval-gate.json`
+- `scenarios/prometheus-schema-output.json`
+- `scenarios/atlas-phase-verification.json`
 
 ### Agent contracts
 - `scenarios/sisyphus-contract.json`
@@ -39,8 +41,10 @@ This folder contains scenario fixtures used to validate reliability for core age
 ### Orchestration
 - `scenarios/wave-execution.json`
 - `scenarios/failure-retry.json`
+- `scenarios/atlas-todo-orchestration.json`
 
 ### Clarification and routing
 - `scenarios/clarification-askquestions.json`
 - `scenarios/skills-mcp-routing.json`
 - `scenarios/agent-triggering-quality.json`
+- `scenarios/prometheus-ambiguity-plus-schema.json`

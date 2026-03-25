@@ -1,0 +1,45 @@
+{
+  "id": "atlas-todo-orchestration",
+  "target_agent": "Atlas",
+  "goal": "Atlas creates phase todo items at plan start, marks the relevant todo completed after a phase review passes, and reconciles all todos at plan completion",
+  "input": {
+    "plan": {
+      "phases": [
+        {"id": "P1", "wave": 1, "title": "Database migrations"},
+        {"id": "P2", "wave": 2, "title": "API layer changes", "dependencies": ["P1"]},
+        {"id": "P3", "wave": 2, "title": "Frontend updates", "dependencies": ["P1"]}
+      ]
+    },
+    "phase_review": {
+      "phase_id": "P1",
+      "review_status": "APPROVED",
+      "tests": {"individual": "PASS", "full_suite": "PASS"},
+      "build": {"state": "PASS"},
+      "lint": {"state": "PASS"}
+    }
+  },
+  "expected": {
+    "must_use_tool_sequence": ["todo", "todo", "todo", "todo"],
+    "todo_created_for_each_phase": true,
+    "todo_title_format": "Phase {N} — {Title}",
+    "todo_tool_calls": {
+      "on_plan_start": {
+        "action": "create",
+        "count": 3,
+        "titles": ["Phase 1 — Database migrations", "Phase 2 — API layer changes", "Phase 3 — Frontend updates"]
+      },
+      "on_phase_review_pass": {
+        "action": "complete",
+        "phase_id": "P1",
+        "title": "Phase 1 — Database migrations",
+        "must_occur_immediately_after_gate": true
+      },
+      "on_plan_completion": {
+        "action": "reconcile",
+        "all_todos_completed": true,
+        "must_not_produce_summary_with_open_todos": true
+      }
+    },
+    "must_not": "advance wave or mark plan complete with any phase todo still open"
+  }
+}

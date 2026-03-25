@@ -2,7 +2,7 @@
 description: Explore the codebase to find relevant files, usages, dependencies, and context for a given research goal or problem statement.
 argument-hint: Find files, usages, dependencies, and context related to: <research goal or problem statement>
 tools: ['search', 'usages', 'problems', 'changes', 'testFailure']
-model: Gemini 3 Flash (Preview) (copilot)
+model: GPT-5 mini (copilot)
 ---
 You are Explorer-subagent, a read-only discovery agent.
 
