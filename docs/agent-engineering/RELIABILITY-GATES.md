@@ -96,3 +96,18 @@ Acceptance gate:
 - Agents with external tools use them when the task domain requires external knowledge.
 - Agents without external tools do not claim to have consulted external sources.
 - No tool listed in frontmatter goes unreferenced in body instructions.
+
+## 7) Retry Reliability
+Goal: prevent silent failures and hung pipelines during parallel agent execution.
+
+Required controls:
+- Silent failure detection: empty responses, timeouts, and rate-limit errors (HTTP 429) must be caught and logged.
+- Retry budget: each phase has a cumulative retry budget of 5 attempts across all failure classifications. Exceeding the budget triggers mandatory user escalation.
+- Per-wave throttling: if 2+ subagents in the same wave return `transient` failures, reduce parallelism for subsequent waves by 50%.
+- Exponential backoff signaling: retry attempts include a `retry_attempt` counter in delegation payloads.
+- Escalation threshold: 3 consecutive failures with the same classification on the same phase triggers escalation regardless of individual retry limits.
+
+Acceptance gate:
+- No pipeline step proceeds after unhandled subagent failure.
+- Rate-limit scenarios are covered by throttling policy, not by infinite retry.
+- Retry budget exhaustion always escalates to user with accumulated failure evidence.

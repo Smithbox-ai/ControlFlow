@@ -32,14 +32,32 @@
         "action": "complete",
         "phase_id": "P1",
         "title": "Phase 1 — Database migrations",
-        "must_occur_immediately_after_gate": true
+        "must_occur_immediately_after_gate": true,
+        "must_occur_before_approval_pause": true
       },
       "on_plan_completion": {
         "action": "reconcile",
         "all_todos_completed": true,
         "must_not_produce_summary_with_open_todos": true
+      },
+      "on_prior_phase_open_before_next_phase_start": {
+        "action": "reconcile",
+        "trigger": "prior_phase_todo_open",
+        "must_use_todo_tool": true,
+        "must_occur_before_next_phase_start": true,
+        "applicable_phase_transitions": ["P1→P2", "P1→P3"]
       }
     },
-    "must_not": "advance wave or mark plan complete with any phase todo still open"
+    "pre_phase_gate_checks_prior_todo": true,
+    "pre_phase_open_todo_reconcile_required": {
+      "if_prior_phase_todo_is_open": true,
+      "atlas_must": "use todo tool to reconcile prior phase todo before starting next phase",
+      "before": "next_phase_start"
+    },
+    "must_not": [
+      "advance wave or mark plan complete with any phase todo still open",
+      "mark phase todo as completed after the user approval pause",
+      "start next wave phase while the prior phase todo remains open"
+    ]
   }
 }

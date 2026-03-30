@@ -1,25 +1,49 @@
 # PART-SPEC Compliance Gaps
 
-Audit date: 2026-03-23
+Audit date: 2026-03-30
 Checklist version: 9-item (includes clarification triggers and tool-routing rules)
 
 ## Summary
 
 | Agent | Compliant | Gaps | Target Phase |
 |-------|-----------|------|-------------|
-| Atlas | ❌ | No clarification triggers; no tool-routing rules for fetch/githubRepo/askQuestions | Phase 2 |
-| Prometheus | ❌ | Missing PreFlect; no approval gate policy; negative askQuestions framing; Context7 phantom grant; no tool-routing rules | Phase 2 |
+| Atlas | ✅ | None (resolved: clarification triggers, tool-routing, PLAN_REVIEW gate, retry reliability) | Complete |
+| Prometheus | ✅ | None (resolved: PreFlect, approval gate, askQuestions framing, Context7, tool-routing, Mermaid visualization) | Complete |
 | Oracle | ❌ | Missing PreFlect; approval gate N/A not stated; no tool-routing rules for fetch/githubRepo | Phase 3a |
 | Explorer | ❌ | Missing PreFlect; approval gate N/A not stated | Phase 3a |
 | Code-Review | ❌ | Missing PreFlect; no user approval gate (has verification gates only) | Phase 3a |
+| Challenger | ✅ | None (new agent, built to spec) | Complete |
 | Sisyphus | ❌ | Missing user approval gate; no tool-routing rules for fetch/githubRepo | Phase 3a |
 | Frontend-Engineer | ❌ | Missing user approval gate; no tool-routing rules for fetch/githubRepo | Phase 3a |
 | DevOps | ❌ | No clarification triggers (has Uncertainty Protocol but no askQuestions); no tool-routing rules for fetch/githubRepo | Phase 3a |
 | DocWriter | ❌ | Missing user approval gate; no tool-routing rules for fetch/githubRepo | Phase 3a |
 | BrowserTester | ❌ | Missing user approval gate; no tool-routing rules for fetch/githubRepo | Phase 3a |
 
-Compliance rate: 0/10 (0%) against 9-item checklist
-Compliance rate (original 7-item): 2/10 (Atlas, DevOps)
+Compliance rate: 3/11 (27%) against 9-item checklist
+
+## Recently Resolved Gaps
+
+### Adversarial Plan Review (NEW)
+- Added `Challenger-subagent.agent.md` as adversarial plan auditor.
+- Schema: `schemas/challenger.plan-audit.schema.json`.
+- Atlas state machine extended with conditional `PLAN_REVIEW` gate.
+- Trigger policy: 3+ phases, confidence < 0.9, or high-risk/destructive scope.
+- Max 2 Challenger→Prometheus revision rounds before user escalation.
+
+### Prometheus Mermaid Visualization (NEW)
+- Prometheus now requires Architecture Visualization section for 3+ phase plans.
+- Allowed diagram types: `flowchart TD`, `sequenceDiagram`, `stateDiagram-v2`.
+- Schema extended with optional `diagrams` array in `schemas/prometheus.plan.schema.json`.
+
+### Shared Clarification Contract (NEW)
+- Created `schemas/clarification-request.schema.json` as canonical shared contract.
+- 5 acting agent schemas now reference shared contract via `$ref`.
+- Oracle and Explorer intentionally excluded (no `NEEDS_INPUT` status in their enum).
+
+### Atlas Retry Reliability (NEW)
+- Added Retry Reliability Policy to `Atlas.agent.md`.
+- Added Section 7 (Retry Reliability) to `docs/agent-engineering/RELIABILITY-GATES.md`.
+- Covers: silent failure detection, retry budgets, per-wave throttling, exponential backoff signaling, escalation thresholds.
 
 ## Gap Details
 

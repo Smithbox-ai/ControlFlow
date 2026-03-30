@@ -20,7 +20,8 @@
         "DevOps-subagent",
         "DocWriter-subagent",
         "BrowserTester-subagent",
-        "Code-Review-subagent"
+        "Code-Review-subagent",
+        "Challenger-subagent"
       ],
       "properties": {
         "Explorer-subagent": {
@@ -133,6 +134,37 @@
             "changed_files": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
             "review_depth": { "type": "string", "enum": ["full", "standard", "lightweight"] },
             "security_sensitive": { "type": "boolean" }
+          }
+        },
+        "Challenger-subagent": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["task_id", "plan_path", "plan_summary"],
+          "properties": {
+            "task_id": { "type": "string" },
+            "plan_path": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Path to the persisted plan artifact. Challenger reads the file directly rather than relying on inline prompt summaries."
+            },
+            "plan_summary": {
+              "type": "string",
+              "minLength": 10,
+              "description": "Concise summary of the plan for initial context. Challenger uses this for triage before reading the full plan."
+            },
+            "focus_areas": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["security", "architecture", "dependency_conflict", "scope_gap", "test_coverage", "destructive_risk", "performance", "contract_violation", "missing_rollback"]
+              },
+              "description": "Optional audit focus areas. If omitted, Challenger performs a full-spectrum audit."
+            },
+            "retry_attempt": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Retry attempt counter for exponential backoff signaling."
+            }
           }
         }
       }

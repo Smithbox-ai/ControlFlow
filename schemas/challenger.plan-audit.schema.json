@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://copilot-atlas.local/schemas/challenger.plan-audit.schema.json",
+  "title": "ChallengerPlanAudit",
+  "description": "Output schema for the Challenger adversarial plan reviewer. Validates plan quality, architecture safety, and risk coverage before implementation begins.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "agent",
+    "status",
+    "confidence",
+    "abstain",
+    "plan_reference",
+    "findings",
+    "risk_summary",
+    "recommendation"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "agent": { "type": "string", "const": "Challenger-subagent" },
+    "status": {
+      "type": "string",
+      "enum": ["APPROVED", "NEEDS_REVISION", "REJECTED", "ABSTAIN"],
+      "description": "APPROVED: plan is safe to execute. NEEDS_REVISION: fixable issues found. REJECTED: fundamental flaws requiring replan. ABSTAIN: insufficient evidence to evaluate."
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Confidence in the audit verdict. Below 0.7 triggers automatic ABSTAIN."
+    },
+    "abstain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["is_abstaining", "reasons"],
+      "properties": {
+        "is_abstaining": { "type": "boolean" },
+        "reasons": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "plan_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["plan_path", "phase_count", "total_waves"],
+      "properties": {
+        "plan_path": { "type": "string", "description": "Path to the plan artifact that was audited." },
+        "phase_count": { "type": "integer", "minimum": 1 },
+        "total_waves": { "type": "integer", "minimum": 1 },
+        "plan_title": { "type": "string" }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["severity", "category", "description", "affected_phases"],
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": ["CRITICAL", "MAJOR", "MINOR"],
+            "description": "CRITICAL: blocks execution. MAJOR: significant risk if unaddressed. MINOR: improvement suggestion."
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "security",
+              "architecture",
+              "dependency_conflict",
+              "scope_gap",
+              "test_coverage",
+              "destructive_risk",
+              "performance",
+              "contract_violation",
+              "missing_rollback"
+            ]
+          },
+          "description": { "type": "string", "minLength": 10 },
+          "affected_phases": {
+            "type": "array",
+            "items": { "type": "integer", "minimum": 1 },
+            "minItems": 1
+          },
+          "suggested_fix": { "type": "string" }
+        }
+      }
+    },
+    "risk_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["critical_count", "major_count", "minor_count", "overall_risk"],
+      "properties": {
+        "critical_count": { "type": "integer", "minimum": 0 },
+        "major_count": { "type": "integer", "minimum": 0 },
+        "minor_count": { "type": "integer", "minimum": 0 },
+        "overall_risk": {
+          "type": "string",
+          "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+        }
+      }
+    },
+    "recommendation": {
+      "type": "string",
+      "description": "Concise recommendation for Atlas: proceed, revise specific phases, or replan entirely."
+    },
+    "failure_classification": {
+      "type": "string",
+      "enum": ["transient", "fixable", "needs_replan", "escalate"],
+      "description": "Required when status is NEEDS_REVISION or REJECTED. Classifies the failure type for Atlas routing."
+    }
+  }
+}

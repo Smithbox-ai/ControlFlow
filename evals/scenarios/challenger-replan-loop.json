@@ -1,0 +1,80 @@
+{
+  "scenario_id": "challenger-replan-loop",
+  "title": "Challenger-Prometheus Replan Loop Cap",
+  "description": "Validates that Atlas caps the Challenger→Prometheus revision loop at 2 iterations",
+  "agent": "Atlas",
+  "category": "orchestration",
+  "inputs": [
+    {
+      "label": "first-revision-succeeds",
+      "description": "Challenger finds issues, Prometheus revises, Challenger approves on second pass",
+      "input": {
+        "iteration_1": {
+          "challenger_status": "NEEDS_REVISION",
+          "failure_classification": "fixable"
+        },
+        "iteration_2": {
+          "challenger_status": "APPROVED"
+        }
+      },
+      "expected_behavior": {
+        "total_iterations": 2,
+        "final_state": "ACTING",
+        "escalated": false
+      }
+    },
+    {
+      "label": "two-revisions-then-approve",
+      "description": "Challenger finds issues twice, Prometheus revises twice, Challenger approves on third pass",
+      "input": {
+        "iteration_1": {
+          "challenger_status": "NEEDS_REVISION",
+          "failure_classification": "fixable"
+        },
+        "iteration_2": {
+          "challenger_status": "NEEDS_REVISION",
+          "failure_classification": "fixable"
+        },
+        "iteration_3": {
+          "challenger_status": "APPROVED"
+        }
+      },
+      "expected_behavior": {
+        "total_iterations": 3,
+        "max_revision_rounds": 2,
+        "final_state": "ACTING",
+        "escalated": false
+      }
+    },
+    {
+      "label": "cap-exceeded-escalates",
+      "description": "After 2 revision rounds, if Challenger still rejects, escalate to user",
+      "input": {
+        "iteration_1": {
+          "challenger_status": "NEEDS_REVISION",
+          "failure_classification": "fixable"
+        },
+        "iteration_2": {
+          "challenger_status": "NEEDS_REVISION",
+          "failure_classification": "fixable"
+        },
+        "iteration_3_would_be": {
+          "note": "Atlas does NOT run a 3rd revision. Instead, escalates."
+        }
+      },
+      "expected_behavior": {
+        "total_revision_rounds": 2,
+        "escalated": true,
+        "state_transition": "WAITING_APPROVAL",
+        "user_sees": "Challenger findings from both rounds plus Prometheus revision attempts"
+      }
+    }
+  ],
+  "assertions": [
+    "Maximum 2 Challenger→Prometheus revision rounds before escalation",
+    "Each revision round sends Challenger findings to Prometheus as revision context",
+    "If Challenger approves within 2 rounds, pipeline proceeds to ACTING",
+    "If 2 rounds exhausted without approval, Atlas escalates to user",
+    "Escalation includes accumulated findings from all rounds"
+  ]
+}

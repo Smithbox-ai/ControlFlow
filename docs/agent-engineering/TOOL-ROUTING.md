@@ -43,6 +43,7 @@ If a tool is listed in an agent's YAML frontmatter `tools:` array, the agent's b
 | Oracle | ✅ | ✅ | ❌ | Deep research; fetch for evidence |
 | Explorer | ❌ | ❌ | ❌ | Read-only local discovery |
 | Code-Review | ❌ | ❌ | ❌ | Verification only |
+| Challenger | ❌ | ❌ | ❌ | Read-only plan audit; local codebase cross-reference only |
 | Sisyphus | ✅ | ✅ | ❌ | Implementation; fetch for API reference |
 | Frontend-Engineer | ✅ | ✅ | ❌ | Implementation; fetch for component docs |
 | DevOps | ✅ | ✅ | ❌ | Infrastructure; fetch for provider docs |

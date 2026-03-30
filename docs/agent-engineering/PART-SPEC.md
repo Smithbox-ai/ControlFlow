@@ -9,6 +9,7 @@ P.A.R.T is mandatory for all core agents:
 - `Oracle-subagent.agent.md`
 - `Explorer-subagent.agent.md`
 - `Code-Review-subagent.agent.md`
+- `Challenger-subagent.agent.md`
 
 P.A.R.T is mandatory for all implementation agents:
 - `Sisyphus-subagent.agent.md`

@@ -187,6 +187,20 @@ Define data and interface contracts between phases that have dependencies:
 - Subagent delegation suggestions per phase.
 - Max parallel agents recommendation (default: 10, reduce if resource-intensive phases).
 - Failure expectations summary per wave.
+
+### Architecture Visualization (Mandatory for 3+ phase plans)
+When a plan contains 3 or more phases, include a visualization section with Mermaid diagrams.
+
+Allowed diagram types:
+- `flowchart TD` — Phase dependency DAG showing execution order and wave grouping.
+- `sequenceDiagram` — Inter-phase data flow and handoff sequence.
+- `stateDiagram-v2` — State machine visualization for complex branching or lifecycle logic.
+
+Include at minimum:
+1. A phase dependency DAG (`flowchart TD`) showing which phases depend on which, grouped by wave.
+2. One additional diagram (sequence or state) if the plan involves complex inter-phase contracts or state transitions.
+
+Keep diagrams compact. Each diagram should fit within 30 lines of Mermaid source.
 ```
 
 ### Plan Quality Standards
@@ -198,6 +212,7 @@ Every plan must satisfy:
 4. **Testable** — Success criteria are objectively verifiable.
 5. **Practical** — Phase count is 3–10; decompose further if exceeding 10.
 6. **Parallelizable** — Phases that can run independently MUST be assigned the same wave number. Sequential-only when there is a real data dependency.
+7. **Visualized** — Plans with 3+ phases MUST include an Architecture Visualization section with at least a phase dependency DAG in Mermaid format.
 7. **Failure-aware** — Each phase includes failure expectations with classification and mitigation strategies.
 
 ### Research Scaling

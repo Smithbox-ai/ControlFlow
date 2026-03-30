@@ -166,6 +166,24 @@
       }
     },
     "success_criteria": { "type": "array", "items": { "type": "string" } },
+    "diagrams": {
+      "type": "array",
+      "description": "Mermaid architecture diagrams. Required when phases array has 3 or more items.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "title", "mermaid_source"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["flowchart", "sequenceDiagram", "stateDiagram-v2"],
+            "description": "Mermaid diagram type. flowchart for dependency DAG, sequenceDiagram for inter-phase flow, stateDiagram-v2 for state machines."
+          },
+          "title": { "type": "string", "minLength": 3 },
+          "mermaid_source": { "type": "string", "minLength": 10, "description": "Raw Mermaid source code for the diagram." }
+        }
+      }
+    },
     "handoff": {
       "type": "object",
       "additionalProperties": false,

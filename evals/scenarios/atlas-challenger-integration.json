@@ -1,0 +1,110 @@
+{
+  "scenario_id": "atlas-challenger-integration",
+  "title": "Atlas Challenger Integration",
+  "description": "Validates that Atlas correctly routes plans to Challenger for adversarial review based on trigger conditions",
+  "agent": "Atlas",
+  "category": "orchestration",
+  "inputs": [
+    {
+      "label": "complex-plan-triggers-challenger",
+      "description": "A 5-phase plan should trigger Challenger review",
+      "input": {
+        "plan": {
+          "phase_count": 5,
+          "confidence": 0.85,
+          "has_destructive_ops": false
+        }
+      },
+      "expected_behavior": {
+        "challenger_invoked": true,
+        "trigger_reason": "phase_count >= 3",
+        "delegation_includes": ["plan_path", "plan_summary"]
+      }
+    },
+    {
+      "label": "low-confidence-triggers-challenger",
+      "description": "A 2-phase plan with confidence 0.7 should trigger Challenger review",
+      "input": {
+        "plan": {
+          "phase_count": 2,
+          "confidence": 0.7,
+          "has_destructive_ops": false
+        }
+      },
+      "expected_behavior": {
+        "challenger_invoked": true,
+        "trigger_reason": "confidence < 0.9"
+      }
+    },
+    {
+      "label": "simple-plan-skips-challenger",
+      "description": "A 2-phase plan with high confidence should skip Challenger",
+      "input": {
+        "plan": {
+          "phase_count": 2,
+          "confidence": 0.95,
+          "has_destructive_ops": false
+        }
+      },
+      "expected_behavior": {
+        "challenger_invoked": false,
+        "proceeds_to": "ACTING"
+      }
+    },
+    {
+      "label": "destructive-plan-triggers-challenger",
+      "description": "A 2-phase plan with destructive operations should trigger Challenger review",
+      "input": {
+        "plan": {
+          "phase_count": 2,
+          "confidence": 0.95,
+          "has_destructive_ops": true
+        }
+      },
+      "expected_behavior": {
+        "challenger_invoked": true,
+        "trigger_reason": "destructive_scope"
+      }
+    },
+    {
+      "label": "challenger-rejected-escalates",
+      "description": "When Challenger returns REJECTED, Atlas must escalate to user",
+      "input": {
+        "challenger_response": {
+          "status": "REJECTED",
+          "failure_classification": "needs_replan",
+          "findings": [{"severity": "CRITICAL", "category": "security"}]
+        }
+      },
+      "expected_behavior": {
+        "state_transition": "WAITING_APPROVAL",
+        "user_sees_findings": true
+      }
+    },
+    {
+      "label": "challenger-needs-revision-routes-to-prometheus",
+      "description": "When Challenger returns NEEDS_REVISION, Atlas routes back to Prometheus",
+      "input": {
+        "challenger_response": {
+          "status": "NEEDS_REVISION",
+          "failure_classification": "fixable",
+          "findings": [{"severity": "MAJOR", "category": "test_coverage"}]
+        }
+      },
+      "expected_behavior": {
+        "routes_to": "Prometheus",
+        "max_iterations": 2
+      }
+    }
+  ],
+  "assertions": [
+    "Challenger is invoked for plans with 3+ phases",
+    "Challenger is invoked for plans with confidence < 0.9",
+    "Challenger is invoked for plans with destructive operations",
+    "Challenger is NOT invoked for simple plans (< 3 phases, high confidence, non-destructive)",
+    "Atlas passes plan_path (not inline plan) to Challenger",
+    "REJECTED status transitions to WAITING_APPROVAL",
+    "NEEDS_REVISION routes back to Prometheus with max 2 iterations",
+    "ABSTAIN from Challenger does not block pipeline"
+  ]
+}

@@ -42,7 +42,7 @@
       "type": "array",
       "items": {
         "type": "string",
-        "enum": ["pii_checked", "destructive_action_checked", "scope_checked", "policy_checked"]
+        "enum": ["pii_checked", "destructive_action_checked", "scope_checked", "policy_checked", "todo_verified"]
       }
     },
     "next_action": { "type": "string", "minLength": 3 }

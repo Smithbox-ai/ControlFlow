@@ -1,0 +1,91 @@
+{
+  "scenario_id": "clarification-schema-fragment",
+  "title": "Shared Clarification Request Schema Validation",
+  "description": "Validates the standalone clarification-request.schema.json as a reusable contract fragment for NEEDS_INPUT payloads",
+  "agent": "Atlas",
+  "category": "contract",
+  "inputs": [
+    {
+      "label": "valid-clarification-request",
+      "description": "A well-formed clarification request with 2 options, impact analysis, and recommendation",
+      "input": {
+        "options": [
+          {
+            "id": "option-a",
+            "description": "Use inline styles for the component",
+            "pros": ["Simple implementation", "No build step changes"],
+            "cons": ["Harder to maintain", "No theme support"],
+            "affected_files": ["src/components/Button.tsx"]
+          },
+          {
+            "id": "option-b",
+            "description": "Use CSS modules for the component",
+            "pros": ["Scoped styles", "Theme support", "Better maintainability"],
+            "cons": ["Requires build config update"],
+            "affected_files": ["src/components/Button.tsx", "src/components/Button.module.css", "webpack.config.js"]
+          }
+        ],
+        "impact_analysis": "This decision affects the styling architecture for all future components in the project.",
+        "recommended_option": "option-b",
+        "recommended_option_rationale": "CSS modules provide better long-term maintainability and theme support with minimal build config overhead."
+      },
+      "expected_validation": "PASS"
+    },
+    {
+      "label": "invalid-single-option",
+      "description": "A clarification request with only 1 option should fail validation (minItems: 2)",
+      "input": {
+        "options": [
+          {
+            "id": "only-option",
+            "description": "The only available approach"
+          }
+        ],
+        "impact_analysis": "No real choice to make.",
+        "recommended_option": "only-option",
+        "recommended_option_rationale": "It is the only option."
+      },
+      "expected_validation": "FAIL",
+      "expected_failure_reason": "options array has fewer than 2 items"
+    },
+    {
+      "label": "invalid-missing-impact",
+      "description": "A clarification request missing impact_analysis should fail validation",
+      "input": {
+        "options": [
+          { "id": "a", "description": "Option A" },
+          { "id": "b", "description": "Option B" }
+        ],
+        "recommended_option": "a",
+        "recommended_option_rationale": "Option A is simpler."
+      },
+      "expected_validation": "FAIL",
+      "expected_failure_reason": "Missing required field: impact_analysis"
+    },
+    {
+      "label": "invalid-four-options",
+      "description": "A clarification request with 4 options should fail validation (maxItems: 3)",
+      "input": {
+        "options": [
+          { "id": "a", "description": "Option A" },
+          { "id": "b", "description": "Option B" },
+          { "id": "c", "description": "Option C" },
+          { "id": "d", "description": "Option D" }
+        ],
+        "impact_analysis": "Too many choices.",
+        "recommended_option": "a",
+        "recommended_option_rationale": "Option A is the best."
+      },
+      "expected_validation": "FAIL",
+      "expected_failure_reason": "options array has more than 3 items"
+    }
+  ],
+  "assertions": [
+    "Valid clarification requests pass schema validation against schemas/clarification-request.schema.json",
+    "Options array must have 2-3 items",
+    "Each option must have id and description",
+    "impact_analysis, recommended_option, and recommended_option_rationale are all required",
+    "Schema is self-contained and can be referenced via $ref from execution report schemas",
+    "Oracle and Explorer schemas are intentionally excluded from clarification_request adoption (read-only agents without NEEDS_INPUT status)"
+  ]
+}

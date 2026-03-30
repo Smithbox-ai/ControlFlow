@@ -8,7 +8,8 @@ A multi-agent orchestration system for VS Code Copilot. This fork replaces vibe-
 
 - **Context Conservation** — agents summarize and compress context at delegation boundaries to stay within token limits.
 - **Parallel Agent Execution** — Atlas dispatches independent subagents in parallel when tasks have no dependencies, using wave-based execution from Prometheus plans.
-- **Structured Planning** — Prometheus produces phased plans with explicit task IDs, dependencies, wave assignments, inter-phase contracts, and failure expectations before any code is written.
+- **Structured Planning** — Prometheus produces phased plans with explicit task IDs, dependencies, wave assignments, inter-phase contracts, failure expectations, and Mermaid architecture diagrams (mandatory for 3+ phase plans).
+- **Adversarial Plan Review** — Challenger audits complex plans for architecture defects, security gaps, and dependency conflicts before implementation begins.
 - **Deterministic Handoffs** — every subagent returns a structured JSON report; Atlas validates schema compliance before accepting results.
 - **Reliability Gates** — PreFlect (pre-execution review), human approval gates for destructive operations, and explicit abstention when confidence is low.
 - **TDD Integration** — Code-Review and implementation agents enforce test-first methodology.
@@ -29,18 +30,21 @@ A multi-agent orchestration system for VS Code Copilot. This fork replaces vibe-
 
 | Agent | File | Model | Role |
 |-------|------|-------|------|
-| **Oracle** | `Oracle-subagent.agent.md` | GPT-5.3-Codex | Evidence-first research |
-| **Explorer** | `Explorer-subagent.agent.md` | Gemini 3 Flash | Read-only codebase discovery |
-| **Code-Review** | `Code-Review-subagent.agent.md` | GPT-5.3-Codex | Verification, safety gate reviewer |
+| **Oracle** | `Oracle-subagent.agent.md` | GPT-5.4 | Evidence-first research |
+| **Explorer** | `Explorer-subagent.agent.md` | GPT-5.4 mini | Read-only codebase discovery |
+| **Code-Review** | `Code-Review-subagent.agent.md` | GPT-5.4 | Verification, safety gate reviewer |
+| **Challenger** | `Challenger-subagent.agent.md` | GPT-5.4 | Adversarial plan auditor |
 | **Sisyphus** | `Sisyphus-subagent.agent.md` | Claude Sonnet 4.6 | Implementation with execution reports |
 | **Frontend-Engineer** | `Frontend-Engineer-subagent.agent.md` | Gemini 3.1 Pro | Frontend implementation with execution reports |
 | **DevOps** | `DevOps-subagent.agent.md` | Claude Sonnet 4.6 | CI/CD, containers, infrastructure deployment |
 | **DocWriter** | `DocWriter-subagent.agent.md` | Gemini 3.1 Pro | Documentation, diagrams, code-doc parity |
-| **BrowserTester** | `BrowserTester-subagent.agent.md` | Gemini 3 Flash | E2E browser testing, accessibility audits |
+| **BrowserTester** | `BrowserTester-subagent.agent.md` | GPT-5.4 mini | E2E browser testing, accessibility audits |
 
 ### Clarification & Tool Routing
 
-Prometheus and Atlas own user-facing clarification via `askQuestions`. Acting subagents (Sisyphus, Frontend-Engineer, DevOps, DocWriter, BrowserTester) return structured `NEEDS_INPUT` with `clarification_request` when they encounter ambiguity. Read-only agents (Oracle, Explorer, Code-Review) return findings, verdicts, or `ABSTAIN` — they do not interact with the user directly.
+Prometheus and Atlas own user-facing clarification via `askQuestions`. Acting subagents (Sisyphus, Frontend-Engineer, DevOps, DocWriter, BrowserTester) return structured `NEEDS_INPUT` with `clarification_request` when they encounter ambiguity. Read-only agents (Oracle, Explorer, Code-Review, Challenger) return findings, verdicts, or `ABSTAIN` — they do not interact with the user directly.
+
+The `clarification_request` payload across all 5 acting agent schemas is governed by a shared contract: `schemas/clarification-request.schema.json`. Oracle and Explorer do not include `clarification_request` — they are read-only agents whose status enums do not include `NEEDS_INPUT`.
 
 Each agent has role-specific routing rules for external tools. See `docs/agent-engineering/TOOL-ROUTING.md` and `docs/agent-engineering/CLARIFICATION-POLICY.md`.
 
@@ -55,6 +59,7 @@ Contracts are aligned to four dimensions:
 5. **Failure Taxonomy** — all agents classify failures as `transient`, `fixable`, `needs_replan`, or `escalate` for automated routing by Atlas.
 6. **Clarification Reliability** — agents with `askQuestions` use it proactively for enumerated ambiguity classes; agents without it return structured `NEEDS_INPUT` for conductor routing.
 7. **Tool Routing** — deterministic rules for local search vs external fetch vs Context7/MCP, with no phantom grants.
+8. **Retry Reliability** — silent failure detection, retry budgets per phase, per-wave throttling after rate-limit signals, and escalation thresholds for repeated failures.
 
 Reference: `docs/agent-engineering/RELIABILITY-GATES.md`.
 
@@ -80,8 +85,10 @@ For fast codebase discovery, invoke Explorer. It performs parallel searches and 
 
 ```
 User Request
-    └── Prometheus (creates phased plan with waves)
+    └── Prometheus (creates phased plan with waves and Mermaid diagrams)
          └── Atlas (orchestrates wave-based execution)
+              ├── Plan Review Gate (conditional)
+              │    └── Challenger (adversarial plan audit for 3+ phase / low-confidence / high-risk plans)
               ├── Wave 1: Foundation
               │    └── Explorer / Oracle (discovery & research)
               ├── Wave 2: Implementation (parallel)
@@ -189,6 +196,8 @@ Every custom agent should include:
 - `schemas/devops.execution-report.schema.json`
 - `schemas/docwriter.execution-report.schema.json`
 - `schemas/browser-tester.execution-report.schema.json`
+- `schemas/challenger.plan-audit.schema.json`
+- `schemas/clarification-request.schema.json`
 
 **Eval fixtures:**
 - `evals/README.md`
@@ -206,10 +215,18 @@ Every custom agent should include:
 - `evals/scenarios/clarification-askquestions.json`
 - `evals/scenarios/skills-mcp-routing.json`
 - `evals/scenarios/agent-triggering-quality.json`
+- `evals/scenarios/challenger-contract.json`
+- `evals/scenarios/challenger-adversarial-detection.json`
+- `evals/scenarios/atlas-challenger-integration.json`
+- `evals/scenarios/atlas-retry-backoff.json`
+- `evals/scenarios/challenger-replan-loop.json`
+- `evals/scenarios/prometheus-mermaid-output.json`
+- `evals/scenarios/clarification-schema-fragment.json`
+- `evals/scenarios/needs-input-routing.json`
 
 ## Migration Status
 
-P.A.R.T migration complete. Full compliance revision applied. All 10 agents now have:
+P.A.R.T migration complete. Full compliance revision applied. All 11 agents now have:
 - P.A.R.T instruction architecture (section order compliant)
 - JSON Schema 2020-12 output contracts
 - Explicit abstention paths for low confidence

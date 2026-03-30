@@ -1,0 +1,92 @@
+{
+  "scenario_id": "challenger-adversarial-detection",
+  "title": "Challenger Adversarial Detection",
+  "description": "Validates Challenger can detect deliberately planted flaws in a multi-phase plan",
+  "agent": "Challenger-subagent",
+  "category": "adversarial",
+  "inputs": [
+    {
+      "label": "circular-dependency",
+      "description": "Plan where Phase 3 depends on Phase 5 and Phase 5 depends on Phase 3",
+      "planted_flaws": ["circular_dependency"],
+      "input": {
+        "plan_path": "plans/test-circular-deps.md",
+        "plan_summary": "5-phase plan with hidden circular dependency between Phase 3 and Phase 5",
+        "focus_areas": ["architecture"]
+      },
+      "expected_detection": {
+        "must_find_category": "dependency_conflict",
+        "minimum_severity": "CRITICAL",
+        "status_must_not_be": "APPROVED"
+      }
+    },
+    {
+      "label": "file-collision-in-wave",
+      "description": "Two phases in the same wave both modify Atlas.agent.md",
+      "planted_flaws": ["parallel_file_collision"],
+      "input": {
+        "plan_path": "plans/test-file-collision.md",
+        "plan_summary": "4-phase plan where Phase 1 (Wave 1) and Phase 2 (Wave 1) both modify Atlas.agent.md",
+        "focus_areas": ["dependency_conflict"]
+      },
+      "expected_detection": {
+        "must_find_category": "dependency_conflict",
+        "minimum_severity": "MAJOR",
+        "status_must_not_be": "APPROVED"
+      }
+    },
+    {
+      "label": "missing-tests",
+      "description": "Phase 4 creates new schema but declares no tests or acceptance criteria",
+      "planted_flaws": ["missing_test_coverage"],
+      "input": {
+        "plan_path": "plans/test-no-tests.md",
+        "plan_summary": "3-phase plan where Phase 2 creates a new JSON schema with no validation tests",
+        "focus_areas": ["test_coverage"]
+      },
+      "expected_detection": {
+        "must_find_category": "test_coverage",
+        "minimum_severity": "MAJOR",
+        "status_must_not_be": "APPROVED"
+      }
+    },
+    {
+      "label": "destructive-without-rollback",
+      "description": "Plan includes bulk schema rewrite with no rollback strategy",
+      "planted_flaws": ["missing_rollback"],
+      "input": {
+        "plan_path": "plans/test-no-rollback.md",
+        "plan_summary": "6-phase plan that rewrites 7 JSON schemas in one phase with no incremental migration",
+        "focus_areas": ["destructive_risk"]
+      },
+      "expected_detection": {
+        "must_find_category": "destructive_risk",
+        "minimum_severity": "MAJOR",
+        "status_must_not_be": "APPROVED"
+      }
+    },
+    {
+      "label": "security-untrusted-input",
+      "description": "Plan parses user-supplied binary files without input validation step",
+      "planted_flaws": ["security_gap"],
+      "input": {
+        "plan_path": "plans/test-security-gap.md",
+        "plan_summary": "4-phase plan that adds binary file parsing without input validation or bounds checking",
+        "focus_areas": ["security"]
+      },
+      "expected_detection": {
+        "must_find_category": "security",
+        "minimum_severity": "CRITICAL",
+        "status_must_not_be": "APPROVED"
+      }
+    }
+  ],
+  "assertions": [
+    "Challenger detects ALL planted flaws",
+    "Each planted flaw appears in findings with correct category",
+    "Severity is at least the expected minimum",
+    "Status is never APPROVED when CRITICAL flaws are present",
+    "Each finding has a non-empty suggested_fix",
+    "Output conforms to schemas/challenger.plan-audit.schema.json"
+  ]
+}

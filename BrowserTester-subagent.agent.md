@@ -1,7 +1,7 @@
 ---
 description: 'Runs E2E browser tests, verifies UI/UX, and checks accessibility compliance'
 tools: ['search', 'usages', 'problems', 'changes', 'testFailure', 'edit', 'fetch']
-model: Gemini 3 Flash (Preview) (copilot)
+model: GPT-5.4 mini (copilot)
 ---
 You are BrowserTester-subagent, an E2E browser testing and UI verification agent.
 

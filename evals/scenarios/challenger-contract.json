@@ -1,0 +1,74 @@
+{
+  "scenario_id": "challenger-contract",
+  "title": "Challenger Schema Compliance",
+  "description": "Validates that Challenger-subagent produces output conforming to challenger.plan-audit.schema.json",
+  "agent": "Challenger-subagent",
+  "category": "contract",
+  "inputs": [
+    {
+      "label": "valid-approved-output",
+      "description": "A well-formed plan with no critical issues should produce APPROVED status",
+      "input": {
+        "plan_path": "plans/sample-clean-plan.md",
+        "plan_summary": "Simple 2-phase plan with clear acceptance criteria, tests, and no file collisions",
+        "focus_areas": []
+      },
+      "expected_output": {
+        "schema_version": "1.0.0",
+        "agent": "Challenger-subagent",
+        "status": "APPROVED",
+        "confidence_min": 0.8,
+        "required_fields": ["plan_reference", "findings", "risk_summary", "recommendation"],
+        "risk_summary_constraints": {
+          "critical_count": 0,
+          "overall_risk": ["LOW", "MEDIUM"]
+        }
+      }
+    },
+    {
+      "label": "valid-needs-revision-output",
+      "description": "A plan with fixable issues should produce NEEDS_REVISION with failure_classification",
+      "input": {
+        "plan_path": "plans/sample-flawed-plan.md",
+        "plan_summary": "5-phase plan with missing tests in Phase 3 and overlapping file edits in Wave 2",
+        "focus_areas": ["test_coverage", "dependency_conflict"]
+      },
+      "expected_output": {
+        "schema_version": "1.0.0",
+        "agent": "Challenger-subagent",
+        "status": "NEEDS_REVISION",
+        "required_fields": ["findings", "risk_summary", "recommendation", "failure_classification"],
+        "findings_min_count": 1,
+        "failure_classification_values": ["fixable", "needs_replan"]
+      }
+    },
+    {
+      "label": "valid-abstain-output",
+      "description": "When plan artifact is inaccessible, Challenger must ABSTAIN",
+      "input": {
+        "plan_path": "plans/nonexistent-plan.md",
+        "plan_summary": "",
+        "focus_areas": []
+      },
+      "expected_output": {
+        "schema_version": "1.0.0",
+        "agent": "Challenger-subagent",
+        "status": "ABSTAIN",
+        "abstain_constraints": {
+          "is_abstaining": true,
+          "reasons_min_count": 1
+        }
+      }
+    }
+  ],
+  "assertions": [
+    "Output matches schemas/challenger.plan-audit.schema.json",
+    "status is one of: APPROVED, NEEDS_REVISION, REJECTED, ABSTAIN",
+    "failure_classification is present when status is NEEDS_REVISION or REJECTED",
+    "abstain.is_abstaining is true when status is ABSTAIN",
+    "abstain.reasons has at least one entry when is_abstaining is true",
+    "findings array contains objects with severity, category, description, affected_phases",
+    "risk_summary contains critical_count, major_count, minor_count, overall_risk",
+    "plan_reference contains plan_path, phase_count, total_waves"
+  ]
+}

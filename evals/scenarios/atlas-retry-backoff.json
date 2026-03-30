@@ -1,0 +1,93 @@
+{
+  "scenario_id": "atlas-retry-backoff",
+  "title": "Atlas Retry and Backoff Policy",
+  "description": "Validates Atlas retry budget, throttling, and escalation behavior under failure conditions",
+  "agent": "Atlas",
+  "category": "reliability",
+  "inputs": [
+    {
+      "label": "transient-failure-retries",
+      "description": "A transient failure should be retried up to 3 times",
+      "input": {
+        "subagent_response": {
+          "status": "FAILED",
+          "failure_classification": "transient",
+          "reason": "Rate limit exceeded"
+        },
+        "retry_attempt": 1
+      },
+      "expected_behavior": {
+        "action": "retry",
+        "max_retries": 3,
+        "includes_retry_attempt_counter": true
+      }
+    },
+    {
+      "label": "retry-budget-exhaustion",
+      "description": "After 5 cumulative retries on a phase, escalate regardless of classification",
+      "input": {
+        "phase_retry_count": 5,
+        "subagent_response": {
+          "status": "FAILED",
+          "failure_classification": "transient"
+        }
+      },
+      "expected_behavior": {
+        "action": "escalate",
+        "reason": "retry_budget_exhausted",
+        "state_transition": "WAITING_APPROVAL"
+      }
+    },
+    {
+      "label": "wave-throttling",
+      "description": "When 2+ subagents in a wave return transient failures, reduce parallelism by 50%",
+      "input": {
+        "wave_failures": [
+          {"agent": "Sisyphus-subagent", "failure_classification": "transient"},
+          {"agent": "Frontend-Engineer-subagent", "failure_classification": "transient"}
+        ],
+        "current_parallelism": 4
+      },
+      "expected_behavior": {
+        "new_parallelism": 2,
+        "throttle_reason": "2+ transient failures in wave"
+      }
+    },
+    {
+      "label": "same-classification-escalation",
+      "description": "3 failures with same classification on same phase triggers escalation",
+      "input": {
+        "consecutive_failures": [
+          {"classification": "fixable", "attempt": 1},
+          {"classification": "fixable", "attempt": 2},
+          {"classification": "fixable", "attempt": 3}
+        ]
+      },
+      "expected_behavior": {
+        "action": "escalate",
+        "reason": "same_classification_threshold",
+        "state_transition": "WAITING_APPROVAL"
+      }
+    },
+    {
+      "label": "silent-failure-detection",
+      "description": "Empty subagent response must not be treated as success",
+      "input": {
+        "subagent_response": null
+      },
+      "expected_behavior": {
+        "action": "retry",
+        "treated_as_success": false,
+        "logged_as": "silent_failure"
+      }
+    }
+  ],
+  "assertions": [
+    "Transient failures are retried up to 3 times with retry_attempt counter",
+    "Phase retry budget of 5 is enforced regardless of classification",
+    "2+ transient failures in a wave reduce parallelism by 50% for subsequent waves",
+    "3 consecutive same-classification failures escalate to user",
+    "Empty/null subagent responses are detected and retried, never treated as success",
+    "All escalations transition to WAITING_APPROVAL with accumulated evidence"
+  ]
+}

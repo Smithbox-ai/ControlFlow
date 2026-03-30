@@ -28,7 +28,12 @@ Run deterministic orchestration for: `Research -> Design -> Planning -> Implemen
 - If confidence is below threshold or required evidence is missing, return `ABSTAIN`.
 
 ### State Machine
-- `PLANNING` -> `WAITING_APPROVAL` -> `ACTING` -> `REVIEWING` -> `WAITING_APPROVAL` -> (`ACTING` next phase OR `COMPLETE`).
+- `PLANNING` -> `WAITING_APPROVAL` -> `PLAN_REVIEW` -> `ACTING` -> `REVIEWING` -> `WAITING_APPROVAL` -> (`ACTING` next phase OR `COMPLETE`).
+- `PLAN_REVIEW` is the adversarial audit gate: after user approves the plan and before implementation begins, delegate to Challenger for complex plans.
+- `PLAN_REVIEW` is conditional — triggered only for plans with 3+ phases, confidence below 0.9, or high-risk/destructive scope. Simple plans skip directly to `ACTING`.
+- If Challenger returns `NEEDS_REVISION`: route back to Prometheus for targeted replan (max 2 iterations, then escalate to user).
+- If Challenger returns `REJECTED`: transition to `WAITING_APPROVAL` with Challenger findings for user decision.
+- If Challenger returns `APPROVED` or is skipped: transition to `ACTING`.
 - Any high-risk action transitions to `WAITING_APPROVAL` via `HIGH_RISK_APPROVAL_GATE`.
 
 ### Planning vs Acting Split (Hard Rule)
@@ -142,16 +147,27 @@ Reference: `docs/agent-engineering/TOOL-ROUTING.md`
    - Require structured plan from planner contract.
    - Pause for user approval.
 
-4. **Implementation Loop (Per Phase)**
+4. **Plan Review Gate (Conditional)**
+   - Trigger conditions: plan has 3+ phases, OR plan confidence < 0.9, OR scope includes destructive/high-risk operations.
+   - If triggered: delegate plan artifact path to Challenger-subagent. Challenger reads the persisted plan file, not an inline prompt summary.
+   - If Challenger returns `APPROVED`: proceed to Implementation Loop.
+   - If Challenger returns `NEEDS_REVISION` with `fixable`: route findings back to Prometheus for targeted revision (max 2 Challenger-Prometheus iterations).
+   - If Challenger returns `NEEDS_REVISION` with `needs_replan`: route to Prometheus for full phase redesign of affected phases.
+   - If Challenger returns `REJECTED`: transition to `WAITING_APPROVAL`, present Challenger findings to user for decision.
+   - If Challenger returns `ABSTAIN`: log the abstention and proceed to Implementation Loop (do not block on audit uncertainty).
+   - If trigger conditions are not met: skip directly to Implementation Loop.
+
+5. **Implementation Loop (Per Phase)**
+   - **Pre-Phase Gate (phases after Phase 1):** Before starting any phase after Phase 1, verify the previous phase's todo item is marked completed. If it is not, mark it via the `#todos` tool before proceeding.
    - Run PreFlect gate.
    - Delegate implementation.
    - Delegate review.
    - Verification Build Gate: after the implementation subagent reports completion, verify build success. Either confirm the execution report includes `build.state: PASS`, or if build evidence is absent or ambiguous, run the project's build command directly. If the build fails, route through Failure Classification Handling before proceeding.
    - If review status is not `APPROVED`, loop with targeted revision context.
-   - Pause for user commit/continue approval.
    - Mark the completed phase's todo item as completed using the `#todos` tool.
+   - Pause for user commit/continue approval.
 
-5. **Completion Gate**
+6. **Completion Gate**
    - Run cross-phase consistency review.
    - Verify all phase todo items are marked completed. If any are not, reconcile them before producing the completion summary.
    - Produce completion summary.
@@ -162,6 +178,7 @@ Before marking any phase as complete, Atlas MUST verify:
 2. Build passes — evidence from the subagent report (`build.state: PASS`) or an independent run.
 3. Lint/problems are clean — verify via `read/problems` or equivalent validation evidence.
 4. Review status is `APPROVED`.
+5. Phase todo item is marked as completed via the `#todos` tool.
 
 If any check fails, the phase is not complete and must route through Failure Classification Handling.
 
@@ -191,6 +208,7 @@ When delegating, specify the subagent and its expected deliverable:
 - **DocWriter** — Documentation: return execution report with parity verification and coverage percentage.
 - **BrowserTester** — E2E Testing: return execution report with health-first gate, scenario results, and accessibility audit.
 - **Code-Review** — Verification: return schema-compliant verdict with gate results.
+- **Challenger** — Plan audit: return schema-compliant adversarial review with findings, risk summary, and recommendation. Triggered conditionally for complex plans (3+ phases, confidence < 0.9, or high-risk scope).
 
 Each delegation must include: scope description, expected output format, and relevant context references.
 
@@ -213,6 +231,19 @@ When a subagent returns a `failure_classification`, Atlas routes automatically:
 | `escalate` | STOP — transition to `WAITING_APPROVAL`, present to user | 0 |
 
 If retry limit is exhausted, escalate to user with accumulated failure evidence.
+
+### Retry Reliability Policy
+To prevent silent failures and hung pipelines during parallel execution:
+
+1. **Silent Failure Detection**: If a subagent call returns an empty response, a timeout, or a rate-limit error (HTTP 429), Atlas MUST NOT proceed to the next pipeline step. Log the failure and enter retry handling.
+
+2. **Retry Budget Per Phase**: Each phase has a cumulative retry budget of 5 attempts across all failure classifications. Once exhausted, escalate to user regardless of classification.
+
+3. **Per-Wave Throttling**: If 2 or more subagents in the same wave return `transient` failures, reduce parallelism for subsequent waves by 50% (rounded up). This prevents cascading rate-limit exhaustion.
+
+4. **Exponential Backoff Signaling**: When retrying after a `transient` failure, include `retry_attempt` count in the delegation payload so the subagent can adjust its tool call frequency.
+
+5. **Escalation Threshold**: If the same phase fails 3 times with the same `failure_classification`, escalate to user even if the individual classification would allow more retries.
 
 ### NEEDS_INPUT Routing (Mandatory)
 When a subagent returns `status: "NEEDS_INPUT"` with a `clarification_request` object:
@@ -338,4 +369,5 @@ Rules:
 - No fabrication of evidence.
 - No silent destructive action.
 - No phase may be marked complete without verified build evidence. Accepting a subagent completion claim without checking build and test evidence is non-compliant.
+- No phase transition may occur while the completed phase's todo item remains unmarked. Todo marking via the `#todos` tool is a blocking prerequisite before advancing to the next phase or wave.
 - If uncertain and cannot verify safely: `ABSTAIN`.
