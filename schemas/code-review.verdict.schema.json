@@ -17,7 +17,7 @@
     "next_steps"
   ],
   "properties": {
-    "schema_version": { "type": "string", "const": "1.0.0" },
+    "schema_version": { "type": "string", "const": "1.1.0" },
     "agent": { "type": "string", "const": "Code-Review-subagent" },
     "status": {
       "type": "string",
@@ -48,7 +48,27 @@
           "category": {
             "type": "string",
             "enum": ["correctness", "security", "tests", "maintainability", "consistency", "safety_gate"]
+          },
+          "validation_status": {
+            "type": "string",
+            "enum": ["confirmed", "rejected", "unvalidated"],
+            "description": "MUST be populated for every CRITICAL or MAJOR issue. confirmed: reviewer verified the issue exists and is reproducible. rejected: issue was a false positive after investigation. unvalidated: reviewer did not attempt verification. Atlas blocks only on issues with validation_status = 'confirmed'."
           }
+        }
+      }
+    },
+    "validated_blocking_issues": {
+      "type": "array",
+      "description": "Subset of issues that are both CRITICAL or MAJOR severity AND have validation_status = 'confirmed'. Atlas uses this array — not the raw issues array — as the authoritative list of blockers. An empty array means no confirmed blockers even if unvalidated issues exist.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["severity", "description", "file"],
+        "properties": {
+          "severity": { "type": "string", "enum": ["CRITICAL", "MAJOR"] },
+          "description": { "type": "string" },
+          "file": { "type": "string" },
+          "line": { "type": "integer", "minimum": 1 }
         }
       }
     },

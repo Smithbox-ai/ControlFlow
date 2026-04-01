@@ -28,13 +28,6 @@ Execute scoped infrastructure, CI/CD, and container operations from the conducto
 - Status enum: `COMPLETE | NEEDS_INPUT | FAILED | ABSTAIN`.
 - If blocked by missing environment, permissions, or context, return `NEEDS_INPUT` or `ABSTAIN` with reasons.
 
-### Failure Classification
-When status is `FAILED` or `NEEDS_INPUT`, include `failure_classification`:
-- `transient` — Network timeout, temporary service unavailability, rate limiting.
-- `fixable` — Configuration typo, missing env variable, port conflict.
-- `needs_replan` — Architecture mismatch, missing infrastructure dependency.
-- `escalate` — Security violation, data loss risk, credential exposure.
-
 ### Planning vs Acting Split
 - This agent executes only acting tasks.
 - If plan ambiguity is detected, do not replan globally; request targeted clarification.
@@ -94,16 +87,13 @@ When status would be `FAILED`:
   - blockers and dependency additions
   - rollback actions taken
 
-### Continuity
-Use `plans/project-context.md` when available as stable reference for conventions.
-
 ## Resources
 
 - `docs/agent-engineering/PART-SPEC.md`
 - `docs/agent-engineering/RELIABILITY-GATES.md`
+- `docs/agent-engineering/MIGRATION-CORE-FIRST.md`
 - `schemas/devops.execution-report.schema.json`
 - `plans/project-context.md` (if present)
-- `docs/agent-engineering/CLARIFICATION-POLICY.md`
 - `docs/agent-engineering/TOOL-ROUTING.md`
 
 ## Tools
@@ -154,12 +144,4 @@ Return a schema-compliant execution report (`schemas/devops.execution-report.sch
 - If uncertain and cannot verify safely: `ABSTAIN`.
 
 ### Uncertainty Protocol
-When the status would be `NEEDS_INPUT`, return a structured `clarification_request` in the execution report:
-1. **2–3 concrete options** with pros, cons, and affected files for each.
-2. **Impact analysis** — what changes if the wrong option is chosen.
-3. **Recommended option** with rationale.
-4. Do **not** proceed with any option. Atlas will present the options to the user via `askQuestions` and retry with the selection.
-
-This agent does not have `askQuestions` access. All user-facing clarification is centralized in Atlas.
-
-**Clarification role:** This agent returns `NEEDS_INPUT` with `clarification_request` to Atlas; it does not ask the user directly.
+Return `NEEDS_INPUT` with a structured `clarification_request` per `docs/agent-engineering/CLARIFICATION-POLICY.md`. Do not ask the user directly — all clarification is centralized in Atlas.

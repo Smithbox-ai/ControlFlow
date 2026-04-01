@@ -18,5 +18,61 @@
     "must_run_independent_build_if_ambiguous": true,
     "must_not_mark_phase_complete_on_failed_build": true,
     "must_verify_review_before_completion": true
+  },
+  "validated_blocking_issues_scenario": {
+    "description": "Atlas trusts only validated_blocking_issues from Code-Review, not raw unvalidated CRITICAL/MAJOR findings",
+    "input": {
+      "code_review_verdict": {
+        "status": "NEEDS_REVISION",
+        "issues": [
+          {
+            "severity": "CRITICAL",
+            "description": "Potential null dereference in auth handler",
+            "file": "src/auth.ts",
+            "validation_status": "unvalidated"
+          },
+          {
+            "severity": "MAJOR",
+            "description": "Missing error handling for 404 response",
+            "file": "src/api.ts",
+            "validation_status": "rejected"
+          }
+        ],
+        "validated_blocking_issues": []
+      }
+    },
+    "expected": {
+      "atlas_blocks_phase": false,
+      "reason": "validated_blocking_issues is empty — no confirmed blockers despite unvalidated CRITICAL finding",
+      "atlas_notes_unvalidated_issues": true,
+      "atlas_does_not_block_on_unvalidated": true
+    }
+  },
+  "validated_blocking_issues_scenario_positive": {
+    "description": "When validated_blocking_issues is non-empty, Atlas must block phase progression",
+    "input": {
+      "code_review_verdict": {
+        "status": "NEEDS_REVISION",
+        "issues": [
+          {
+            "severity": "CRITICAL",
+            "description": "SQL injection vulnerability in query builder",
+            "file": "src/db.ts",
+            "validation_status": "confirmed"
+          }
+        ],
+        "validated_blocking_issues": [
+          {
+            "severity": "CRITICAL",
+            "description": "SQL injection vulnerability in query builder",
+            "file": "src/db.ts"
+          }
+        ]
+      }
+    },
+    "expected": {
+      "atlas_blocks_phase": true,
+      "reason": "confirmed CRITICAL issue present in validated_blocking_issues"
+    }
   }
 }

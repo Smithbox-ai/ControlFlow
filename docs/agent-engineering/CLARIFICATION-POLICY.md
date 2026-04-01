@@ -67,3 +67,12 @@ Atlas will extract this and present to the user via `askQuestions`.
 
 ## Threshold Rule
 Clarification is mandatory ONLY when the ambiguity would **materially change the output** (different files modified, different architecture, different user-facing behavior). If all options lead to equivalent outcomes, make a reasonable assumption and proceed.
+
+## Subagent Clarification Handoff
+
+When a subagent's status would be `NEEDS_INPUT`, return a structured `clarification_request` in the execution report. Required fields:
+- `options`: 2–3 concrete options, each with pros, cons, and `affected_files`.
+- `impact_analysis`: what changes if the wrong option is chosen.
+- `recommended_option`: the agent’s recommendation with rationale.
+
+Atlas extracts this and calls `vscode/askQuestions`, then retries with the user’s selection. Full contract: `schemas/clarification-request.schema.json`. Do not attempt direct user interaction.

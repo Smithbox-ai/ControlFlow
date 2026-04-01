@@ -86,6 +86,6 @@
     "Each option must have id and description",
     "impact_analysis, recommended_option, and recommended_option_rationale are all required",
     "Schema is self-contained and can be referenced via $ref from execution report schemas",
-    "Oracle and Explorer schemas are intentionally excluded from clarification_request adoption (read-only agents without NEEDS_INPUT status)"
+    "Oracle and Scout schemas are intentionally excluded from clarification_request adoption (read-only agents without NEEDS_INPUT status)"
   ]
 }

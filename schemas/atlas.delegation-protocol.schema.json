@@ -12,7 +12,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "Explorer-subagent",
+        "Scout-subagent",
         "Oracle-subagent",
         "Prometheus",
         "Sisyphus-subagent",
@@ -24,7 +24,7 @@
         "Challenger-subagent"
       ],
       "properties": {
-        "Explorer-subagent": {
+        "Scout-subagent": {
           "type": "object",
           "additionalProperties": false,
           "required": ["scope_description"],

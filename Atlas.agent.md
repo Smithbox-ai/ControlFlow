@@ -80,9 +80,6 @@ When context budget approaches limit:
   - Pending approvals
 - Remove stale notes when superseded.
 
-### Continuity
-Use `plans/project-context.md` when present as stable reference for conventions.
-
 ### State Tracking
 Maintain awareness of current orchestration state at all times:
 - **Current State:** Which state machine node is active (`PLANNING`, `WAITING_APPROVAL`, `ACTING`, `REVIEWING`, `COMPLETE`).
@@ -101,7 +98,6 @@ Maintain awareness of current orchestration state at all times:
 
 - `docs/agent-engineering/PART-SPEC.md`
 - `docs/agent-engineering/RELIABILITY-GATES.md`
-- `docs/agent-engineering/MIGRATION-CORE-FIRST.md`
 - `schemas/atlas.gate-event.schema.json`
 - `schemas/code-review.verdict.schema.json`
 - `schemas/prometheus.plan.schema.json`
@@ -131,7 +127,7 @@ Maintain awareness of current orchestration state at all times:
 ### External Tool Routing
 Reference: `docs/agent-engineering/TOOL-ROUTING.md`
 
-- `web/fetch` and `web/githubRepo`: use for orchestration-level context when subagent research is insufficient. Prefer delegating deep research to Oracle or Explorer.
+- `web/fetch` and `web/githubRepo`: use for orchestration-level context when subagent research is insufficient. Prefer delegating deep research to Oracle or Scout.
 - `vscode/askQuestions`: use for mandatory clarification classes and NEEDS_INPUT routing from subagents.
 
 ## Execution Protocol
@@ -163,6 +159,7 @@ Reference: `docs/agent-engineering/TOOL-ROUTING.md`
    - Delegate implementation.
    - Delegate review.
    - Verification Build Gate: after the implementation subagent reports completion, verify build success. Either confirm the execution report includes `build.state: PASS`, or if build evidence is absent or ambiguous, run the project's build command directly. If the build fails, route through Failure Classification Handling before proceeding.
+   - Block only on `validated_blocking_issues` from Code-Review verdict — not on raw unvalidated CRITICAL/MAJOR findings. If `validated_blocking_issues` is empty, the phase may proceed even if unvalidated issues exist.
    - If review status is not `APPROVED`, loop with targeted revision context.
    - Mark the completed phase's todo item as completed using the `#todos` tool.
    - Pause for user commit/continue approval.
@@ -201,7 +198,7 @@ Violating a stopping rule is equivalent to skipping a gate.
 When delegating, specify the subagent and its expected deliverable:
 - **Prometheus** — Planning: produce a structured plan document.
 - **Oracle** — Research: return evidence-backed findings with citations and confidence levels.
-- **Explorer** — Discovery: return file maps, dependency graphs, usage patterns.
+- **Scout** — Discovery: return file maps, dependency graphs, usage patterns.
 - **Sisyphus** — Backend implementation: return execution report with changed files and test results.
 - **Frontend-Engineer** — UI implementation: return execution report with accessibility/responsive verification.
 - **DevOps** — Infrastructure: return execution report with health checks, rollback steps, and deployment details.

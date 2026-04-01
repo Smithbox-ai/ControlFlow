@@ -111,3 +111,15 @@ Acceptance gate:
 - No pipeline step proceeds after unhandled subagent failure.
 - Rate-limit scenarios are covered by throttling policy, not by infinite retry.
 - Retry budget exhaustion always escalates to user with accumulated failure evidence.
+
+## 8) Executability
+Goal: plans must be actionable by a cold-start executor without additional clarification.
+
+Required controls:
+- Every phase must specify concrete file paths, input/output contracts, and verification commands.
+- Plans are audited for cold-start executability by Challenger (executability_checklist in schema).
+- If a plan cannot be executed from the artifact alone, Challenger raises at minimum a MAJOR finding.
+
+Acceptance gate:
+- Challenger populates executability_checklist for the first 3 tasks of every audited plan.
+- Plans with any executability failure produce a MAJOR or CRITICAL finding — they do not silently pass.

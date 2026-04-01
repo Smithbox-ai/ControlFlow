@@ -7,7 +7,7 @@ P.A.R.T is mandatory for all core agents:
 - `Atlas.agent.md`
 - `Prometheus.agent.md`
 - `Oracle-subagent.agent.md`
-- `Explorer-subagent.agent.md`
+- `Scout-subagent.agent.md`
 - `Code-Review-subagent.agent.md`
 - `Challenger-subagent.agent.md`
 
@@ -51,6 +51,8 @@ Required content:
 - PreFlect policy:
   - Before acting, agent must compare intended plan against known failure patterns.
 
+**Shared policy rule:** Generic Continuity, Failure Classification enum, and NOTES.md baseline structure are defined in `.github/copilot-instructions.md` (workspace instructions). Agent files must include ONLY domain-specific Archive content: custom PreFlect risks, custom compaction rules, custom memory fields, and any unique protocols (e.g., Health-First Gate, State Tracking, Idempotency Mandate).
+
 ## 3) Resources
 Required content:
 - Domain references used by the agent (repo files, docs, schemas).
@@ -75,6 +77,8 @@ Required for agents with `askQuestions` or user-interaction tools:
 
 Required for agents WITHOUT user-interaction tools:
 - Explicit statement that clarification is delegated to the conductor via structured `NEEDS_INPUT` status.
+
+**Reference rule:** Clarification policy content (mandatory classes, trigger logic, format) belongs in `docs/agent-engineering/CLARIFICATION-POLICY.md`. Agent files must use short pointers to the canonical doc, not verbatim repetitions of policy content.
 
 ## 6) Tool Routing Rules (NEW)
 Required when agent has access to external knowledge tools (fetch, githubRepo, Context7/MCP):

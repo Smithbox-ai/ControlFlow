@@ -5,7 +5,7 @@ Core agents:
 - `Atlas.agent.md`
 - `Prometheus.agent.md`
 - `Oracle-subagent.agent.md`
-- `Explorer-subagent.agent.md`
+- `Scout-subagent.agent.md`
 - `Code-Review-subagent.agent.md`
 
 Implementation agents:

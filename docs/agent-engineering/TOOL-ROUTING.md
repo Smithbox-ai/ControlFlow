@@ -41,7 +41,7 @@ If a tool is listed in an agent's YAML frontmatter `tools:` array, the agent's b
 | Atlas | ✅ | ✅ | ❌ | Orchestration; delegates research |
 | Prometheus | ✅ | ✅ | ✅ | Planning; use Context7 for library docs |
 | Oracle | ✅ | ✅ | ❌ | Deep research; fetch for evidence |
-| Explorer | ❌ | ❌ | ❌ | Read-only local discovery |
+| Scout | ❌ | ❌ | ❌ | Read-only local discovery |
 | Code-Review | ❌ | ❌ | ❌ | Verification only |
 | Challenger | ❌ | ❌ | ❌ | Read-only plan audit; local codebase cross-reference only |
 | Sisyphus | ✅ | ✅ | ❌ | Implementation; fetch for API reference |

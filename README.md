@@ -31,7 +31,7 @@ A multi-agent orchestration system for VS Code Copilot. This fork replaces vibe-
 | Agent | File | Model | Role |
 |-------|------|-------|------|
 | **Oracle** | `Oracle-subagent.agent.md` | GPT-5.4 | Evidence-first research |
-| **Explorer** | `Explorer-subagent.agent.md` | GPT-5.4 mini | Read-only codebase discovery |
+| **Scout** | `Scout-subagent.agent.md` | GPT-5.4 mini | Read-only codebase discovery |
 | **Code-Review** | `Code-Review-subagent.agent.md` | GPT-5.4 | Verification, safety gate reviewer |
 | **Challenger** | `Challenger-subagent.agent.md` | GPT-5.4 | Adversarial plan auditor |
 | **Sisyphus** | `Sisyphus-subagent.agent.md` | Claude Sonnet 4.6 | Implementation with execution reports |
@@ -42,9 +42,9 @@ A multi-agent orchestration system for VS Code Copilot. This fork replaces vibe-
 
 ### Clarification & Tool Routing
 
-Prometheus and Atlas own user-facing clarification via `askQuestions`. Acting subagents (Sisyphus, Frontend-Engineer, DevOps, DocWriter, BrowserTester) return structured `NEEDS_INPUT` with `clarification_request` when they encounter ambiguity. Read-only agents (Oracle, Explorer, Code-Review, Challenger) return findings, verdicts, or `ABSTAIN` — they do not interact with the user directly.
+Prometheus and Atlas own user-facing clarification via `askQuestions`. Acting subagents (Sisyphus, Frontend-Engineer, DevOps, DocWriter, BrowserTester) return structured `NEEDS_INPUT` with `clarification_request` when they encounter ambiguity. Read-only agents (Oracle, Scout, Code-Review, Challenger) return findings, verdicts, or `ABSTAIN` — they do not interact with the user directly.
 
-The `clarification_request` payload across all 5 acting agent schemas is governed by a shared contract: `schemas/clarification-request.schema.json`. Oracle and Explorer do not include `clarification_request` — they are read-only agents whose status enums do not include `NEEDS_INPUT`.
+The `clarification_request` payload across all 5 acting agent schemas is governed by a shared contract: `schemas/clarification-request.schema.json`. Oracle and Scout do not include `clarification_request` — they are read-only agents whose status enums do not include `NEEDS_INPUT`.
 
 Each agent has role-specific routing rules for external tools. See `docs/agent-engineering/TOOL-ROUTING.md` and `docs/agent-engineering/CLARIFICATION-POLICY.md`.
 
@@ -77,9 +77,9 @@ Atlas orchestrates phase execution: dispatches subagents, runs PreFlect gates be
 
 For research-only tasks, invoke Oracle directly. It returns structured findings with evidence citations and confidence scores.
 
-### Quick Exploration with Explorer
+### Quick Exploration with Scout
 
-For fast codebase discovery, invoke Explorer. It performs parallel searches and returns a discovery report without modifying files.
+For fast codebase discovery, invoke Scout. It performs parallel searches and returns a discovery report without modifying files.
 
 ## Workflow Example
 
@@ -90,7 +90,7 @@ User Request
               ├── Plan Review Gate (conditional)
               │    └── Challenger (adversarial plan audit for 3+ phase / low-confidence / high-risk plans)
               ├── Wave 1: Foundation
-              │    └── Explorer / Oracle (discovery & research)
+              │    └── Scout / Oracle (discovery & research)
               ├── Wave 2: Implementation (parallel)
               │    ├── Sisyphus (backend implementation)
               │    ├── Frontend-Engineer (UI implementation)
@@ -159,7 +159,7 @@ Every custom agent should include:
 ### Post-Migration Revision
 
 - Restored delegation heuristics and routing templates for Atlas and Prometheus.
-- Added parallel search mandates and merging protocols for Explorer.
+- Added parallel search mandates and merging protocols for Scout.
 - Restored uncertainty protocols and confidence criteria for Oracle.
 - Added stopping rules and best practices for Sisyphus and Frontend-Engineer.
 - Strengthened Code-Review verdict schema with explicit approval/rejection criteria.
@@ -189,7 +189,7 @@ Every custom agent should include:
 - `schemas/atlas.delegation-protocol.schema.json`
 - `schemas/prometheus.plan.schema.json`
 - `schemas/oracle.research-findings.schema.json`
-- `schemas/explorer.discovery.schema.json`
+- `schemas/scout.discovery.schema.json`
 - `schemas/code-review.verdict.schema.json`
 - `schemas/sisyphus.execution-report.schema.json`
 - `schemas/frontend.execution-report.schema.json`
@@ -238,7 +238,7 @@ P.A.R.T migration complete. Full compliance revision applied. All 11 agents now 
 - External tool routing rules aligned to `TOOL-ROUTING.md` (role-specific for all agents with external tools)
 - Centralized clarification ownership (Prometheus/Atlas own `askQuestions`; subagents return `NEEDS_INPUT` or `ABSTAIN`)
 
-Phase 4 (repo-local skills) was evaluated and skipped — Phases 1–3b reduced cross-agent duplication to manageable levels. The one remaining verbatim shared block (Uncertainty Protocol across 5 acting agents) is intentional policy alignment, not redundancy.
+Phase 4 (repo-local skills) was evaluated and skipped — Phases 1–3b reduced cross-agent duplication to manageable levels. Shared policies were extracted to `.github/copilot-instructions.md`, and identical Uncertainty Protocol blocks across 5 acting agents were compressed to canonical policy pointers.
 
 See `docs/agent-engineering/COMPLIANCE-GAPS.md` for the original audit baseline.
 

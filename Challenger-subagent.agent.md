@@ -28,10 +28,10 @@ Audit implementation plans for architectural defects, security vulnerabilities, 
 - Status must be one of: `APPROVED`, `NEEDS_REVISION`, `REJECTED`, `ABSTAIN`.
 - If confidence is below 0.7 or plan artifact is inaccessible, return `ABSTAIN`.
 
-### Failure Classification
-When status is `NEEDS_REVISION` or `REJECTED`, include `failure_classification`:
+### Failure Classification (Deviation from Standard)
+`transient` is NOT applicable for plan audits. When status is `NEEDS_REVISION` or `REJECTED`, emit one of:
 - `fixable` — Plan has addressable issues: missing tests, unclear acceptance criteria, incomplete rollback steps.
-- `needs_replan` — Fundamental architecture flaw, circular dependencies, or critical security gap that requires Prometheus to redesign.
+- `needs_replan` — Fundamental architecture flaw, circular dependencies, or critical security gap requiring Prometheus to redesign.
 - `escalate` — Destructive risk with no mitigation, data integrity concern, or ambiguous requirement with high impact.
 
 ### Audit Methodology
@@ -69,6 +69,12 @@ For each plan, evaluate against these dimensions:
    - Status enums inconsistent with consuming agents.
    - Missing `$ref` for shared contract fragments.
 
+7. **Executability Audit**
+   - Simulate executing the first 3 tasks from the plan artifact alone (no prior context).
+   - For each task, verify: concrete file paths present, input/output contracts defined, verification commands specified, acceptance criteria objectively testable.
+   - A task FAILS if a fresh executor would be blocked without additional clarification.
+   - MUST populate `executability_checklist` per schema. If any task fails, raise at minimum a MAJOR finding.
+
 ### Plan Artifact Handling
 - Atlas provides the `plan_path` in the delegation payload.
 - Read the plan file via `read/readFile`. Do NOT rely on inline prompt-only plan descriptions.
@@ -93,9 +99,6 @@ For each plan, evaluate against these dimensions:
   - Recurring risk patterns across plans.
   - False positive findings to avoid in future audits.
 
-### Continuity
-Use `plans/project-context.md` when available as stable reference for conventions.
-
 ### PreFlect (Mandatory Before Audit)
 Before issuing a verdict, evaluate:
 1. Plan completeness — does the plan artifact contain all required sections (phases, tests, acceptance criteria)?
@@ -111,7 +114,6 @@ If plan artifact is incomplete or inaccessible, return `ABSTAIN` rather than an 
 - `schemas/challenger.plan-audit.schema.json`
 - `schemas/prometheus.plan.schema.json` (reference for expected plan structure)
 - `plans/project-context.md` (if present)
-- `docs/agent-engineering/CLARIFICATION-POLICY.md`
 
 ## Tools
 

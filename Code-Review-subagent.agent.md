@@ -25,13 +25,6 @@ Validate implementation correctness, quality, reliability, and safety before pro
 - Status must be one of: `APPROVED`, `NEEDS_REVISION`, `FAILED`, `ABSTAIN`.
 - If verification evidence is missing, do not approve.
 
-### Failure Classification
-When status is `NEEDS_REVISION` or `FAILED`, include `failure_classification`:
-- `transient` — Flaky test in CI, temporary build environment issue.
-- `fixable` — Code quality issue, missing test case, lint violation.
-- `needs_replan` — Fundamental approach is wrong, architecture needs redesign.
-- `escalate` — Security vulnerability, data exposure risk, policy violation.
-
 ### Mandatory Verification Gates
 Before setting `APPROVED`:
 1. `problems` check on modified files.
@@ -46,6 +39,9 @@ Flag and escalate when changed scope includes:
 - sensitive data exposure risks
 - policy violations
 
+### Issue Validation Requirement
+For every CRITICAL or MAJOR issue: MUST populate `validation_status` (`confirmed` / `rejected` / `unvalidated`). Populate `validated_blocking_issues` with the subset of confirmed CRITICAL/MAJOR issues. Atlas blocks phase progression only on this validated subset — not on raw unvalidated findings. See schema `description` fields for definitions.
+
 ## Archive
 
 ### Context Compaction Policy
@@ -56,9 +52,6 @@ Flag and escalate when changed scope includes:
   - blocking issues
   - recurring risk patterns
   - unresolved safety concerns
-
-### Continuity
-Use `plans/project-context.md` when available as stable reference for conventions.
 
 ### PreFlect (Mandatory Before Review)
 Before issuing a verdict, evaluate:
@@ -75,8 +68,6 @@ If verification evidence is incomplete, return `ABSTAIN` rather than an unsuppor
 - `schemas/code-review.verdict.schema.json`
 - `schemas/atlas.gate-event.schema.json`
 - `plans/project-context.md` (if present)
-- `docs/agent-engineering/CLARIFICATION-POLICY.md`
-- `docs/agent-engineering/TOOL-ROUTING.md`
 
 ## Tools
 

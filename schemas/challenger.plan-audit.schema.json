@@ -17,7 +17,7 @@
     "recommendation"
   ],
   "properties": {
-    "schema_version": { "type": "string", "const": "1.0.0" },
+    "schema_version": { "type": "string", "const": "1.1.0" },
     "agent": { "type": "string", "const": "Challenger-subagent" },
     "status": {
       "type": "string",
@@ -100,14 +100,47 @@
         }
       }
     },
+    "executability_checklist": {
+      "type": "array",
+      "description": "Cold-start executability audit results. For each of the first 3 tasks in the plan, simulate execution from the plan artifact alone (no prior context). A task PASSES if a fresh executor could complete it without additional clarification. FAILS if required inputs, file paths, commands, or acceptance criteria are missing or underspecified. If any task fails, overall executability is BLOCKED and should influence the verdict (at minimum a MAJOR finding).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["task_id", "checks_passed", "total_checks", "executable"],
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "description": "Phase and step reference, e.g. 'Phase1-Step1'."
+          },
+          "checks_passed": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of executability checks that passed for this task."
+          },
+          "total_checks": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Total number of executability checks evaluated for this task."
+          },
+          "executable": {
+            "type": "boolean",
+            "description": "True if all checks passed. False if any check failed — executor would be blocked."
+          },
+          "first_blocker": {
+            "type": "string",
+            "description": "Description of the first check that failed, explaining what is missing or underspecified. Omit if executable is true."
+          }
+        }
+      }
+    },
     "recommendation": {
       "type": "string",
       "description": "Concise recommendation for Atlas: proceed, revise specific phases, or replan entirely."
     },
     "failure_classification": {
       "type": "string",
-      "enum": ["transient", "fixable", "needs_replan", "escalate"],
-      "description": "Required when status is NEEDS_REVISION or REJECTED. Classifies the failure type for Atlas routing."
+      "enum": ["fixable", "needs_replan", "escalate"],
+      "description": "Required when status is NEEDS_REVISION or REJECTED. Note: 'transient' is not applicable for plan audits. fixable: addressable within existing phase structure. needs_replan: fundamental flaw requiring Prometheus redesign. escalate: destructive or ambiguous risk requiring human decision."
     }
   }
 }

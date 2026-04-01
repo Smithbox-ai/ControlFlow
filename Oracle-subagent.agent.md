@@ -42,9 +42,6 @@ Return factual, evidence-linked research findings for the parent conductor/plann
   - confirmed facts
   - unresolved questions
 
-### Continuity
-Use `plans/project-context.md` when available to align naming and architecture interpretation.
-
 ### PreFlect (Mandatory Before Research)
 Before returning findings, evaluate:
 1. Evidence sufficiency — are there enough sources to support the conclusions?
@@ -55,19 +52,15 @@ If evidence is insufficient for reliable conclusions, return `ABSTAIN` with reas
 
 ## Resources
 
-- `docs/agent-engineering/PART-SPEC.md`
-- `docs/agent-engineering/RELIABILITY-GATES.md`
 - `schemas/oracle.research-findings.schema.json`
-- `schemas/explorer.discovery.schema.json`
+- `schemas/scout.discovery.schema.json`
 - `plans/project-context.md` (if present)
-- `docs/agent-engineering/CLARIFICATION-POLICY.md`
-- `docs/agent-engineering/TOOL-ROUTING.md`
 
 ## Tools
 
 ### Allowed
 - Read/search/usages/problems/changes for repository evidence.
-- Delegate discovery bursts to `Explorer-subagent`.
+- Delegate discovery bursts to `Scout-subagent`.
 
 ### Disallowed
 - No edits, no implementation actions.

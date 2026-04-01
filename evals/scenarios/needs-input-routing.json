@@ -7,7 +7,7 @@
   "design_notes": {
     "excluded_agents": {
       "Oracle-subagent": "Read-only research agent. Status enum: COMPLETE, ABSTAIN, INSUFFICIENT_EVIDENCE. No NEEDS_INPUT status — research agents surface insufficient evidence, not clarification requests.",
-      "Explorer-subagent": "Read-only discovery agent. Status enum: COMPLETE, ABSTAIN. No NEEDS_INPUT status — discovery agents return whatever they find without requiring user decisions."
+      "Scout-subagent": "Read-only discovery agent. Status enum: COMPLETE, ABSTAIN. No NEEDS_INPUT status — discovery agents return whatever they find without requiring user decisions."
     }
   },
   "inputs": [
@@ -95,7 +95,7 @@
     "NEEDS_INPUT routing takes priority over failure_classification routing",
     "Atlas retries the subagent with user selection after clarification",
     "clarification_request payload conforms to schemas/clarification-request.schema.json",
-    "Oracle and Explorer schemas do not include clarification_request (intentional — read-only agents)",
+    "Oracle and Scout schemas do not include clarification_request (intentional — read-only agents)",
     "All 5 acting agent schemas reference clarification-request.schema.json via $ref"
   ]
 }
