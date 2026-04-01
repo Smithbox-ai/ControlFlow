@@ -148,3 +148,5 @@ Return a schema-compliant `ChallengerPlanAudit` object containing:
 - Failure classification when status is not `APPROVED`.
 
 Findings must be specific and actionable. Vague observations like "the plan could be better" are non-compliant.
+
+**Clarification role:** This agent returns schema-compliant audit findings to Atlas. If the plan artifact is inaccessible or the plan scope is ambiguous, it returns `ABSTAIN`. It does not interact with the user directly.

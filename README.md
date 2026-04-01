@@ -7,6 +7,7 @@ A multi-agent orchestration system for VS Code Copilot. This fork replaces vibe-
 ## Key Features
 
 - **Context Conservation** — agents summarize and compress context at delegation boundaries to stay within token limits.
+- **Least-Privilege Tool Grants** — each agent's `tools:` frontmatter is trimmed to the minimum set required by its role and body-level routing rules.
 - **Parallel Agent Execution** — Atlas dispatches independent subagents in parallel when tasks have no dependencies, using wave-based execution from Prometheus plans.
 - **Structured Planning** — Prometheus produces phased plans with explicit task IDs, dependencies, wave assignments, inter-phase contracts, failure expectations, and Mermaid architecture diagrams (mandatory for 3+ phase plans).
 - **Adversarial Plan Review** — Challenger audits complex plans for architecture defects, security gaps, and dependency conflicts before implementation begins.

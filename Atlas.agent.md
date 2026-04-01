@@ -1,6 +1,6 @@
 ---
 description: 'Orchestrates Planning, Implementation, and Review cycle for complex tasks'
-tools: ['vscode/getProjectSetupInfo', 'vscode/installExtension', 'vscode/newWorkspace', 'vscode/runCommand', 'vscode/askQuestions', 'vscode/vscodeAPI', 'vscode/extensions', 'execute/runNotebookCell', 'execute/testFailure', 'execute/getTerminalOutput', 'execute/awaitTerminal', 'execute/killTerminal', 'execute/createAndRunTask', 'execute/runInTerminal', 'read/problems', 'read/readFile', 'read/terminalSelection', 'read/terminalLastCommand', 'agent', 'edit/createDirectory', 'edit/createFile', 'edit/createJupyterNotebook', 'edit/editFiles', 'edit/editNotebook', 'search/changes', 'search/codebase', 'search/fileSearch', 'search/listDirectory', 'search/textSearch', 'search/usages', 'web/fetch', 'web/githubRepo', 'todo']
+tools: ['vscode/askQuestions', 'execute/testFailure', 'execute/getTerminalOutput', 'execute/awaitTerminal', 'execute/killTerminal', 'execute/createAndRunTask', 'execute/runInTerminal', 'read/problems', 'read/readFile', 'agent', 'edit/createFile', 'edit/editFiles', 'search/changes', 'search/codebase', 'search/fileSearch', 'search/listDirectory', 'search/textSearch', 'search/usages', 'web/fetch', 'web/githubRepo', 'todo']
 agents: ["*"]
 model: Claude Sonnet 4.6 (copilot)
 ---
@@ -25,6 +25,7 @@ Run deterministic orchestration for: `Research -> Design -> Planning -> Implemen
 ### Deterministic Contracts
 - Gate-event output schema: `schemas/atlas.gate-event.schema.json`.
 - Status/decision enums are fixed by schema.
+- Prometheus plan phases must include `executor_agent`; Atlas treats that field as authoritative for phase dispatch.
 - If confidence is below threshold or required evidence is missing, return `ABSTAIN`.
 
 ### State Machine
@@ -113,7 +114,8 @@ Maintain awareness of current orchestration state at all times:
 - Discovery: search/read tools.
 - Delegation: `agent`.
 - Coordination docs: create/edit markdown artifacts.
-- Validation signals: problems/test failures/terminal outputs.
+- Validation signals: `read/problems`, `execute/testFailure`, and `execute/getTerminalOutput` when subagent evidence is incomplete or ambiguous.
+- Validation execution: `execute/runInTerminal`, `execute/createAndRunTask`, `execute/awaitTerminal`, and `execute/killTerminal` for independent build/test verification when Atlas must confirm results directly.
 
 ### Disallowed
 - Do not use tools to bypass user approval for high-risk operations.
@@ -156,7 +158,9 @@ Reference: `docs/agent-engineering/TOOL-ROUTING.md`
 5. **Implementation Loop (Per Phase)**
    - **Pre-Phase Gate (phases after Phase 1):** Before starting any phase after Phase 1, verify the previous phase's todo item is marked completed. If it is not, mark it via the `#todos` tool before proceeding.
    - Run PreFlect gate.
-   - Delegate implementation.
+   - Resolve the phase owner from `phase.executor_agent`. This field is authoritative for delegation and approval summaries.
+   - If a legacy phase omits `executor_agent`, do not infer silently. Route the plan back through `REPLAN` to Prometheus and stop the implementation batch until the phase is reissued with an explicit executor.
+   - Delegate execution to the declared executor agent.
    - Delegate review.
    - Verification Build Gate: after the implementation subagent reports completion, verify build success. Either confirm the execution report includes `build.state: PASS`, or if build evidence is absent or ambiguous, run the project's build command directly. If the build fails, route through Failure Classification Handling before proceeding.
    - Block only on `validated_blocking_issues` from Code-Review verdict — not on raw unvalidated CRITICAL/MAJOR findings. If `validated_blocking_issues` is empty, the phase may proceed even if unvalidated issues exist.
@@ -195,17 +199,7 @@ Mandatory pause points requiring explicit user acknowledgment before proceeding:
 Violating a stopping rule is equivalent to skipping a gate.
 
 ### Subagent Delegation Contracts
-When delegating, specify the subagent and its expected deliverable:
-- **Prometheus** — Planning: produce a structured plan document.
-- **Oracle** — Research: return evidence-backed findings with citations and confidence levels.
-- **Scout** — Discovery: return file maps, dependency graphs, usage patterns.
-- **Sisyphus** — Backend implementation: return execution report with changed files and test results.
-- **Frontend-Engineer** — UI implementation: return execution report with accessibility/responsive verification.
-- **DevOps** — Infrastructure: return execution report with health checks, rollback steps, and deployment details.
-- **DocWriter** — Documentation: return execution report with parity verification and coverage percentage.
-- **BrowserTester** — E2E Testing: return execution report with health-first gate, scenario results, and accessibility audit.
-- **Code-Review** — Verification: return schema-compliant verdict with gate results.
-- **Challenger** — Plan audit: return schema-compliant adversarial review with findings, risk summary, and recommendation. Triggered conditionally for complex plans (3+ phases, confidence < 0.9, or high-risk scope).
+For agent descriptions, roles, and expected deliverables, see `plans/project-context.md` — Agent Role Matrix.
 
 Each delegation must include: scope description, expected output format, and relevant context references.
 

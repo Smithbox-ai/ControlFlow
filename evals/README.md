@@ -48,3 +48,42 @@ This folder contains scenario fixtures used to validate reliability for core age
 - `scenarios/skills-mcp-routing.json`
 - `scenarios/agent-triggering-quality.json`
 - `scenarios/prometheus-ambiguity-plus-schema.json`
+
+## Running Validations
+
+The `validate.mjs` harness runs structural checks against schemas, agent prompts, and eval fixtures. It does not execute the agents themselves.
+
+### Install
+
+```bash
+cd evals
+npm install
+```
+
+### Run
+
+```bash
+npm test
+```
+
+### Passes
+
+| Pass | What it checks |
+|------|----------------|
+| **1 — Schema Validity** | All `schemas/*.schema.json` compile under `ajv` JSON Schema 2020-12. |
+| **2 — Scenario Integrity** | All `evals/scenarios/*.json` have the required identity fields and point to real agent files. |
+| **3 — Reference Integrity** | All backtick schema/doc references inside `*.agent.md` resolve to existing files. |
+| **3b — Required Artifacts** | Shared repo-local dependencies like `.github/copilot-instructions.md`, `plans/project-context.md`, and governance docs exist. |
+| **3c — Tool Grant Consistency** | Every agent frontmatter `tools:` list matches the repository's canonical least-privilege tool set. |
+| **4 — P.A.R.T Section Order** | Every `*.agent.md` preserves `## Prompt` → `## Archive` → `## Resources` → `## Tools` ordering. |
+
+### Exit codes
+
+- `0` — all checks passed.
+- `1` — one or more checks failed.
+
+### Limitations
+
+- The harness validates structural consistency, not live model behavior.
+- It does not prove that an agent uses every granted tool correctly at runtime.
+- It does not execute Copilot agents or assert semantic quality of freeform prose.

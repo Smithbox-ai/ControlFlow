@@ -34,18 +34,20 @@ When Prometheus has Context7 tools granted:
 ### Rule 4: No Phantom Grants
 If a tool is listed in an agent's YAML frontmatter `tools:` array, the agent's body instructions MUST include routing rules for that tool. A tool that appears only in frontmatter with no body reference is a compliance gap.
 
+Prefer least-privilege grants: do not grant tools solely for speculative future use. Frontmatter should expose the minimum tool surface needed by the current role contract and body instructions.
+
 ### Rule 5: Role-Specific Restrictions
 
 | Agent | fetch | githubRepo | Context7 | Notes |
 |-------|-------|-----------|----------|-------|
 | Atlas | ✅ | ✅ | ❌ | Orchestration; delegates research |
 | Prometheus | ✅ | ✅ | ✅ | Planning; use Context7 for library docs |
-| Oracle | ✅ | ✅ | ❌ | Deep research; fetch for evidence |
+| Oracle | ✅ | ❌ | ❌ | Deep research; fetch for evidence |
 | Scout | ❌ | ❌ | ❌ | Read-only local discovery |
 | Code-Review | ❌ | ❌ | ❌ | Verification only |
 | Challenger | ❌ | ❌ | ❌ | Read-only plan audit; local codebase cross-reference only |
 | Sisyphus | ✅ | ✅ | ❌ | Implementation; fetch for API reference |
 | Frontend-Engineer | ✅ | ✅ | ❌ | Implementation; fetch for component docs |
 | DevOps | ✅ | ✅ | ❌ | Infrastructure; fetch for provider docs |
-| DocWriter | ✅ | ✅ | ❌ | Documentation; fetch for external refs |
-| BrowserTester | ✅ | ✅ | ❌ | Testing; fetch for test framework docs |
+| DocWriter | ✅ | ❌ | ❌ | Documentation; fetch for external refs |
+| BrowserTester | ✅ | ❌ | ❌ | Testing; fetch for test framework docs |

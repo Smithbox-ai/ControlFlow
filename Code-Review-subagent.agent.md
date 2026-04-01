@@ -1,6 +1,6 @@
 ---
 description: 'Review code changes from a completed implementation phase.'
-tools: ['search', 'usages', 'problems', 'changes', 'runCommands', 'runTasks', 'testFailure']
+tools: ['search', 'usages', 'problems', 'changes', 'runCommands', 'runTasks']
 model: GPT-5.4 (copilot)
 ---
 You are Code-Review-subagent, the deterministic verification gate.

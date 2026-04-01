@@ -1,0 +1,25 @@
+{
+  "id": "atlas-phase-executor-routing",
+  "target_agent": "Atlas",
+  "goal": "Atlas dispatches each phase to the explicit executor_agent and does not override it with heuristics",
+  "input": {
+    "plan": {
+      "phases": [
+        {
+          "phase_id": 1,
+          "title": "Documentation refresh",
+          "objective": "Update runtime guidance",
+          "wave": 1,
+          "executor_agent": "DocWriter-subagent"
+        }
+      ]
+    }
+  },
+  "expected": {
+    "schema": "schemas/atlas.gate-event.schema.json",
+    "authoritative_routing_field": "executor_agent",
+    "must_delegate_to": "DocWriter-subagent",
+    "must_not_delegate_to": ["Sisyphus-subagent", "Frontend-Engineer-subagent"],
+    "legacy_phase_without_executor_agent": "REPLAN"
+  }
+}

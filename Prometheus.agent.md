@@ -1,6 +1,6 @@
 ---
 description: 'Autonomous planner that writes comprehensive implementation plans and feeds them to Atlas'
-tools: [execute/testFailure, read/problems, read/readFile, agent/runSubagent, edit/createDirectory, edit/createFile, search/changes, search/codebase, search/fileSearch, search/listDirectory, search/searchResults, search/textSearch, search/usages, web/fetch, web/githubRepo, vscode/askQuestions, vscode/getProjectSetupInfo, io.github.upstash/context7/get-library-docs, io.github.upstash/context7/resolve-library-id]
+tools: [read/readFile, agent/runSubagent, edit/createFile, search/codebase, search/fileSearch, search/listDirectory, search/textSearch, search/usages, web/fetch, web/githubRepo, vscode/askQuestions, vscode/getProjectSetupInfo, io.github.upstash/context7/get-library-docs, io.github.upstash/context7/resolve-library-id]
 model: Claude Opus 4.6 (copilot)
 handoffs:
   - label: Start implementation with Atlas
@@ -26,6 +26,7 @@ Produce implementation plans that are deterministic, schema-compliant, and execu
 
 ### Deterministic Contracts
 - Output must conform to `schemas/prometheus.plan.schema.json`.
+- Every phase MUST declare exactly one machine-readable `executor_agent` from the supported executor set in `plans/project-context.md`.
 - If confidence is below threshold or evidence is missing, set status to `ABSTAIN` or `REPLAN_REQUIRED`.
 
 ### Mandatory Workflow Procedure
@@ -141,6 +142,7 @@ The markdown plan file must follow this structure:
 
 #### Phase 1 — {Phase Title}
 - **Objective:** What this phase accomplishes.
+- **Executor Agent:** Primary subagent Atlas must dispatch for this phase. Required in the JSON plan and must match the supported executor set in `plans/project-context.md`.
 - **Wave:** Execution wave number (phases in the same wave run in parallel).
 - **Dependencies:** Prerequisites (files, decisions, prior phases by ID).
 - **Files:** Files to create/modify.
@@ -171,7 +173,7 @@ Define data and interface contracts between phases that have dependencies:
 ### Notes for Atlas
 - Recommended execution order and parallelization opportunities.
 - Wave assignments and dependency graph.
-- Subagent delegation suggestions per phase.
+- `executor_agent` is the authoritative per-phase routing field. Optional delegation notes may name supporting agents, but must not conflict with the declared primary executor.
 - Max parallel agents recommendation (default: 10, reduce if resource-intensive phases).
 - Failure expectations summary per wave.
 
@@ -199,9 +201,10 @@ Every plan must satisfy:
 4. **Testable** — Success criteria are objectively verifiable.
 5. **Practical** — Phase count is 3–10; decompose further if exceeding 10.
 6. **Parallelizable** — Phases that can run independently MUST be assigned the same wave number. Sequential-only when there is a real data dependency.
-7. **Visualized** — Plans with 3+ phases MUST include an Architecture Visualization section with at least a phase dependency DAG in Mermaid format.
-7. **Failure-aware** — Each phase includes failure expectations with classification and mitigation strategies.
-8. **Executable** — Each phase MUST specify: concrete file paths, input/output contracts, verification commands, and test specifics sufficient for a cold-start executor to proceed without additional clarification. Vague steps like "implement the feature" without file-level detail are non-compliant.
+7. **Routable** — Every phase MUST specify exactly one `executor_agent` so Atlas can dispatch it without inference.
+8. **Visualized** — Plans with 3+ phases MUST include an Architecture Visualization section with at least a phase dependency DAG in Mermaid format.
+9. **Failure-aware** — Each phase includes failure expectations with classification and mitigation strategies.
+10. **Executable** — Each phase MUST specify: concrete file paths, input/output contracts, verification commands, test specifics, and the owning `executor_agent` sufficient for a cold-start executor to proceed without additional clarification. Vague steps like "implement the feature" without file-level detail are non-compliant.
 
 ### Research Scaling
 

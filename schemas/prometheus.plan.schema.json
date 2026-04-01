@@ -19,7 +19,7 @@
     "handoff"
   ],
   "properties": {
-    "schema_version": { "type": "string", "const": "1.0.0" },
+    "schema_version": { "type": "string", "const": "1.1.0" },
     "agent": { "type": "string", "const": "Prometheus" },
     "status": {
       "type": "string",
@@ -48,6 +48,7 @@
           "title",
           "objective",
           "wave",
+          "executor_agent",
           "files",
           "tests",
           "steps",
@@ -62,6 +63,20 @@
             "type": "integer",
             "minimum": 1,
             "description": "Execution wave for parallel dispatch. Phases in the same wave run in parallel. Wave N+1 waits for wave N to complete."
+          },
+          "executor_agent": {
+            "type": "string",
+            "enum": [
+              "Scout-subagent",
+              "Oracle-subagent",
+              "Sisyphus-subagent",
+              "Frontend-Engineer-subagent",
+              "DevOps-subagent",
+              "DocWriter-subagent",
+              "BrowserTester-subagent",
+              "Code-Review-subagent"
+            ],
+            "description": "Primary subagent Atlas must dispatch for this phase. Atlas treats this field as authoritative and must not override it with heuristics."
           },
           "dependencies": {
             "type": "array",

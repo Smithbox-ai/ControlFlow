@@ -9,6 +9,8 @@
   "expected": {
     "schema": "schemas/prometheus.plan.schema.json",
     "response_begins_with_schema_object": true,
+    "executor_agent_required_in_all_phases": true,
+    "phase_required_fields": ["executor_agent"],
     "markdown_plan_created_after_schema_output": true,
     "handoff_present": true,
     "must_not": "markdown-only response"

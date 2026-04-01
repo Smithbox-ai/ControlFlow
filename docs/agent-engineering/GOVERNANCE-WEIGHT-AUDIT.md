@@ -1,0 +1,160 @@
+# Governance Weight Audit
+
+> **Purpose:** Identify token overhead caused by redundant, low-value, or complexity-conditional content in agent prompts. Recommend targeted reductions that do not sacrifice safety gates.
+>
+> Scope: `Atlas.agent.md`, `Prometheus.agent.md`.
+> Analysis date: 2026-04-01.
+
+## Methodology
+
+Token estimates are approximate: **1 line ≈ 15 tokens** (mixed prose + YAML/JSON). File sizes measured from current workspace state. Redundancy is classified against `.github/copilot-instructions.md` (shared policies) and `plans/project-context.md` (agent role matrix, now available).
+
+---
+
+## Atlas.agent.md — Token Footprint by Section
+
+| Section | Lines | Est. Tokens | Notes |
+|---------|-------|------------|-------|
+| Mission + Scope | 14 | 210 | Load-bearing |
+| Deterministic Contracts | 5 | 75 | Load-bearing |
+| State Machine | 20 | 300 | Load-bearing, non-redundant |
+| Planning vs Acting Split | 6 | 90 | Load-bearing |
+| PreFlect | 10 | 150 | Load-bearing |
+| Human Approval Gate | 8 | 120 | Load-bearing |
+| Clarification Triggers + NEEDS_INPUT Routing | 22 | 330 | Load-bearing |
+| Context Compaction | 5 | 75 | Load-bearing |
+| Agentic Memory Policy | 8 | 120 | Load-bearing |
+| State Tracking + Todo Protocol | 22 | 330 | Load-bearing |
+| Resources list | 10 | 150 | Load-bearing |
+| Tools (all sub-sections) | 15 | 225 | Load-bearing |
+| Execution Protocol | 70 | 1,050 | Load-bearing, but has redundant subsections (see below) |
+| Phase Verification Checklist | 8 | 120 | Load-bearing |
+| Delegation Heuristics | 10 | 150 | **Partially redundant** — project-context.md now has decision tree |
+| Stopping Rules | 8 | 120 | Load-bearing |
+| **Subagent Delegation Contracts** | **15** | **225** | **Redundant** — duplicates agent role matrix in project-context.md |
+| Wave-Aware Execution | 8 | 120 | Complexity-conditional (only relevant for 3+ phase plans) |
+| Failure Classification Handling | 14 | 210 | **Partially redundant** — copilot-instructions.md has the enum |
+| **Retry Reliability Policy** | **22** | **330** | Complexity-conditional (parallel execution, rate limits) |
+| Batch Approval | 8 | 120 | Complexity-conditional (multi-wave plans) |
+| Output Requirements (plan templates) | 60 | 900 | **High overhead** — templates duplicated in Prometheus |
+
+**Total estimated: ~350 lines ≈ 5,250 tokens**
+
+---
+
+## Prometheus.agent.md — Token Footprint by Section
+
+| Section | Lines | Est. Tokens | Notes |
+|---------|-------|------------|-------|
+| Mission + Scope | 12 | 180 | Load-bearing |
+| Mandatory Workflow Procedure | 12 | 180 | Load-bearing |
+| Clarification Policy pointer | 6 | 90 | Load-bearing |
+| Abstention Policy | 8 | 120 | Load-bearing |
+| PreFlect | 8 | 120 | Load-bearing |
+| Context Compaction + Memory | 15 | 225 | Load-bearing |
+| Resources list | 10 | 150 | Load-bearing |
+| Tools (all sub-sections) | 30 | 450 | Load-bearing |
+| **Plan Document Template** | **55** | **825** | **High overhead** — present here AND referenced in Atlas output templates |
+| Plan Quality Standards | 12 | 180 | Partially redundant with template requirements |
+| Research Scaling | 8 | 120 | Useful heuristic, not redundant |
+| Non-Negotiable Rules | 10 | 150 | Load-bearing |
+
+**Total estimated: ~185 lines ≈ 2,775 tokens**
+
+---
+
+## Findings
+
+### Finding 1: Subagent Delegation Contracts — Redundant (HIGH VALUE)
+
+**Location:** `Atlas.agent.md` — `### Subagent Delegation Contracts`  
+**Lines:** ~15 | **Tokens:** ~225  
+
+The list maps each agent name to its role and expected deliverable. This information is now fully covered by the Agent Role Matrix in `plans/project-context.md`, which Atlas reads at session start (referenced in Resources).
+
+**Recommendation:** Replace the full list with a single pointer:
+```
+For agent descriptions, roles, and expected deliverables, see `plans/project-context.md` — Agent Role Matrix.
+```
+**Token savings: ~200 tokens** (keep ~25 for the pointer).
+
+---
+
+### Finding 2: Failure Classification Detail — Partially Redundant (MEDIUM VALUE)
+
+**Location:** `Atlas.agent.md` — `### Failure Classification Handling`  
+**Lines:** ~14 | **Tokens:** ~210  
+
+The table (transient/fixable/needs_replan/escalate with actions and max retries) duplicates the Failure Classification enum already in `.github/copilot-instructions.md`. However, the `Max Retries` column and routing action specifics are Atlas-specific.
+
+**Recommendation:** Keep the routing table but remove the introductory prose (2 lines) that re-explains the four classes already defined in shared instructions.  
+**Token savings: ~30 tokens** (marginal, but clean).
+
+---
+
+### Finding 3: Output Requirements Templates — Significant Overhead (MEDIUM VALUE, HIGH RISK)
+
+**Location:** `Prometheus.agent.md` — `### Plan Document Template` (~55 lines)  
+**Location:** `Atlas.agent.md` — `### Plan File Template`, `### Phase Completion Template`, `### Plan Completion Template` (~60 lines combined)
+
+The plan document template is defined in Prometheus (~55 lines) and an equivalent structure is in Atlas output requirements. These templates are essential for plan quality but represent ~900 tokens of overhead per invocation.
+
+**Recommendation (advisory only, do not implement without plan):** Extract templates to a shared `plans/plan-templates.md` file and replace in-prompt content with a file reference. This is the highest-impact reduction but carries non-trivial risk — if agents fail to load the external file, plan output quality degrades silently.  
+**Potential token savings: ~800–900 tokens**  
+**Risk:** Medium — template availability depends on the agent reading `plans/plan-templates.md` successfully before generating output.  
+**Decision:** Do NOT implement without evaluating how often plan generation fails when referenced files are unavailable.
+
+---
+
+### Finding 4: Delegation Heuristics — Partially Redundant (LOW VALUE)
+
+**Location:** `Atlas.agent.md` — `### Delegation Heuristics`  
+**Lines:** ~10 | **Tokens:** ~150  
+
+The decision tree ("Handle directly" vs "Delegate to subagent" based on complexity thresholds) is useful operational guidance. It is NOT duplicated in project-context.md (the project-context decision tree is about which agent to invoke, not when to delegate vs handle). This section is load-bearing.
+
+**Recommendation:** No change.
+
+---
+
+### Finding 5: Complexity-Conditional Sections — Lite-Mode Candidate (MEDIUM VALUE)
+
+**Location:** `Atlas.agent.md` — Wave-Aware Execution (8 lines), Retry Reliability Policy (22 lines), Batch Approval (8 lines)
+
+These sections are only exercised when plans have multiple waves, parallel agents, or rate-limit conditions. For single-phase, single-agent tasks, they add ~330 tokens that will never be used.
+
+**Recommendation (advisory):** These sections cannot be safely removed from the Atlas prompt without creating a separate "lite" agent. The most practical path if lightweight execution matters is to **bypass Atlas entirely** for single-phase tasks: invoke Sisyphus or the appropriate specialized agent directly. Atlas is optimized for multi-phase orchestration; using it for single-agent tasks is like loading a factory for a one-off request.  
+**Net savings if bypassing Atlas for single tasks:** ~5,250 tokens (entire Atlas prompt).
+
+---
+
+## Lite-Mode Recommendation
+
+> Use Atlas only when you actually need orchestration.
+
+| Task Complexity | Recommended Invocation | Est. Prompt Overhead |
+|---|---|---|
+| Single action (1 file, obvious implementation) | Invoke specialized agent directly (Sisyphus, DocWriter, etc.) | ~300–800 tokens |
+| 1-phase plan (clear scope, no cross-cutting) | Invoke Prometheus for plan, then specialized agent directly | ~3,000 tokens |
+| 2-phase sequential (no parallel agents) | Invoke Prometheus + Atlas, plan has 2 phases → Challenger skipped, Mermaid skipped, Batch Approval trivial | ~8,000–10,000 tokens |
+| 3+ phases or cross-cutting concern | Full Atlas pipeline as designed | ~10,000–20,000+ tokens |
+
+The system is already lite-mode-aware for 1–2 phase plans: Challenger is skipped (conditional on 3+ phases), Mermaid is skipped (conditional on 3+ phases), and Batch Approval is trivial for a single wave. The main optimization remaining is architectural — choose the right entry point.
+
+---
+
+## Actionable Recommendations (Safe to Implement)
+
+| Finding | Action | Files | Token Savings |
+|---------|--------|-------|--------------|
+| 1 — Subagent Delegation Contracts | Replace with project-context.md pointer | `Atlas.agent.md` | ~200 tokens |
+| 2 — Failure Classification intro | Remove 2-line re-explanation of shared enum | `Atlas.agent.md` | ~30 tokens |
+
+**Total safe savings: ~230 tokens per Atlas invocation.**
+
+## Advisory Recommendations (Require Planning)
+
+| Finding | Action | Risk | Token Savings |
+|---------|--------|------|--------------|
+| 3 — Plan templates | Extract to `plans/plan-templates.md` | Medium | ~800–900 tokens |
+| 5 — Lite-mode bypass | Use specialized agents directly for simple tasks | Low | ~5,000+ tokens (bypassing Atlas) |
