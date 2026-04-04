@@ -49,7 +49,7 @@ If high risk and unresolved, return `ABSTAIN` or `NEEDS_INPUT`.
 4. Run health checks on deployed services.
 5. Verify resource usage and cleanup orphaned resources.
 6. If operation fails, execute rollback protocol.
-7. Emit schema-compliant execution report.
+7. Emit structured text execution report.
 
 ### Approval Gates (Mandatory)
 | Condition | Action |
@@ -132,7 +132,18 @@ Reference: `docs/agent-engineering/TOOL-ROUTING.md`
 
 ## Output Requirements
 
-Return a schema-compliant execution report (`schemas/platform-engineer.execution-report.schema.json`) and a concise human-readable summary of operations and verification results.
+Return a structured text report. Do NOT output raw JSON to chat.
+
+Include these fields clearly labeled:
+- **Status** — COMPLETE, NEEDS_INPUT, FAILED, or ABSTAIN.
+- **Changes** — list of infrastructure operations performed.
+- **Rollback Steps** — steps taken or available for rollback.
+- **Idempotency** — evidence that operations are safe to re-run.
+- **Build/Deploy** — PASS or FAIL with details.
+- **Failure Classification** — when not COMPLETE: transient, fixable, needs_replan, or escalate.
+- **Summary** — concise description of what was done.
+
+Full contract reference: `schemas/platform-engineer.execution-report.schema.json`.
 
 ## Non-Negotiable Rules
 

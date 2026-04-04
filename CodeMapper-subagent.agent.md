@@ -91,9 +91,16 @@ multi_tool_use.parallel:
 
 ## Output Requirements
 
-Return:
-1. Schema-compliant JSON object per `schemas/code-mapper.discovery.schema.json`.
-2. Concise human summary.
+Return a structured text report. Do NOT output raw JSON to chat.
+
+Include these fields clearly labeled:
+- **Status** — COMPLETE or ABSTAIN.
+- **Files Found** — list of relevant files with roles/descriptions.
+- **Dependencies** — key dependency relationships discovered.
+- **Entry Points** — main entry points for the investigated area.
+- **Summary** — concise overview of discovery results.
+
+Full contract reference: `schemas/code-mapper.discovery.schema.json`.
 
 ## Non-Negotiable Rules
 

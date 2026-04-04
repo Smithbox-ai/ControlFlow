@@ -1,24 +1,26 @@
-# Core Evals (Phase 1 + Phase 2)
+# ControlFlow — Eval Suite
 
-This folder contains scenario fixtures used to validate reliability for core agents.
+Structural validation fixtures for the ControlFlow multi-agent system. These scenarios verify schema compliance, agent contracts, and orchestration behavior without executing live agents.
 
 ## What is validated
-1. Schema compliance for core outputs.
+1. Schema compliance for agent output contracts.
 2. Consistency under repeated runs.
 3. Robustness under paraphrases and naming drift.
 4. Predictability via correct `ABSTAIN` behavior.
 5. Safety via mandatory human approval gates for high-risk actions.
-6. Failure taxonomy routing (transient, fixable, needs_replan, escalate).
+6. Failure taxonomy routing (`transient`, `fixable`, `needs_replan`, `escalate`).
 7. Wave-based execution ordering and batch approval.
 8. Agent-specific contracts (PlatformEngineer rollback, BrowserTester health-first, TechnicalWriter parity).
-9. Clarification triggering via askQuestions for enumerated ambiguity classes.
-10. Tool routing compliance (Context7/MCP usage when third-party docs are needed).
-11. NEEDS_INPUT routing from subagents through Orchestrator to user via askQuestions.
-12. Semantic risk coverage — Planner `risk_review` array is present and covers all 7 categories in every plan output.
+9. Clarification triggering via `askQuestions` for enumerated ambiguity classes.
+10. Tool routing compliance (MCP usage when third-party docs are needed).
+11. `NEEDS_INPUT` routing from subagents through Orchestrator to user via `askQuestions`.
+12. Semantic risk coverage — Planner `risk_review` array covers all 7 categories in every plan output.
+13. Adversarial plan review — PlanAuditor, AssumptionVerifier, and ExecutabilityVerifier contracts.
+14. Complexity-aware pipeline routing (TRIVIAL / SMALL / MEDIUM / LARGE).
 
 ## Suggested execution flow
 1. Run each scenario against the corresponding agent contract.
-2. Validate output object against the matching schema in `schemas/`.
+2. Validate output against the matching schema in `schemas/`.
 3. Repeat deterministic scenarios at least 3 times and compare status transitions.
 4. Record any drift in gate events and abstention decisions.
 
@@ -33,31 +35,47 @@ This folder contains scenario fixtures used to validate reliability for core age
 - `scenarios/atlas-phase-verification.json`
 
 ### Agent contracts
-- `scenarios/sisyphus-contract.json`
-- `scenarios/frontend-contract.json`
-- `scenarios/devops-contract.json`
-- `scenarios/docwriter-contract.json`
-- `scenarios/browser-tester-contract.json`
+- `scenarios/sisyphus-contract.json` — CoreImplementer execution contract
+- `scenarios/frontend-contract.json` — UIImplementer execution contract
+- `scenarios/devops-contract.json` — PlatformEngineer execution contract
+- `scenarios/docwriter-contract.json` — TechnicalWriter execution contract
+- `scenarios/browser-tester-contract.json` — BrowserTester execution contract
+- `scenarios/dryrun-contract.json` — ExecutabilityVerifier execution contract
+- `scenarios/skeptic-contract.json` — AssumptionVerifier execution contract
 
 ### Orchestration
 - `scenarios/wave-execution.json`
 - `scenarios/failure-retry.json`
 - `scenarios/atlas-todo-orchestration.json`
+- `scenarios/atlas-phase-executor-routing.json`
+- `scenarios/atlas-retry-backoff.json`
+- `scenarios/complexity-gate-routing.json`
 
 ### Clarification and routing
 - `scenarios/clarification-askquestions.json`
+- `scenarios/clarification-schema-fragment.json`
 - `scenarios/skills-mcp-routing.json`
 - `scenarios/agent-triggering-quality.json`
+- `scenarios/needs-input-routing.json`
 - `scenarios/prometheus-ambiguity-plus-schema.json`
 
-### PlanAuditor adversarial and integration
-- `scenarios/challenger-contract.json`
-- `scenarios/challenger-adversarial-detection.json`
-- `scenarios/challenger-replan-loop.json`
-- `scenarios/atlas-challenger-integration.json`
+### Adversarial review
+- `scenarios/challenger-contract.json` — PlanAuditor contract
+- `scenarios/challenger-adversarial-detection.json` — PlanAuditor defect detection
+- `scenarios/challenger-replan-loop.json` — PlanAuditor revision iteration
+- `scenarios/atlas-challenger-integration.json` — Orchestrator ↔ PlanAuditor integration
+- `scenarios/skeptic-contract.json` — AssumptionVerifier contract
+- `scenarios/skeptic-mirage-detection.json` — AssumptionVerifier mirage detection
+- `scenarios/dryrun-contract.json` — ExecutabilityVerifier contract
+- `scenarios/dryrun-executability.json` — ExecutabilityVerifier walkthrough
+- `scenarios/iterative-review-convergence.json` — Review loop convergence
 
-### Semantic risk discovery
-- `scenarios/prometheus-large-data-risk-discovery.json`
+### Planner behavior
+- `scenarios/prometheus-large-data-risk-discovery.json` — Semantic risk discovery
+- `scenarios/prometheus-mermaid-output.json` — Mermaid diagram generation
+- `scenarios/prometheus-idea-interview-trigger.json` — Idea interview activation
+- `scenarios/prometheus-idea-interview-bypass.json` — Idea interview bypass
+- `scenarios/behavioral-plan-quality.json` — Plan quality behavioral checks
 
 ## Running Validations
 

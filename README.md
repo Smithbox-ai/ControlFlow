@@ -1,23 +1,158 @@
-# ControlFlow (Fork)
+# ControlFlow
 
-> Modified fork of [bigguy345/Github-Copilot-Orchestrator](https://github.com/bigguy345/Github-Copilot-Orchestrator).
-
-A multi-agent orchestration system for VS Code Copilot. This fork replaces vibe-based prompts with deterministic **P.A.R.T contracts** (Prompt → Archive → Resources → Tools), strict JSON Schema outputs, and reliability gates.
+A multi-agent orchestration system for VS Code Copilot. ControlFlow replaces single-agent workflows with a coordinated team of 13 specialized agents governed by deterministic **P.A.R.T contracts** (Prompt → Archive → Resources → Tools), structured text outputs, and reliability gates.
 
 ## Key Features
 
-- **Context Conservation** — agents summarize and compress context at delegation boundaries to stay within token limits.
-- **Least-Privilege Tool Grants** — each agent's `tools:` frontmatter is trimmed to the minimum set required by its role and body-level routing rules.
-- **Parallel Agent Execution** — Orchestrator dispatches independent subagents in parallel when tasks have no dependencies, using wave-based execution from Planner plans.
-- **Structured Planning** — Planner produces phased plans with explicit task IDs, dependencies, wave assignments, inter-phase contracts, failure expectations, and Mermaid architecture diagrams (mandatory for 3+ phase plans).
-- **Adversarial Plan Review** — PlanAuditor audits complex plans for architecture defects, security gaps, and dependency conflicts before implementation begins.
-- **Semantic Risk Discovery** — Planner evaluates 7 non-functional risk categories (`data_volume`, `performance`, `concurrency`, `access_control`, `migration_rollback`, `dependency`, `operability`) at planning step 0.5 — before research delegation. Plans with unresolved HIGH-impact risks automatically trigger PlanAuditor even for small, high-confidence plans.
-- **Deterministic Handoffs** — every subagent returns a structured JSON report; Orchestrator validates schema compliance before accepting results.
+- **Context-Efficient Output** — agents return structured text summaries instead of raw JSON, conserving context tokens across delegation chains.
+- **Least-Privilege Tool Grants** — each agent's `tools:` frontmatter is trimmed to the minimum set required by its role.
+- **Parallel Agent Execution** — Orchestrator dispatches independent subagents in parallel using wave-based execution from Planner plans.
+- **Structured Planning** — Planner produces phased plans with task IDs, dependencies, wave assignments, inter-phase contracts, failure expectations, and Mermaid architecture diagrams.
+- **Adversarial Plan Review** — PlanAuditor, AssumptionVerifier, and ExecutabilityVerifier audit complex plans before implementation begins.
+- **Semantic Risk Discovery** — Planner evaluates 7 non-functional risk categories (`data_volume`, `performance`, `concurrency`, `access_control`, `migration_rollback`, `dependency`, `operability`) before research delegation.
 - **Reliability Gates** — PreFlect (pre-execution review), human approval gates for destructive operations, and explicit abstention when confidence is low.
 - **TDD Integration** — CodeReviewer and implementation agents enforce test-first methodology.
-- **Failure Taxonomy** — all agents classify failures (`transient`, `fixable`, `needs_replan`, `escalate`) enabling automated retry and routing by Orchestrator.
-- **Batch Approval** — Orchestrator requests one approval per execution wave to reduce approval fatigue, with per-phase approval for destructive operations.
+- **Failure Taxonomy** — all agents classify failures (`transient`, `fixable`, `needs_replan`, `escalate`) enabling automated retry and routing.
+- **Batch Approval** — one approval per execution wave to reduce approval fatigue, with per-phase approval for destructive operations.
 - **Health-First Testing** — BrowserTester verifies application health before running E2E scenarios to eliminate false positives.
+
+## Getting Started — When to Use Which Agent
+
+| Scenario | Agent | Why |
+|----------|-------|-----|
+| Abstract idea or vague goal | `@Planner` | Conducts an idea interview, structures the prompt, produces a phased implementation plan with architecture decisions and Mermaid diagrams. |
+| Detailed task with clear requirements | `@Orchestrator` | Dispatches subagents directly, runs verification gates, and manages the full implementation cycle phase by phase. |
+| Research question | `@Researcher` | Deep evidence-based investigation with confidence scores and source citations. |
+| Quick codebase exploration | `@CodeMapper` | Fast read-only discovery — finds files, dependencies, and entry points without modifying anything. |
+
+**Typical workflow:** Start with `@Planner` for any non-trivial task. Review and approve the generated plan. Then invoke `@Orchestrator` to execute it. Orchestrator handles all subagent coordination, review gates, and approvals automatically.
+
+## Agent Interaction Architecture
+
+```mermaid
+graph TB
+    User((User))
+
+    subgraph Orchestration
+        Orchestrator[Orchestrator<br/><i>conductor & gate controller</i>]
+        Planner[Planner<br/><i>structured planning</i>]
+    end
+
+    subgraph "Adversarial Review"
+        PlanAuditor[PlanAuditor<br/><i>plan audit</i>]
+        AssumptionVerifier[AssumptionVerifier<br/><i>mirage detection</i>]
+        ExecutabilityVerifier[ExecutabilityVerifier<br/><i>executability check</i>]
+    end
+
+    subgraph Research
+        Researcher[Researcher<br/><i>evidence-first research</i>]
+        CodeMapper[CodeMapper<br/><i>codebase discovery</i>]
+    end
+
+    subgraph Implementation
+        CoreImplementer[CoreImplementer<br/><i>backend implementation</i>]
+        UIImplementer[UIImplementer<br/><i>frontend implementation</i>]
+        PlatformEngineer[PlatformEngineer<br/><i>CI/CD & infrastructure</i>]
+    end
+
+    subgraph Verification
+        CodeReviewer[CodeReviewer<br/><i>code review & safety</i>]
+        BrowserTester[BrowserTester<br/><i>E2E & accessibility</i>]
+    end
+
+    subgraph Documentation
+        TechnicalWriter[TechnicalWriter<br/><i>docs & diagrams</i>]
+    end
+
+    User -->|idea / vague goal| Planner
+    User -->|detailed task| Orchestrator
+    User -->|research question| Researcher
+    User -->|codebase question| CodeMapper
+    Planner -->|structured plan| Orchestrator
+    Orchestrator -->|dispatch| Research
+    Orchestrator -->|dispatch| Implementation
+    Orchestrator -->|dispatch| Verification
+    Orchestrator -->|dispatch| Documentation
+    Orchestrator -->|audit| PlanAuditor
+    Orchestrator -->|audit| AssumptionVerifier
+    Orchestrator -->|audit| ExecutabilityVerifier
+
+    style Orchestrator fill:#4A90D9,color:#fff
+    style Planner fill:#7B68EE,color:#fff
+    style PlanAuditor fill:#E74C3C,color:#fff
+    style AssumptionVerifier fill:#E74C3C,color:#fff
+    style ExecutabilityVerifier fill:#E74C3C,color:#fff
+    style Researcher fill:#2ECC71,color:#fff
+    style CodeMapper fill:#2ECC71,color:#fff
+    style CoreImplementer fill:#F39C12,color:#fff
+    style UIImplementer fill:#F39C12,color:#fff
+    style PlatformEngineer fill:#F39C12,color:#fff
+    style CodeReviewer fill:#1ABC9C,color:#fff
+    style BrowserTester fill:#1ABC9C,color:#fff
+    style TechnicalWriter fill:#9B59B6,color:#fff
+```
+
+## Pipeline by Complexity
+
+ControlFlow adjusts its pipeline depth based on plan complexity. Simpler tasks skip unnecessary review stages.
+
+```mermaid
+graph LR
+    subgraph "TRIVIAL"
+        T1[Plan] --> T2[Implement] --> T3[Review]
+    end
+```
+
+```mermaid
+graph LR
+    subgraph "SMALL"
+        S1[Plan] --> S2[PlanAuditor] --> S3[Implement] --> S4[Review]
+    end
+```
+
+```mermaid
+graph LR
+    subgraph "MEDIUM"
+        M1[Plan] --> M2[PlanAuditor +<br/>AssumptionVerifier] --> M3[Implement] --> M4[Review]
+    end
+```
+
+```mermaid
+graph LR
+    subgraph "LARGE"
+        L1[Plan] --> L2[PlanAuditor +<br/>AssumptionVerifier] --> L3[ExecutabilityVerifier] --> L4[Implement] --> L5[Review]
+    end
+```
+
+## Orchestration State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> PLANNING
+    PLANNING --> WAITING_APPROVAL: plan ready
+    WAITING_APPROVAL --> PLAN_REVIEW: user approved
+    PLAN_REVIEW --> ACTING: audit passed
+    PLAN_REVIEW --> PLANNING: needs revision
+    WAITING_APPROVAL --> ACTING: trivial plan (skip review)
+    ACTING --> REVIEWING: phase complete
+    REVIEWING --> WAITING_APPROVAL: review done
+    WAITING_APPROVAL --> ACTING: next phase approved
+    WAITING_APPROVAL --> COMPLETE: all phases done
+    COMPLETE --> [*]
+```
+
+## Failure Routing
+
+```mermaid
+flowchart LR
+    F[Subagent Failure] --> C{Classification}
+    C -->|transient| R1[Retry same agent<br/>max 3x]
+    C -->|fixable| R2[Retry with fix hint<br/>max 1x]
+    C -->|needs_replan| R3[Delegate to Planner]
+    C -->|escalate| R4[Stop — present to user]
+    R1 -->|exhausted| R4
+    R2 -->|exhausted| R4
+```
 
 ## Agent Architecture
 
@@ -25,8 +160,8 @@ A multi-agent orchestration system for VS Code Copilot. This fork replaces vibe-
 
 | Agent | File | Model | Role |
 |-------|------|-------|------|
-| **Orchestrator** | `Orchestrator.agent.md` | Claude Sonnet 4.6 | Orchestrator, gate controller, delegation |
-| **Planner** | `Planner.agent.md` | Claude Opus 4.6 | Planning-only, phased implementation plans |
+| **Orchestrator** | `Orchestrator.agent.md` | Claude Sonnet 4.6 | Conductor, gate controller, delegation |
+| **Planner** | `Planner.agent.md` | Claude Opus 4.6 | Structured planning, idea interviews |
 
 ### Specialized Subagents
 
@@ -34,91 +169,43 @@ A multi-agent orchestration system for VS Code Copilot. This fork replaces vibe-
 |-------|------|-------|------|
 | **Researcher** | `Researcher-subagent.agent.md` | GPT-5.4 | Evidence-first research |
 | **CodeMapper** | `CodeMapper-subagent.agent.md` | GPT-5.4 mini | Read-only codebase discovery |
-| **CodeReviewer** | `CodeReviewer-subagent.agent.md` | GPT-5.4 | Verification, safety gate reviewer |
-| **PlanAuditor** | `PlanAuditor-subagent.agent.md` | GPT-5.4 | Adversarial plan auditor |
-| **CoreImplementer** | `CoreImplementer-subagent.agent.md` | Claude Sonnet 4.6 | Implementation with execution reports |
-| **UIImplementer** | `UIImplementer-subagent.agent.md` | Gemini 3.1 Pro | Frontend implementation with execution reports |
-| **PlatformEngineer** | `PlatformEngineer-subagent.agent.md` | Claude Sonnet 4.6 | CI/CD, containers, infrastructure deployment |
+| **CodeReviewer** | `CodeReviewer-subagent.agent.md` | GPT-5.4 | Code review and safety gates |
+| **PlanAuditor** | `PlanAuditor-subagent.agent.md` | GPT-5.4 | Adversarial plan audit |
+| **AssumptionVerifier** | `AssumptionVerifier-subagent.agent.md` | GPT-5.4 | Assumption-fact confusion detection |
+| **ExecutabilityVerifier** | `ExecutabilityVerifier-subagent.agent.md` | GPT-5.4 mini | Cold-start plan executability simulation |
+| **CoreImplementer** | `CoreImplementer-subagent.agent.md` | Claude Sonnet 4.6 | Backend implementation |
+| **UIImplementer** | `UIImplementer-subagent.agent.md` | Gemini 3.1 Pro | Frontend implementation |
+| **PlatformEngineer** | `PlatformEngineer-subagent.agent.md` | Claude Sonnet 4.6 | CI/CD, containers, infrastructure |
 | **TechnicalWriter** | `TechnicalWriter-subagent.agent.md` | Gemini 3.1 Pro | Documentation, diagrams, code-doc parity |
 | **BrowserTester** | `BrowserTester-subagent.agent.md` | GPT-5.4 mini | E2E browser testing, accessibility audits |
 
 ### Clarification & Tool Routing
 
-Planner and Orchestrator own user-facing clarification via `askQuestions`. Acting subagents (CoreImplementer, UIImplementer, PlatformEngineer, TechnicalWriter, BrowserTester) return structured `NEEDS_INPUT` with `clarification_request` when they encounter ambiguity. Read-only agents (Researcher, CodeMapper, CodeReviewer, PlanAuditor) return findings, verdicts, or `ABSTAIN` — they do not interact with the user directly.
+Planner and Orchestrator own user-facing clarification via `askQuestions`. Acting subagents (CoreImplementer, UIImplementer, PlatformEngineer, TechnicalWriter, BrowserTester) return structured `NEEDS_INPUT` with `clarification_request` when they encounter ambiguity. Read-only agents (Researcher, CodeMapper, CodeReviewer, PlanAuditor, AssumptionVerifier, ExecutabilityVerifier) return findings, verdicts, or `ABSTAIN` — they do not interact with the user directly.
 
-The `clarification_request` payload across all 5 acting agent schemas is governed by a shared contract: `schemas/clarification-request.schema.json`. Researcher and CodeMapper do not include `clarification_request` — they are read-only agents whose status enums do not include `NEEDS_INPUT`.
-
-Each agent has role-specific routing rules for external tools. See `docs/agent-engineering/TOOL-ROUTING.md` and `docs/agent-engineering/CLARIFICATION-POLICY.md`.
+The `clarification_request` payload is governed by `schemas/clarification-request.schema.json`. Each agent has role-specific routing rules for external tools — see `docs/agent-engineering/TOOL-ROUTING.md` and `docs/agent-engineering/CLARIFICATION-POLICY.md`.
 
 ## Reliability Model
 
-Contracts are aligned to four dimensions:
-
-1. **Consistency** — deterministic statuses and gate transitions.
-2. **Robustness** — graceful behavior under paraphrase and naming drift.
-3. **Predictability** — explicit abstention when confidence or evidence is low.
-4. **Safety** — mandatory human approval gates for destructive and irreversible operations.
-5. **Failure Taxonomy** — all agents classify failures as `transient`, `fixable`, `needs_replan`, or `escalate` for automated routing by Orchestrator.
-6. **Clarification Reliability** — agents with `askQuestions` use it proactively for enumerated ambiguity classes; agents without it return structured `NEEDS_INPUT` for conductor routing.
-7. **Tool Routing** — deterministic rules for local search vs external fetch vs Context7/MCP, with no phantom grants.
-8. **Retry Reliability** — silent failure detection, retry budgets per phase, per-wave throttling after rate-limit signals, and escalation thresholds for repeated failures.
+| Dimension | Description |
+|-----------|-------------|
+| **Consistency** | Deterministic statuses and gate transitions |
+| **Robustness** | Graceful behavior under paraphrase and naming drift |
+| **Predictability** | Explicit abstention when confidence or evidence is low |
+| **Safety** | Mandatory human approval for destructive/irreversible operations |
+| **Failure Taxonomy** | `transient` / `fixable` / `needs_replan` / `escalate` classification for automated routing |
+| **Clarification Reliability** | Proactive `askQuestions` for enumerated ambiguity classes; structured `NEEDS_INPUT` for conductor routing |
+| **Tool Routing** | Deterministic rules for local search vs external fetch vs MCP, no phantom grants |
+| **Retry Reliability** | Silent failure detection, retry budgets, per-wave throttling, escalation thresholds |
 
 Reference: `docs/agent-engineering/RELIABILITY-GATES.md`.
-
-## Usage
-
-### Planning with Planner
-
-Ask Planner to produce a structured plan for your task. Review the phased plan, approve it, then hand off to Orchestrator.
-
-### Executing with Orchestrator
-
-Orchestrator orchestrates phase execution: dispatches subagents, runs PreFlect gates before each batch, and requires human approval for high-risk operations. Continue phase-by-phase with explicit approvals where required.
-
-### Direct Research with Researcher
-
-For research-only tasks, invoke Researcher directly. It returns structured findings with evidence citations and confidence scores.
-
-### Quick Exploration with CodeMapper
-
-For fast codebase discovery, invoke CodeMapper. It performs parallel searches and returns a discovery report without modifying files.
-
-## Workflow Example
-
-```
-User Request
-    └── Planner (creates phased plan with waves and Mermaid diagrams)
-         └── Orchestrator (orchestrates wave-based execution)
-              ├── Plan Review Gate (conditional)
-              │    └── PlanAuditor (adversarial plan audit for 3+ phase / low-confidence / high-risk plans)
-              ├── Wave 1: Foundation
-              │    └── CodeMapper / Researcher (discovery & research)
-              ├── Wave 2: Implementation (parallel)
-              │    ├── CoreImplementer (backend implementation)
-              │    ├── UIImplementer (UI implementation)
-              │    └── PlatformEngineer (infrastructure deployment)
-              ├── Wave 3: Verification
-              │    ├── CodeReviewer (verification & safety)
-              │    └── BrowserTester (E2E & accessibility)
-              └── Wave 4: Documentation
-                   └── TechnicalWriter (docs & diagrams)
-```
-
-### Failure Routing
-
-```
-Subagent returns failure_classification
-    ├── transient → Orchestrator retries same agent (max 3x)
-    ├── fixable → Orchestrator retries with fix hint (max 1x)
-    ├── needs_replan → Orchestrator delegates to Planner
-    └── escalate → Orchestrator stops and presents to user
-```
 
 ## Installation
 
 1. Clone this repository.
 2. Copy `*.agent.md` files to your VS Code prompts directory.
-3. Reload VS Code.
+3. Copy `schemas/`, `docs/`, and `plans/` directories alongside the agent files.
+4. Reload VS Code.
 
 ## Configuration
 
@@ -133,12 +220,10 @@ Subagent returns failure_classification
 
 ### Adding Custom Agents
 
-**Quick method:** Create a new `.agent.md` file following the P.A.R.T structure (Prompt → Archive → Resources → Tools).
-
-**Manual method:** Copy an existing agent file (e.g., `CoreImplementer-subagent.agent.md`) and modify the sections for your use case.
+Create a new `.agent.md` file following the P.A.R.T structure (Prompt → Archive → Resources → Tools). Use any existing agent as a template.
 
 Every custom agent should include:
-- A JSON Schema output contract in `schemas/`.
+- A JSON Schema contract in `schemas/` for documentation.
 - Non-Negotiable Rules (no fabrication, abstain on uncertainty).
 - Explicit tool restrictions in the `## Tools` section.
 
@@ -147,104 +232,48 @@ Every custom agent should include:
 - VS Code Insiders recommended.
 - GitHub Copilot with custom agent support.
 
-## What Changed (Fork vs Upstream)
+## Design Principles
 
-### P.A.R.T Migration
+### P.A.R.T Contract Architecture
 
-- All 7 agents migrated from vibe-based prompts to deterministic P.A.R.T contracts.
-- Strict JSON Schema 2020-12 output contracts for all agents.
-- Planning vs Acting split made explicit.
-- PreFlect gate added before execution batches.
-- Human approval gates for destructive and irreversible operations.
-- Context compaction and agentic memory policy standardized.
+Every agent follows a four-section structure — **Prompt** (mission, scope, deterministic contracts), **Archive** (memory policies, context compaction), **Resources** (file references, loaded on-demand), **Tools** (allowed/disallowed with routing rules). This eliminates ambiguity in agent behavior and makes contracts auditable.
 
-### Post-Migration Revision
+### Structured Text Over JSON
 
-- Restored delegation heuristics and routing templates for Orchestrator and Planner.
-- Added parallel search mandates and merging protocols for CodeMapper.
-- Restored uncertainty protocols and confidence criteria for Researcher.
-- Added stopping rules and best practices for CoreImplementer and UIImplementer.
-- Strengthened CodeReviewer verdict schema with explicit approval/rejection criteria.
+Agents return structured text summaries with clearly labeled fields instead of raw JSON objects. This conserves context tokens in multi-agent delegation chains where the orchestrating LLM reads text — not programmatically parses JSON. Schema files in `schemas/` are retained as documentation contracts and eval references.
 
-### Ecosystem Modernization
+### Least-Privilege Delegation
 
-- Added 3 new specialized agents: PlatformEngineer, TechnicalWriter, BrowserTester.
-- Wave-aware parallel execution in Orchestrator (batch approval per wave).
-- Failure taxonomy across all agents (`transient`, `fixable`, `needs_replan`, `escalate`).
-- Inter-phase contracts and failure expectations in Planner plans.
-- External delegation protocol schema to reduce Orchestrator context bloat.
-- Health-first gate for BrowserTester to prevent false-positive E2E failures.
-- Rollback protocol mandate for PlatformEngineer agent.
+Each agent receives only the tools required by its role. Implementation agents cannot access `askQuestions`. Read-only agents cannot modify files. Orchestrator cannot bypass approval gates. Tool grants are declared in frontmatter and enforced by body-level routing rules.
 
-### New Artifacts
+### Adversarial Review Pipeline
 
-**Governance docs:**
-- `docs/agent-engineering/PART-SPEC.md`
-- `docs/agent-engineering/RELIABILITY-GATES.md`
-- `docs/agent-engineering/MIGRATION-CORE-FIRST.md`
-- `docs/agent-engineering/CLARIFICATION-POLICY.md`
-- `docs/agent-engineering/TOOL-ROUTING.md`
-- `docs/agent-engineering/COMPLIANCE-GAPS.md`
+Complex plans pass through up to three independent reviewers — PlanAuditor (architecture and risk), AssumptionVerifier (assumption-fact confusion detection), and ExecutabilityVerifier (cold-start executability simulation) — before implementation begins. The pipeline depth scales with plan complexity.
 
-**Schema contracts:**
-- `schemas/orchestrator.gate-event.schema.json`
-- `schemas/orchestrator.delegation-protocol.schema.json`
-- `schemas/planner.plan.schema.json`
-- `schemas/researcher.research-findings.schema.json`
-- `schemas/code-mapper.discovery.schema.json`
-- `schemas/code-reviewer.verdict.schema.json`
-- `schemas/core-implementer.execution-report.schema.json`
-- `schemas/ui-implementer.execution-report.schema.json`
-- `schemas/platform-engineer.execution-report.schema.json`
-- `schemas/technical-writer.execution-report.schema.json`
-- `schemas/browser-tester.execution-report.schema.json`
-- `schemas/plan-auditor.plan-audit.schema.json`
-- `schemas/clarification-request.schema.json`
+### Wave-Based Parallel Execution
 
-**Eval fixtures:**
-- `evals/README.md`
-- `evals/scenarios/consistency-repeatability.json`
-- `evals/scenarios/robustness-paraphrase.json`
-- `evals/scenarios/predictability-abstain.json`
-- `evals/scenarios/safety-approval-gate.json`
-- `evals/scenarios/sisyphus-contract.json`
-- `evals/scenarios/frontend-contract.json`
-- `evals/scenarios/devops-contract.json`
-- `evals/scenarios/docwriter-contract.json`
-- `evals/scenarios/browser-tester-contract.json`
-- `evals/scenarios/wave-execution.json`
-- `evals/scenarios/failure-retry.json`
-- `evals/scenarios/clarification-askquestions.json`
-- `evals/scenarios/skills-mcp-routing.json`
-- `evals/scenarios/agent-triggering-quality.json`
-- `evals/scenarios/challenger-contract.json`
-- `evals/scenarios/challenger-adversarial-detection.json`
-- `evals/scenarios/atlas-challenger-integration.json`
-- `evals/scenarios/atlas-retry-backoff.json`
-- `evals/scenarios/challenger-replan-loop.json`
-- `evals/scenarios/prometheus-mermaid-output.json`
-- `evals/scenarios/clarification-schema-fragment.json`
-- `evals/scenarios/needs-input-routing.json`
+Planner assigns phases to execution waves. Orchestrator dispatches all phases within a wave in parallel, waits for completion, then advances to the next wave. This maximizes throughput while respecting inter-phase dependencies.
 
-## Migration Status
+### Failure Taxonomy and Automated Recovery
 
-P.A.R.T migration complete. Full compliance revision applied. All 11 agents now have:
-- P.A.R.T instruction architecture (section order compliant)
-- JSON Schema 2020-12 output contracts
-- Explicit abstention paths for low confidence
-- Failure classification taxonomy for automated routing
-- Non-Negotiable Rules (no fabrication, no code generation without evidence)
-- PreFlect checkpoints (8/8 subagents + Orchestrator + Planner)
-- Human approval gates (explicit or delegated statements in all 10 agents)
-- Clarification triggers aligned to `CLARIFICATION-POLICY.md` (5 mandatory classes)
-- External tool routing rules aligned to `TOOL-ROUTING.md` (role-specific for all agents with external tools)
-- Centralized clarification ownership (Planner/Orchestrator own `askQuestions`; subagents return `NEEDS_INPUT` or `ABSTAIN`)
+All agents classify failures into four categories. Orchestrator routes each category through a deterministic retry/escalation path. Retry budgets, per-wave throttling, and escalation thresholds prevent infinite loops and cascading failures.
 
-Phase 4 (repo-local skills) was evaluated and skipped — Phases 1–3b reduced cross-agent duplication to manageable levels. Shared policies were extracted to `.github/copilot-instructions.md`, and identical Uncertainty Protocol blocks across 5 acting agents were compressed to canonical policy pointers.
+## Evaluation Suite
 
-See `docs/agent-engineering/COMPLIANCE-GAPS.md` for the original audit baseline.
+The `evals/` directory contains scenario fixtures for structural validation. Run `cd evals && npm test` to verify schema compliance, reference integrity, P.A.R.T section ordering, and tool grant consistency across all agents. See `evals/README.md` for details.
 
-> Core contracts prioritize strict schema outputs. This is a controlled breaking change for consumers expecting free-form output. See `docs/agent-engineering/MIGRATION-CORE-FIRST.md`.
+## Project Structure
+
+```
+├── Orchestrator.agent.md          # Conductor agent
+├── Planner.agent.md               # Planning agent
+├── *-subagent.agent.md            # 11 specialized subagents
+├── schemas/                       # JSON Schema contracts (documentation)
+├── docs/agent-engineering/        # Governance policies
+├── evals/                         # Structural validation suite
+│   └── scenarios/                 # Eval scenario fixtures
+└── plans/                         # Plan artifacts and templates
+```
 
 ## License
 
@@ -272,7 +301,8 @@ SOFTWARE.
 
 ## Acknowledgments
 
-This fork builds upon:
-- [Github-Copilot-Orchestrator](https://github.com/bigguy345/Github-Copilot-Orchestrator)
+ControlFlow was inspired by and builds upon ideas from:
+- [Github-Copilot-Atlas](https://github.com/bigguy345/Github-Copilot-Atlas) — original multi-agent orchestration concept for VS Code Copilot.
+- [claude-bishx](https://github.com/bish-x/claude-bishx) — agent engineering patterns and structured workflows.
 - [copilot-orchestra](https://github.com/ShepAlderson/copilot-orchestra)
 - [oh-my-opencode](https://github.com/code-yeongyu/oh-my-opencode)

@@ -65,7 +65,7 @@ For each test scenario, follow this execution order:
 3. Run accessibility audit on all tested pages.
 4. Collect console errors and network failure counts.
 5. Close all browser sessions (cleanup mandate).
-6. Emit schema-compliant execution report.
+6. Emit structured text execution report.
 
 ### Accessibility Audit Standards
 - Check WCAG 2.2 AA compliance for all tested elements.
@@ -128,7 +128,17 @@ Reference: `docs/agent-engineering/TOOL-ROUTING.md`
 
 ## Output Requirements
 
-Return a schema-compliant execution report (`schemas/browser-tester.execution-report.schema.json`) and a concise human-readable summary of test results, accessibility findings, and failure evidence locations.
+Return a structured text report. Do NOT output raw JSON to chat.
+
+Include these fields clearly labeled:
+- **Status** — COMPLETE, NEEDS_INPUT, FAILED, or ABSTAIN.
+- **Health Check** — application health gate result.
+- **Test Results** — passed/failed counts with failure details and evidence locations.
+- **Accessibility Findings** — WCAG violations with severity and element references.
+- **Failure Classification** — when not COMPLETE: transient, fixable, needs_replan, or escalate.
+- **Summary** — concise overview of test results.
+
+Full contract reference: `schemas/browser-tester.execution-report.schema.json`.
 
 ## Non-Negotiable Rules
 

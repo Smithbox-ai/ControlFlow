@@ -44,7 +44,7 @@ If high risk and unresolved, return `ABSTAIN` or `NEEDS_INPUT`.
 3. Run targeted tests, then full suite.
 4. Run lint/format checks.
 5. Run build verification.
-6. Emit schema-compliant execution report.
+6. Emit structured text execution report.
 
 ## Archive
 
@@ -103,7 +103,18 @@ Reference: `docs/agent-engineering/TOOL-ROUTING.md`
 
 ## Output Requirements
 
-Return a schema-compliant execution report (`schemas/core-implementer.execution-report.schema.json`) and a concise human-readable summary of changes and verification results.
+Return a structured text report. Do NOT output raw JSON to chat.
+
+Include these fields clearly labeled:
+- **Status** — COMPLETE, NEEDS_INPUT, FAILED, or ABSTAIN.
+- **Changes** — list of files created/modified with brief descriptions.
+- **Tests** — passed/failed/skipped counts and any failure details.
+- **Build** — PASS or FAIL with details.
+- **Lint** — clean or issue count.
+- **Failure Classification** — when not COMPLETE: transient, fixable, needs_replan, or escalate.
+- **Summary** — concise description of what was done.
+
+Full contract reference: `schemas/core-implementer.execution-report.schema.json`.
 
 ## Non-Negotiable Rules
 

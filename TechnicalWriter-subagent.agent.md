@@ -51,7 +51,7 @@ If high risk and unresolved, return `ABSTAIN` or `NEEDS_INPUT`.
 3. Generate documentation with code snippets and examples.
 4. Generate Mermaid diagrams where architecture/flow visualization adds value.
 5. Verify documentation-code parity — ensure all documented behavior matches code.
-6. Emit schema-compliant execution report.
+6. Emit structured text execution report.
 
 ### Diagram Standards
 - Use **Mermaid** format exclusively (renders natively in GitHub and VS Code).
@@ -112,7 +112,16 @@ Reference: `docs/agent-engineering/TOOL-ROUTING.md`
 
 ## Output Requirements
 
-Return a schema-compliant execution report (`schemas/technical-writer.execution-report.schema.json`) and a concise human-readable summary of documentation created/updated and parity status.
+Return a structured text report. Do NOT output raw JSON to chat.
+
+Include these fields clearly labeled:
+- **Status** — COMPLETE, NEEDS_INPUT, FAILED, or ABSTAIN.
+- **Docs Created/Updated** — list of documentation files with descriptions.
+- **Parity Status** — whether documentation matches current code state.
+- **Failure Classification** — when not COMPLETE: transient, fixable, needs_replan, or escalate.
+- **Summary** — concise description of documentation work done.
+
+Full contract reference: `schemas/technical-writer.execution-report.schema.json`.
 
 ## Non-Negotiable Rules
 

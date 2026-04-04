@@ -122,9 +122,16 @@ Approval gates: N/A. CodeReviewer is a verification-only agent. It does not exec
 
 ## Output Requirements
 
-Return:
-1. Schema-compliant JSON verdict (`schemas/code-reviewer.verdict.schema.json`).
-2. Human-readable review summary following the template below.
+Return a structured text review. Do NOT output raw JSON to chat.
+
+Use the review template below. The review MUST include these key fields that Orchestrator reads:
+- **Status** — APPROVED, NEEDS_REVISION, FAILED, or ABSTAIN.
+- **Score** — weighted percentage.
+- **Blocking Issues** — only validated blocking issues prevent phase advancement.
+- **Verification Gates** — problems/tests/build pass/fail status.
+- **Failure Classification** — when not APPROVED: fixable, needs_replan, or escalate.
+
+Full contract reference: `schemas/code-reviewer.verdict.schema.json`.
 
 ### Review Document Template
 
@@ -165,4 +172,4 @@ Each issue in this format:
 - No fabrication of evidence.
 - If uncertain and cannot verify safely: `ABSTAIN` or `NEEDS_REVISION`.
 
-**Clarification role:** This agent returns schema-compliant verdicts to Orchestrator. If evidence is insufficient for a verdict, it returns `ABSTAIN` rather than an unsupported decision.
+**Clarification role:** This agent returns structured text verdicts to Orchestrator. If evidence is insufficient for a verdict, it returns `ABSTAIN` rather than an unsupported decision.

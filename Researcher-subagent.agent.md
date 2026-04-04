@@ -91,10 +91,16 @@ If still < 3 after the extra cycle, report findings with explicit `uncertainties
 
 ## Output Requirements
 
-Return only a schema-compliant findings object and a concise human summary.
+Return a structured text report. Do NOT output raw JSON to chat.
 
-Required structure is defined by:
-- `schemas/researcher.research-findings.schema.json`
+Include these fields clearly labeled:
+- **Status** — COMPLETE or ABSTAIN.
+- **Confidence** — numeric 0–1.
+- **Key Findings** — numbered list, each with evidence citations (file path + line numbers).
+- **Open Questions** — unresolved items with uncertainty explanations.
+- **Summary** — concise overview of research results.
+
+Full contract reference: `schemas/researcher.research-findings.schema.json`.
 
 ## Non-Negotiable Rules
 

@@ -178,12 +178,18 @@ Approval gates: N/A (read-only audit agent). PlanAuditor returns findings to Orc
 
 ## Output Requirements
 
-Return a schema-compliant `PlanAuditorPlanAudit` object containing:
-- All findings categorized by severity and type.
-- Risk summary with counts per severity level.
-- Actionable recommendation for Orchestrator.
-- Failure classification when status is not `APPROVED`.
+Return a structured text report. Do NOT output raw JSON to chat.
+
+Include these fields clearly labeled:
+- **Status** — APPROVED, NEEDS_REVISION, REJECTED, or ABSTAIN.
+- **Findings** — list each finding with severity (CRITICAL/MAJOR/MINOR), type, and description.
+- **Risk Summary** — counts per severity level.
+- **Recommendation** — actionable next step for Orchestrator.
+- **Failure Classification** — when status is not APPROVED: transient, fixable, needs_replan, or escalate.
+- **Score** — quantitative scoring per dimension.
 
 Findings must be specific and actionable. Vague observations like "the plan could be better" are non-compliant.
 
-**Clarification role:** This agent returns schema-compliant audit findings to Orchestrator. If the plan artifact is inaccessible or the plan scope is ambiguous, it returns `ABSTAIN`. It does not interact with the user directly.
+Full contract reference: `schemas/plan-auditor.plan-audit.schema.json`.
+
+**Clarification role:** This agent returns structured audit findings to Orchestrator. If the plan artifact is inaccessible or the plan scope is ambiguous, it returns `ABSTAIN`. It does not interact with the user directly.

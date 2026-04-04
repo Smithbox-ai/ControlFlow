@@ -23,8 +23,8 @@ Run deterministic orchestration for: `Research -> Design -> Planning -> Implemen
 - Do not bypass schema contracts.
 
 ### Deterministic Contracts
-- Gate-event output schema: `schemas/orchestrator.gate-event.schema.json`.
-- Status/decision enums are fixed by schema.
+- Gate-event field contract: `schemas/orchestrator.gate-event.schema.json` (reference only — do not output JSON to chat).
+- Status/decision enums are fixed by contract.
 - Planner plan phases must include `executor_agent`; Orchestrator treats that field as authoritative for phase dispatch.
 - If confidence is below threshold or required evidence is missing, return `ABSTAIN`.
 
@@ -287,7 +287,16 @@ To reduce approval fatigue on multi-phase plans:
 
 ## Output Requirements
 
-When reporting any gate decision, include a schema-compliant object (matching `schemas/orchestrator.gate-event.schema.json`) and then a concise human-readable summary.
+When reporting any gate decision, provide a concise structured summary. Do NOT output raw JSON to chat — it wastes context tokens.
+
+Include these fields clearly labeled in your gate report:
+- **Status / Decision** — GO, REPLAN, ABSTAIN, or BLOCKED.
+- **Confidence** — numeric 0–1.
+- **Requires Human Approval** — yes/no.
+- **Reason** — one-sentence justification.
+- **Next Action** — what happens next.
+
+Full contract reference: `schemas/orchestrator.gate-event.schema.json`.
 
 ### Templates
 

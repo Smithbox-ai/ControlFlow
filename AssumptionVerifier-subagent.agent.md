@@ -23,7 +23,8 @@ Hunt assumptions disguised as facts. Every claim in a plan is guilty until prove
 - No approval/rejection authority (advisory only — Orchestrator decides).
 
 ### Deterministic Contracts
-- Output must conform to `schemas/assumption-verifier.plan-audit.schema.json`.
+- Output must follow the structured text format below. Do NOT output raw JSON to chat. Full contract reference: `schemas/assumption-verifier.plan-audit.schema.json`.
+- Include: **Status** (COMPLETE/ABSTAIN), **Mirages Found** (BLOCKING count + MINOR count with evidence), **Dimensional Scores** (per-dimension numeric), **Summary**.
 - Status enums: `COMPLETE`, `ABSTAIN`.
 - Confidence below 0.7 triggers automatic `ABSTAIN`.
 - Every mirage finding must include evidence (file paths, actual code references).

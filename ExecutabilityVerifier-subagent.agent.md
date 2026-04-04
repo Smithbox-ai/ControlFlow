@@ -23,7 +23,8 @@ Pretend you are a fresh agent with NO prior context — only the plan artifact a
 - No external API calls or web fetches.
 
 ### Deterministic Contracts
-- Output must conform to `schemas/executability-verifier.execution-report.schema.json`.
+- Output must follow the structured text format below. Do NOT output raw JSON to chat. Full contract reference: `schemas/executability-verifier.execution-report.schema.json`.
+- Include: **Status** (PASS/FAIL/WARN/ABSTAIN), **Per-Task Checklist** (task ID + pass/fail + blockers), **Walkthrough Summary**, **Blocked Steps** (if any).
 - Status enums: `PASS`, `FAIL`, `WARN`, `ABSTAIN`.
 - Confidence below 0.6 triggers automatic `ABSTAIN`.
 
