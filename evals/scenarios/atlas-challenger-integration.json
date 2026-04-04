@@ -16,7 +16,7 @@
         }
       },
       "expected_behavior": {
-        "challenger_invoked": true,
+        "plan_auditor_invoked": true,
         "trigger_reason": "phase_count >= 3",
         "delegation_includes": [
           "plan_path",
@@ -35,7 +35,7 @@
         }
       },
       "expected_behavior": {
-        "challenger_invoked": true,
+        "plan_auditor_invoked": true,
         "trigger_reason": "confidence < 0.9"
       }
     },
@@ -50,7 +50,7 @@
         }
       },
       "expected_behavior": {
-        "challenger_invoked": false,
+        "plan_auditor_invoked": false,
         "proceeds_to": "ACTING"
       }
     },
@@ -65,7 +65,7 @@
         }
       },
       "expected_behavior": {
-        "challenger_invoked": true,
+        "plan_auditor_invoked": true,
         "trigger_reason": "destructive_scope"
       }
     },
@@ -73,7 +73,7 @@
       "label": "challenger-rejected-escalates",
       "description": "When PlanAuditor returns REJECTED, Orchestrator must escalate to user",
       "input": {
-        "challenger_response": {
+        "plan_auditor_response": {
           "status": "REJECTED",
           "failure_classification": "needs_replan",
           "findings": [
@@ -93,7 +93,7 @@
       "label": "challenger-needs-revision-routes-to-prometheus",
       "description": "When PlanAuditor returns NEEDS_REVISION, Orchestrator routes back to Planner",
       "input": {
-        "challenger_response": {
+        "plan_auditor_response": {
           "status": "NEEDS_REVISION",
           "failure_classification": "fixable",
           "findings": [
@@ -128,7 +128,7 @@
         }
       },
       "expected_behavior": {
-        "challenger_invoked": true,
+        "plan_auditor_invoked": true,
         "trigger_reason": "semantic_risk_high_impact_unresolved",
         "delegation_includes": [
           "plan_path",
@@ -159,7 +159,7 @@
         }
       },
       "expected_behavior": {
-        "challenger_invoked": false,
+        "plan_auditor_invoked": false,
         "proceeds_to": "ACTING"
       }
     }

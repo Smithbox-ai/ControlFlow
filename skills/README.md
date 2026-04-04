@@ -14,7 +14,10 @@ skills/
     ├── tdd-patterns.md
     ├── error-handling-patterns.md
     ├── security-patterns.md
-    └── performance-patterns.md
+    ├── performance-patterns.md
+    ├── completeness-traceability.md
+    ├── integration-validator.md
+    └── idea-to-prompt.md
 ```
 
 ## Format Specification

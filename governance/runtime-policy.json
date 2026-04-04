@@ -47,11 +47,6 @@
     "LARGE": 5
   },
 
-  "plan_auditor_planner_loop": {
-    "max_iterations": 2,
-    "convergence_check": true
-  },
-
   "retry_budgets": {
     "max_retries_per_phase": 5,
     "transient_max": 3,

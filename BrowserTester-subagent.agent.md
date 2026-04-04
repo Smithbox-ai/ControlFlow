@@ -55,7 +55,7 @@ For each test scenario, follow this execution order:
 5. **Evidence** — On failure only, capture detailed evidence to evidence directory.
 
 ### Execution Protocol
-0. Read standards (`plans/project-context.md`, `copilot-instructions.md`) when available.
+0. Read standards (`plans/project-context.md`, `.github/copilot-instructions.md`) when available.
 1. Execute health-first gate — verify target application is responsive.
 2. Iterate through validation matrix scenarios:
    a. Navigate to target URL.

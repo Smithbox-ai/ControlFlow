@@ -96,35 +96,18 @@ graph TB
 
 ControlFlow adjusts its pipeline depth based on plan complexity. Simpler tasks skip unnecessary review stages.
 
-```mermaid
-graph LR
-    subgraph "TRIVIAL"
-        T1[Plan] --> T2[Implement] --> T3[Review]
-    end
-```
+| Tier | Scope | Review Agents | Max Iterations |
+|------|-------|---------------|----------------|
+| **TRIVIAL** | 1–2 files, single concern | None — review skipped entirely | — |
+| **SMALL** | 3–5 files, single domain | PlanAuditor | 2 |
+| **MEDIUM** | 6–15 files, cross-domain | PlanAuditor + AssumptionVerifier | 5 |
+| **LARGE** | 15+ files, system-wide | PlanAuditor + AssumptionVerifier + ExecutabilityVerifier | 5 |
 
-```mermaid
-graph LR
-    subgraph "SMALL"
-        S1[Plan] --> S2[PlanAuditor] --> S3[Implement] --> S4[Review]
-    end
-```
-
-```mermaid
-graph LR
-    subgraph "MEDIUM"
-        M1[Plan] --> M2[PlanAuditor +<br/>AssumptionVerifier] --> M3[Implement] --> M4[Review]
-    end
-```
-
-```mermaid
-graph LR
-    subgraph "LARGE"
-        L1[Plan] --> L2[PlanAuditor +<br/>AssumptionVerifier] --> L3[ExecutabilityVerifier] --> L4[Implement] --> L5[Review]
-    end
-```
+Any plan with an unresolved `HIGH`-impact `risk_review` entry forces the full pipeline regardless of tier.
 
 ## Orchestration State Machine
+
+> Simplified — REJECTED transition, HIGH_RISK_APPROVAL_GATE, and ABSTAIN paths omitted for clarity. See `Orchestrator.agent.md` for the full state machine.
 
 ```mermaid
 stateDiagram-v2
@@ -143,16 +126,14 @@ stateDiagram-v2
 
 ## Failure Routing
 
-```mermaid
-flowchart LR
-    F[Subagent Failure] --> C{Classification}
-    C -->|transient| R1[Retry same agent<br/>max 3x]
-    C -->|fixable| R2[Retry with fix hint<br/>max 1x]
-    C -->|needs_replan| R3[Delegate to Planner]
-    C -->|escalate| R4[Stop — present to user]
-    R1 -->|exhausted| R4
-    R2 -->|exhausted| R4
-```
+| Classification | Action | Max Retries |
+|----------------|--------|-------------|
+| `transient` | Retry same agent | 3 |
+| `fixable` | Retry with fix hint | 1 |
+| `needs_replan` | Delegate to Planner | 1 |
+| `escalate` | Stop — present to user | 0 |
+
+When any retry budget is exhausted, the phase escalates to the user with accumulated failure evidence.
 
 ## Agent Architecture
 
@@ -171,12 +152,12 @@ flowchart LR
 | **CodeMapper** | `CodeMapper-subagent.agent.md` | GPT-5.4 mini | Read-only codebase discovery |
 | **CodeReviewer** | `CodeReviewer-subagent.agent.md` | GPT-5.4 | Code review and safety gates |
 | **PlanAuditor** | `PlanAuditor-subagent.agent.md` | GPT-5.4 | Adversarial plan audit |
-| **AssumptionVerifier** | `AssumptionVerifier-subagent.agent.md` | GPT-5.4 | Assumption-fact confusion detection |
-| **ExecutabilityVerifier** | `ExecutabilityVerifier-subagent.agent.md` | GPT-5.4 mini | Cold-start plan executability simulation |
+| **AssumptionVerifier** | `AssumptionVerifier-subagent.agent.md` | Claude Sonnet 4.6 | Assumption-fact confusion detection |
+| **ExecutabilityVerifier** | `ExecutabilityVerifier-subagent.agent.md` | Claude Sonnet 4.6 | Cold-start plan executability simulation |
 | **CoreImplementer** | `CoreImplementer-subagent.agent.md` | Claude Sonnet 4.6 | Backend implementation |
-| **UIImplementer** | `UIImplementer-subagent.agent.md` | Gemini 3.1 Pro | Frontend implementation |
+| **UIImplementer** | `UIImplementer-subagent.agent.md` | Gemini 3.1 Pro (Preview) | Frontend implementation |
 | **PlatformEngineer** | `PlatformEngineer-subagent.agent.md` | Claude Sonnet 4.6 | CI/CD, containers, infrastructure |
-| **TechnicalWriter** | `TechnicalWriter-subagent.agent.md` | Gemini 3.1 Pro | Documentation, diagrams, code-doc parity |
+| **TechnicalWriter** | `TechnicalWriter-subagent.agent.md` | Gemini 3.1 Pro (Preview) | Documentation, diagrams, code-doc parity |
 | **BrowserTester** | `BrowserTester-subagent.agent.md` | GPT-5.4 mini | E2E browser testing, accessibility audits |
 
 ### Clarification & Tool Routing
@@ -204,8 +185,14 @@ Reference: `docs/agent-engineering/RELIABILITY-GATES.md`.
 
 1. Clone this repository.
 2. Copy `*.agent.md` files to your VS Code prompts directory.
-3. Copy `schemas/`, `docs/`, and `plans/` directories alongside the agent files.
-4. Reload VS Code.
+3. Copy the following directories alongside the agent files:
+   - `schemas/` — JSON Schema contracts
+   - `docs/` — Governance policies
+   - `plans/` — Plan artifacts and templates
+   - `governance/` — Operational knobs and tool grants
+   - `skills/` — Domain pattern library
+4. Copy `.github/copilot-instructions.md` alongside the agent files (required by all executor agents).
+5. Reload VS Code.
 
 ## Configuration
 
@@ -268,11 +255,16 @@ The `evals/` directory contains scenario fixtures for structural validation. Run
 ├── Orchestrator.agent.md          # Conductor agent
 ├── Planner.agent.md               # Planning agent
 ├── *-subagent.agent.md            # 11 specialized subagents
-├── schemas/                       # JSON Schema contracts (documentation)
-├── docs/agent-engineering/        # Governance policies
+├── .github/
+│   └── copilot-instructions.md    # Shared agent policy (read by all executor agents)
+├── schemas/                       # JSON Schema contracts (documentation only)
+├── docs/agent-engineering/        # Governance policies and reliability gates
+├── governance/                    # Operational knobs and tool grants
+├── skills/                        # Reusable domain pattern library
 ├── evals/                         # Structural validation suite
 │   └── scenarios/                 # Eval scenario fixtures
 └── plans/                         # Plan artifacts and templates
+    └── templates/                 # Orchestrator document templates
 ```
 
 ## License

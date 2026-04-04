@@ -16,7 +16,7 @@
       },
       {
         "classification": "needs_replan",
-        "expected_action": "delegate_to_prometheus",
+        "expected_action": "delegate_to_planner",
         "max_retries": 1
       },
       {

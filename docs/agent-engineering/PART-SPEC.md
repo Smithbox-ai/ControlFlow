@@ -96,11 +96,15 @@ Required when agent has access to external knowledge tools (fetch, githubRepo, C
   - Failure mode (`ABSTAIN` / `NEEDS_REVISION` / `FAILED`)
 
 ## Deterministic Status Enums
-Use only the following statuses unless a schema defines a stricter subset:
-- `APPROVED`
-- `NEEDS_REVISION`
-- `FAILED`
-- `ABSTAIN`
+The following statuses form the baseline vocabulary. Individual schemas may define richer or stricter subsets for their role:
+- `APPROVED` / `NEEDS_REVISION` — plan-level review outcomes (PlanAuditor)
+- `COMPLETE` / `ABSTAIN` — research and discovery outcomes (Researcher, CodeMapper, AssumptionVerifier)
+- `PASS` / `FAIL` / `WARN` — verification outcomes (ExecutabilityVerifier, BrowserTester)
+- `READY_FOR_EXECUTION` / `REPLAN_REQUIRED` — planning outcomes (Planner)
+- `FAILED` — general execution failure (implementation agents)
+- `NEEDS_INPUT` — acting agents only; triggers user clarification routing via Orchestrator
+
+The authoritative enum for each agent is its schema contract in `schemas/`. PART-SPEC vocabulary is a reference summary only.
 
 ## Human-in-the-loop Gate
 Any destructive or irreversible action must be blocked until explicit user confirmation.

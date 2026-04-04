@@ -44,7 +44,7 @@ Changes applied across 5 phases:
 - Schema: `schemas/plan-auditor.plan-audit.schema.json`.
 - Orchestrator state machine extended with conditional `PLAN_REVIEW` gate.
 - Trigger policy: 3+ phases, confidence < 0.9, or high-risk/destructive scope.
-- Max 2 PlanAuditor→Planner revision rounds before user escalation.
+- Max 5 PlanAuditor→Planner revision rounds (upgraded from 2) before user escalation.
 
 ### Planner Mermaid Visualization (NEW)
 - Planner now requires Architecture Visualization section for 3+ phase plans.
@@ -108,7 +108,7 @@ Comprehensive modernization of the Orchestrator agent system. Changes across 9 p
 3. **5-Iteration Plan Review Loop:** Orchestrator PLAN_REVIEW upgraded from 2 to 5 max iterations with convergence detection (stagnation threshold: <5% improvement over 2 consecutive iterations).
 4. **Complexity Gate:** Planner classifies tasks as TRIVIAL/SMALL/MEDIUM/LARGE. Orchestrator adjusts pipeline depth accordingly (TRIVIAL skips review entirely, LARGE forces full pipeline).
 5. **Template Externalization:** Embedded templates extracted to `plans/templates/` (4 files). Reduces Orchestrator token overhead by ~800-900 tokens per invocation.
-6. **Skill Library:** `skills/` directory with index and 4 domain pattern files (TDD, error handling, security, performance). Planner selects relevant skills during planning.
+6. **Skill Library:** `skills/` directory with index and 7 domain pattern files (TDD, error handling, security, performance, API design, completeness traceability, integration validation). Planner selects relevant skills during planning.
 7. **Per-Issue Validation:** CodeReviewer now executes 4-step validation protocol for CRITICAL/MAJOR findings. False positives documented with rejection reasons.
 8. **Regression Tracking:** Verified items tracked across plan review iterations. Regressions automatically become BLOCKING issues.
 9. **Observability:** trace_id (UUID v4) propagated through all gate events and delegation payloads for log correlation.

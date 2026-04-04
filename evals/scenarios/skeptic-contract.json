@@ -1,7 +1,7 @@
 {
   "scenario_id": "skeptic-contract-01",
   "target_agent": "AssumptionVerifier-subagent",
-  "goal": "Verify AssumptionVerifier output conforms to skeptic.plan-audit.schema.json with required fields",
+  "goal": "Verify AssumptionVerifier output conforms to schemas/assumption-verifier.plan-audit.schema.json with required fields",
   "description": "Structural validation that AssumptionVerifier produces schema-compliant output with mirage_findings array, scoring object with 5 dimensions, and valid status enum.",
   "expected": {
     "status_enum": [

@@ -7,36 +7,36 @@
     {
       "complexity_tier": "TRIVIAL",
       "expected": {
-        "challenger_dispatched": false,
-        "skeptic_dispatched": false,
-        "dryrun_dispatched": false,
+        "plan_auditor_dispatched": false,
+        "assumption_verifier_dispatched": false,
+        "executability_verifier_dispatched": false,
         "plan_review_skipped": true
       }
     },
     {
       "complexity_tier": "SMALL",
       "expected": {
-        "challenger_dispatched": true,
-        "skeptic_dispatched": false,
-        "dryrun_dispatched": false,
+        "plan_auditor_dispatched": true,
+        "assumption_verifier_dispatched": false,
+        "executability_verifier_dispatched": false,
         "max_iterations": 2
       }
     },
     {
       "complexity_tier": "MEDIUM",
       "expected": {
-        "challenger_dispatched": true,
-        "skeptic_dispatched": true,
-        "dryrun_dispatched": false,
+        "plan_auditor_dispatched": true,
+        "assumption_verifier_dispatched": true,
+        "executability_verifier_dispatched": false,
         "max_iterations": 5
       }
     },
     {
       "complexity_tier": "LARGE",
       "expected": {
-        "challenger_dispatched": true,
-        "skeptic_dispatched": true,
-        "dryrun_dispatched": true,
+        "plan_auditor_dispatched": true,
+        "assumption_verifier_dispatched": true,
+        "executability_verifier_dispatched": true,
         "max_iterations": 5
       }
     }

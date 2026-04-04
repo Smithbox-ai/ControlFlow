@@ -5,7 +5,8 @@ Define when agents must ask for user clarification vs making reasonable assumpti
 
 ## Ownership
 - **askQuestions owners:** Planner, Orchestrator.
-- **All other agents:** Return structured `NEEDS_INPUT` status with `clarification_request` to the conductor (Orchestrator). Do not attempt direct user interaction.
+- **Acting subagents** (CoreImplementer, UIImplementer, PlatformEngineer, TechnicalWriter, BrowserTester): Return structured `NEEDS_INPUT` status with `clarification_request` to the conductor (Orchestrator). Do not attempt direct user interaction.
+- **Read-only agents** (Researcher, CodeMapper): Do not expose `NEEDS_INPUT`. Return only `COMPLETE` or `ABSTAIN`. Surface insufficient evidence in findings, not clarification requests.
 
 ## Mandatory Clarification Classes
 

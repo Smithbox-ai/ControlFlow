@@ -104,6 +104,8 @@ npm test
 | **3b — Required Artifacts** | Shared repo-local dependencies like `.github/copilot-instructions.md`, `plans/project-context.md`, and governance docs exist. |
 | **3c — Tool Grant Consistency** | Every agent frontmatter `tools:` list matches the repository's canonical least-privilege tool set. |
 | **4 — P.A.R.T Section Order** | Every `*.agent.md` preserves `## Prompt` → `## Archive` → `## Resources` → `## Tools` ordering. |
+| **5 — Skill Library** | Every file in `skills/patterns/` is registered in `skills/index.md` and every index entry resolves to a real file. |
+| **6 — Synthetic Rename Negative-Path Checks** | Structural guard checks: stale `target_agent`, stale `expected.schema`, and stale nested `agent` references are correctly rejected. |
 
 ### Exit codes
 

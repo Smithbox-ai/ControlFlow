@@ -93,7 +93,7 @@
         "required": ["path", "format"],
         "properties": {
           "path": { "type": "string" },
-          "format": { "type": "string", "enum": ["mermaid", "plantuml", "ascii"] },
+          "format": { "type": "string", "enum": ["mermaid"], "description": "Mermaid only — renders natively in GitHub and VS Code." },
           "renders_correctly": { "type": "boolean" }
         }
       }

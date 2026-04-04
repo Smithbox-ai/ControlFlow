@@ -40,7 +40,7 @@ Before each implementation batch, evaluate:
 If high risk and unresolved, return `ABSTAIN` or `NEEDS_INPUT`.
 
 ### Execution Protocol
-0. Read standards (`plans/project-context.md`, `copilot-instructions.md`) when available.
+0. Read standards (`plans/project-context.md`, `.github/copilot-instructions.md`) when available.
 1. Write failing component/interaction tests first.
 2. Implement minimal UI code and styling.
 3. Run targeted tests, then full suite.

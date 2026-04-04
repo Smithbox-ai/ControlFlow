@@ -1,7 +1,7 @@
 /**
  * ControlFlow — Structural Validation Harness
  *
- * Five passes:
+ * Six passes:
  *   1. Schema Validity      — all schemas/*.schema.json compile without errors
  *   2. Scenario Integrity   — all evals/scenarios/*.json have required fields and
  *                             point to an existing agent.md
@@ -15,6 +15,9 @@
  *                              in the correct order
  *   5. Skill Library        — every file in skills/patterns/ is listed in skills/index.md
  *                             and every index entry resolves to an existing file
+ *   6. Synthetic Rename Negative-Path Checks — structural guard checks: stale target_agent,
+ *                             stale expected.schema, and stale nested agent references are
+ *                             correctly rejected
  *
  * Exit 0 on all checks passed, exit 1 on any failure.
  *

@@ -42,7 +42,7 @@ Before each infrastructure operation, evaluate:
 If high risk and unresolved, return `ABSTAIN` or `NEEDS_INPUT`.
 
 ### Execution Protocol
-0. Read standards (`plans/project-context.md`, `copilot-instructions.md`) when available.
+0. Read standards (`plans/project-context.md`, `.github/copilot-instructions.md`) when available.
 1. Verify environment prerequisites (docker, kubectl, cloud CLI, permissions).
 2. Check approval gate requirements — pause for user if production or security-sensitive.
 3. Execute infrastructure operations using idempotent commands.
