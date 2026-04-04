@@ -1,6 +1,6 @@
 # Error Handling Patterns
 
-## Error Classification (aligned with Atlas failure taxonomy)
+## Error Classification (aligned with Orchestrator failure taxonomy)
 
 | Classification | Meaning | Response |
 |---------------|---------|----------|

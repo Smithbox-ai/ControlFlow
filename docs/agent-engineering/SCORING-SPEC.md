@@ -1,17 +1,17 @@
 # Scoring Specification
 
 ## Purpose
-Unified quantitative scoring system shared by Challenger, Skeptic, and Code-Review agents. All scoring dimensions, formulas, cross-validation rules, and verdict thresholds are defined here as the single source of truth.
+Unified quantitative scoring system shared by PlanAuditor, AssumptionVerifier, and CodeReviewer agents. All scoring dimensions, formulas, cross-validation rules, and verdict thresholds are defined here as the single source of truth.
 
 ## Scoring Dimensions
 
-### Plan-Level Scoring (Challenger & Skeptic)
+### Plan-Level Scoring (PlanAuditor & AssumptionVerifier)
 
 | # | Dimension | Weight | Description | When Active |
 |---|-----------|--------|-------------|-------------|
 | 1 | Correctness | 3.0 | Plan logic matches requirements; no phantom APIs or invalid assumptions | Always |
 | 2 | Completeness | 2.5 | All requirements addressed; no orphaned or missing features | Always |
-| 3 | Executability | 2.5 | Tasks are specific enough for cold-start execution (DryRun score if available) | Always |
+| 3 | Executability | 2.5 | Tasks are specific enough for cold-start execution (ExecutabilityVerifier score if available) | Always |
 | 4 | TDD Quality | 1.5 | Test strategy precedes implementation; concrete test inputs/outputs specified | Always |
 | 5 | Security | 1.5 | No untrusted input parsing, privilege escalation, or secrets exposure | Conditional: active when plan touches auth, API endpoints, data storage, or user input |
 | 6 | Performance | 1.0 | No unbounded queries, N+1 patterns, or missing pagination for large datasets | Conditional: active when plan touches queries, aggregations, or data-intensive operations |
@@ -20,7 +20,7 @@ Unified quantitative scoring system shared by Challenger, Skeptic, and Code-Revi
 **Total active weight (all dimensions):** 12.5
 **Total active weight (excluding conditionals):** 10.0
 
-### Code-Level Scoring (Code-Review)
+### Code-Level Scoring (CodeReviewer)
 
 | # | Dimension | Weight | Description |
 |---|-----------|--------|-------------|
@@ -48,29 +48,29 @@ Ceilings limit a dimension's effective score based on evidence from other agents
 
 | Dimension | Ceiling Source | Ceiling Rule |
 |-----------|---------------|--------------|
-| Correctness | Skeptic mirage count | 0 mirages → cap 5; 1 mirage → cap 4; 2-3 mirages → cap 3; 4+ mirages → cap 2 |
-| Completeness | Orphaned requirements (Skeptic absence mirages) | 0 orphans → cap 5; 1 → cap 4; 2-3 → cap 3; 4+ → cap 2 |
-| Executability | DryRun blocked tasks | 0 blocked → cap 5; 1 blocked → cap 3; 2+ blocked → cap 1 |
+| Correctness | AssumptionVerifier mirage count | 0 mirages → cap 5; 1 mirage → cap 4; 2-3 mirages → cap 3; 4+ mirages → cap 2 |
+| Completeness | Orphaned requirements (AssumptionVerifier absence mirages) | 0 orphans → cap 5; 1 → cap 4; 2-3 → cap 3; 4+ → cap 2 |
+| Executability | ExecutabilityVerifier blocked tasks | 0 blocked → cap 5; 1 blocked → cap 3; 2+ blocked → cap 1 |
 
 When a ceiling is applied: `ceiling_applied: true`, `ceiling_source: "<agent> <metric>"`.
 
 ## Verdict Thresholds
 
-### Plan-Level (Challenger)
+### Plan-Level (PlanAuditor)
 | Percentage | Blocking Issues | Verdict |
 |------------|-----------------|---------|
 | ≥ 75% | 0 CRITICAL, ≤ 2 MAJOR | APPROVED |
 | 60–74% | OR ≥ 75% with > 2 MAJOR | NEEDS_REVISION |
 | < 60% | OR any unresolved CRITICAL | REJECTED |
 
-### Code-Level (Code-Review)
+### Code-Level (CodeReviewer)
 | Percentage | Blocking Issues | Verdict |
 |------------|-----------------|---------|
 | ≥ 75% | 0 confirmed CRITICAL/MAJOR | APPROVED |
 | 60–74% | OR confirmed MAJOR only | NEEDS_REVISION |
 | < 60% | OR confirmed CRITICAL | FAILED |
 
-### Skeptic
+### AssumptionVerifier
 | Percentage | Confidence | Verdict |
 |------------|------------|---------|
 | ≥ 80% | ≥ 0.7 | COMPLETE (plan safe) |

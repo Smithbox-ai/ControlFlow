@@ -1,7 +1,7 @@
 # Idea-to-Prompt Patterns
 
 ## Purpose
-Transform a vague or abstract user idea into a concrete, structured planning prompt that Prometheus (or Atlas) can decompose into an execution-ready plan.
+Transform a vague or abstract user idea into a concrete, structured planning prompt that Planner (or Orchestrator) can decompose into an execution-ready plan.
 
 ## Trigger Detection
 
@@ -60,7 +60,7 @@ Combine interview answers into a planning prompt with these sections:
 **Preferred Approach (if any):** <user preference if stated>
 ```
 
-Replace the original vague request with this structured prompt for all subsequent Prometheus workflow steps.
+Replace the original vague request with this structured prompt for all subsequent Planner workflow steps.
 
 ## Output Contract
 After Step 5, the assembled prompt feeds directly into Step 0 (Clarification Gate) as the new working request. The idea interview does not produce a plan file itself.

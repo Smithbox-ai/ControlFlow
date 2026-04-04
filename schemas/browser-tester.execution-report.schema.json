@@ -28,11 +28,11 @@
     "failure_classification": {
       "type": "string",
       "enum": ["transient", "fixable", "needs_replan", "escalate"],
-      "description": "Required when status is FAILED or NEEDS_INPUT. Classifies the failure type for Atlas retry/escalation logic."
+      "description": "Required when status is FAILED or NEEDS_INPUT. Classifies the failure type for Orchestrator retry/escalation logic."
     },
     "clarification_request": {
       "$ref": "clarification-request.schema.json",
-      "description": "Required when status is NEEDS_INPUT. Structured payload for Atlas to present to user via askQuestions. See schemas/clarification-request.schema.json for full contract."
+      "description": "Required when status is NEEDS_INPUT. Structured payload for Orchestrator to present to user via askQuestions. See schemas/clarification-request.schema.json for full contract."
     },
     "abstain": {
       "type": "object",

@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://copilot-atlas.local/schemas/skeptic.plan-audit.schema.json",
-  "title": "SkepticPlanAudit",
-  "description": "Output schema for the Skeptic adversarial mirage detector. Validates plan claims against codebase reality using 17 systematic mirage patterns.",
+  "$id": "https://copilot-atlas.local/schemas/assumption-verifier.plan-audit.schema.json",
+  "title": "AssumptionVerifierPlanAudit",
+  "description": "Output schema for the AssumptionVerifier adversarial mirage detector. Validates plan claims against codebase reality using 17 systematic mirage patterns.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -18,7 +18,7 @@
   ],
   "properties": {
     "schema_version": { "type": "string", "const": "1.0.0" },
-    "agent": { "type": "string", "const": "Skeptic-subagent" },
+    "agent": { "type": "string", "const": "AssumptionVerifier-subagent" },
     "status": {
       "type": "string",
       "enum": ["COMPLETE", "ABSTAIN"],
@@ -141,7 +141,7 @@
     },
     "recommendation": {
       "type": "string",
-      "description": "Concise recommendation for Atlas: proceed, investigate specific mirages, or revise plan."
+      "description": "Concise recommendation for Orchestrator: proceed, investigate specific mirages, or revise plan."
     },
     "failure_classification": {
       "type": "string",

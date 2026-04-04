@@ -1,13 +1,20 @@
 {
   "id": "atlas-phase-verification",
-  "target_agent": "Atlas",
-  "goal": "Atlas does not mark a phase complete until tests, build, lint/problems, and review evidence are all verified",
+  "target_agent": "Orchestrator",
+  "goal": "Orchestrator does not mark a phase complete until tests, build, lint/problems, and review evidence are all verified",
   "input": {
     "phase_report": {
       "implementation_status": "COMPLETE",
-      "tests": { "individual": "PASS", "full_suite": "PASS" },
-      "build": { "state": "NOT_RUN" },
-      "lint": { "state": "PASS" },
+      "tests": {
+        "individual": "PASS",
+        "full_suite": "PASS"
+      },
+      "build": {
+        "state": "NOT_RUN"
+      },
+      "lint": {
+        "state": "PASS"
+      },
       "review_status": "APPROVED"
     },
     "risk_level": "low"
@@ -20,7 +27,7 @@
     "must_verify_review_before_completion": true
   },
   "validated_blocking_issues_scenario": {
-    "description": "Atlas trusts only validated_blocking_issues from Code-Review, not raw unvalidated CRITICAL/MAJOR findings",
+    "description": "Orchestrator trusts only validated_blocking_issues from CodeReviewer, not raw unvalidated CRITICAL/MAJOR findings",
     "input": {
       "code_review_verdict": {
         "status": "NEEDS_REVISION",
@@ -49,7 +56,7 @@
     }
   },
   "validated_blocking_issues_scenario_positive": {
-    "description": "When validated_blocking_issues is non-empty, Atlas must block phase progression",
+    "description": "When validated_blocking_issues is non-empty, Orchestrator must block phase progression",
     "input": {
       "code_review_verdict": {
         "status": "NEEDS_REVISION",

@@ -1,14 +1,24 @@
 {
   "id": "sisyphus-contract",
-  "target_agent": "Sisyphus-subagent",
+  "target_agent": "CoreImplementer-subagent",
   "goal": "Execution report is schema-compliant and includes DoD evidence",
   "input": {
     "task": "Implement scoped backend change with tests",
     "risk_level": "low"
   },
   "expected": {
-    "schema": "schemas/sisyphus.execution-report.schema.json",
-    "required_status": ["COMPLETE", "NEEDS_INPUT", "FAILED", "ABSTAIN"],
-    "must_include": ["tests", "build", "lint", "definition_of_done"]
+    "schema": "schemas/core-implementer.execution-report.schema.json",
+    "required_status": [
+      "COMPLETE",
+      "NEEDS_INPUT",
+      "FAILED",
+      "ABSTAIN"
+    ],
+    "must_include": [
+      "tests",
+      "build",
+      "lint",
+      "definition_of_done"
+    ]
   }
 }

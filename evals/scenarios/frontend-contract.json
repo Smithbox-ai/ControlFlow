@@ -1,14 +1,26 @@
 {
   "id": "frontend-contract",
-  "target_agent": "Frontend-Engineer-subagent",
+  "target_agent": "UIImplementer-subagent",
   "goal": "Execution report is schema-compliant and includes a11y/responsive evidence",
   "input": {
     "task": "Implement scoped UI component with interaction tests",
     "risk_level": "low"
   },
   "expected": {
-    "schema": "schemas/frontend.execution-report.schema.json",
-    "required_status": ["COMPLETE", "NEEDS_INPUT", "FAILED", "ABSTAIN"],
-    "must_include": ["tests", "build", "lint", "accessibility", "responsive", "definition_of_done"]
+    "schema": "schemas/ui-implementer.execution-report.schema.json",
+    "required_status": [
+      "COMPLETE",
+      "NEEDS_INPUT",
+      "FAILED",
+      "ABSTAIN"
+    ],
+    "must_include": [
+      "tests",
+      "build",
+      "lint",
+      "accessibility",
+      "responsive",
+      "definition_of_done"
+    ]
   }
 }

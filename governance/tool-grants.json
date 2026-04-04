@@ -1,6 +1,6 @@
 {
-  "_comment": "Canonical least-privilege tool policy for Atlas agent system. This file is the single source of truth for tool grants. evals/validate.mjs compares every agent's frontmatter tools list against this manifest. Any drift is a validation failure. To add a new agent, add an entry here AND create the corresponding .agent.md file.",
-  "Atlas.agent.md": [
+  "_comment": "Canonical least-privilege tool policy for Orchestrator agent system. This file is the single source of truth for tool grants. evals/validate.mjs compares every agent's frontmatter tools list against this manifest. Any drift is a validation failure. To add a new agent, add an entry here AND create the corresponding .agent.md file.",
+  "Orchestrator.agent.md": [
     "vscode/askQuestions",
     "execute/testFailure",
     "execute/getTerminalOutput",
@@ -23,7 +23,7 @@
     "web/githubRepo",
     "todo"
   ],
-  "Prometheus.agent.md": [
+  "Planner.agent.md": [
     "read/readFile",
     "agent/runSubagent",
     "edit/createFile",
@@ -39,15 +39,15 @@
     "io.github.upstash/context7/get-library-docs",
     "io.github.upstash/context7/resolve-library-id"
   ],
-  "Oracle-subagent.agent.md": ["search", "usages", "problems", "changes", "fetch", "agent"],
-  "Scout-subagent.agent.md": ["search", "usages", "problems", "changes", "testFailure"],
-  "Sisyphus-subagent.agent.md": ["edit", "search", "runCommands", "runTasks", "usages", "problems", "changes", "testFailure", "fetch", "githubRepo", "agent"],
-  "Frontend-Engineer-subagent.agent.md": ["edit", "search", "runCommands", "runTasks", "usages", "problems", "changes", "testFailure", "fetch", "githubRepo"],
-  "DevOps-subagent.agent.md": ["edit", "search", "runCommands", "runTasks", "usages", "problems", "changes", "testFailure", "fetch", "githubRepo"],
-  "DocWriter-subagent.agent.md": ["search", "usages", "problems", "changes", "edit", "fetch"],
+  "Researcher-subagent.agent.md": ["search", "usages", "problems", "changes", "fetch", "agent"],
+  "CodeMapper-subagent.agent.md": ["search", "usages", "problems", "changes", "testFailure"],
+  "CoreImplementer-subagent.agent.md": ["edit", "search", "runCommands", "runTasks", "usages", "problems", "changes", "testFailure", "fetch", "githubRepo", "agent"],
+  "UIImplementer-subagent.agent.md": ["edit", "search", "runCommands", "runTasks", "usages", "problems", "changes", "testFailure", "fetch", "githubRepo"],
+  "PlatformEngineer-subagent.agent.md": ["edit", "search", "runCommands", "runTasks", "usages", "problems", "changes", "testFailure", "fetch", "githubRepo"],
+  "TechnicalWriter-subagent.agent.md": ["search", "usages", "problems", "changes", "edit", "fetch"],
   "BrowserTester-subagent.agent.md": ["search", "usages", "problems", "changes", "edit", "fetch"],
-  "Code-Review-subagent.agent.md": ["search", "usages", "problems", "changes", "runCommands", "runTasks"],
-  "Challenger-subagent.agent.md": [
+  "CodeReviewer-subagent.agent.md": ["search", "usages", "problems", "changes", "runCommands", "runTasks"],
+  "PlanAuditor-subagent.agent.md": [
     "read/readFile",
     "read/problems",
     "search/codebase",
@@ -56,7 +56,7 @@
     "search/listDirectory",
     "search/usages"
   ],
-  "Skeptic-subagent.agent.md": [
+  "AssumptionVerifier-subagent.agent.md": [
     "read/readFile",
     "search/codebase",
     "search/fileSearch",
@@ -64,7 +64,7 @@
     "search/textSearch",
     "search/usages"
   ],
-  "DryRun-subagent.agent.md": [
+  "ExecutabilityVerifier-subagent.agent.md": [
     "read/readFile",
     "search/codebase",
     "search/fileSearch",

@@ -1,23 +1,38 @@
 {
   "id": "docwriter-contract",
-  "target_agent": "DocWriter-subagent",
+  "target_agent": "TechnicalWriter-subagent",
   "goal": "Execution report is schema-compliant, includes parity verification, and source code is never modified",
   "input": {
     "task": "Generate technical documentation with code-documentation parity verification",
     "risk_level": "low"
   },
   "expected": {
-    "schema": "schemas/docwriter.execution-report.schema.json",
-    "required_status": ["COMPLETE", "NEEDS_INPUT", "FAILED", "ABSTAIN"],
-    "must_include": ["parity_verified", "coverage_percentage", "definition_of_done"],
+    "schema": "schemas/technical-writer.execution-report.schema.json",
+    "required_status": [
+      "COMPLETE",
+      "NEEDS_INPUT",
+      "FAILED",
+      "ABSTAIN"
+    ],
+    "must_include": [
+      "parity_verified",
+      "coverage_percentage",
+      "definition_of_done"
+    ],
     "invariants": {
       "source_code_read_only": true,
       "no_todo_in_output": true
     },
     "conditional": {
       "on_diagrams": {
-        "must_include": ["diagrams_generated"],
-        "allowed_formats": ["mermaid", "plantuml", "ascii"]
+        "must_include": [
+          "diagrams_generated"
+        ],
+        "allowed_formats": [
+          "mermaid",
+          "plantuml",
+          "ascii"
+        ]
       }
     }
   }

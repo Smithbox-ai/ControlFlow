@@ -1,5 +1,5 @@
 /**
- * Copilot Atlas — Structural Validation Harness
+ * ControlFlow — Structural Validation Harness
  *
  * Five passes:
  *   1. Schema Validity      — all schemas/*.schema.json compile without errors
@@ -59,6 +59,66 @@ function normalizeToolSet(tools) {
   return [...tools].sort();
 }
 
+/**
+ * Collect all nested 'agent' or 'target_agent' fields in a scenario object,
+ * skipping the top-level scenario.agent and scenario.target_agent (already
+ * validated in Pass 2).  Returns an array of { path, value } entries.
+ */
+function collectNestedAgentFields(scenarioObj) {
+  const hits = [];
+  function walk(node, path) {
+    if (typeof node !== 'object' || node === null) return;
+    if (Array.isArray(node)) {
+      for (let i = 0; i < node.length; i++) {
+        walk(node[i], `${path}[${i}]`);
+      }
+    } else {
+      for (const [key, value] of Object.entries(node)) {
+        const fullPath = path ? `${path}.${key}` : key;
+        if (key === 'agent' || key === 'target_agent') {
+          hits.push({ path: fullPath, value });
+        }
+        if (typeof value === 'object' && value !== null) {
+          walk(value, fullPath);
+        }
+      }
+    }
+  }
+  // Only recurse into non-top-level keys
+  for (const [key, value] of Object.entries(scenarioObj)) {
+    if (key === 'agent' || key === 'target_agent') continue;
+    walk(value, key);
+  }
+  return hits;
+}
+
+/**
+ * Collect all expected.schema and expected.schema_ref values from a scenario
+ * object, including from scenario.inputs[].expected for multi-input scenarios.
+ * Returns an array of { path, value } entries.
+ */
+function collectSchemaRefs(scenarioObj) {
+  const refs = [];
+  if (scenarioObj.expected) {
+    if (scenarioObj.expected.schema)
+      refs.push({ path: 'expected.schema', value: scenarioObj.expected.schema });
+    if (scenarioObj.expected.schema_ref)
+      refs.push({ path: 'expected.schema_ref', value: scenarioObj.expected.schema_ref });
+  }
+  if (Array.isArray(scenarioObj.inputs)) {
+    for (let i = 0; i < scenarioObj.inputs.length; i++) {
+      const inp = scenarioObj.inputs[i];
+      if (inp.expected) {
+        if (inp.expected.schema)
+          refs.push({ path: `inputs[${i}].expected.schema`, value: inp.expected.schema });
+        if (inp.expected.schema_ref)
+          refs.push({ path: `inputs[${i}].expected.schema_ref`, value: inp.expected.schema_ref });
+      }
+    }
+  }
+  return refs;
+}
+
 // ─── Pass 1: Schema Validity ─────────────────────────────────────────────────
 header('Pass 1: Schema Validity');
 
@@ -88,6 +148,15 @@ for (const file of schemaFiles) {
     fail(`Schema invalid: ${file} — ${e.message}`);
   }
 }
+
+// ─── Load rename-allowlist.json for Pass 2 schema_refs cross-verification ────
+let renameAllowlist = null;
+try {
+  renameAllowlist = JSON.parse(readFileSync(join(ROOT, 'governance', 'rename-allowlist.json'), 'utf8'));
+} catch {
+  // Allowlist not yet available; advisory schema_refs cross-check will be skipped
+}
+const allowlistSchemaRefs = (renameAllowlist && renameAllowlist.schema_refs) ? renameAllowlist.schema_refs : {};
 
 // ─── Pass 2: Scenario Integrity ──────────────────────────────────────────────
 header('Pass 2: Scenario Integrity');
@@ -119,8 +188,8 @@ for (const file of scenarioFiles) {
     continue;
   }
 
-  // Check prometheus scenarios assert risk_review presence
-  if (targetAgent === 'Prometheus') {
+  // Check Planner scenarios assert risk_review presence
+  if (targetAgent === 'Planner') {
     const hasSingleExpected = scenario.expected && typeof scenario.expected === 'object';
     const hasInputs = Array.isArray(scenario.inputs);
     const topLevelAsserts = hasSingleExpected ? scenario.expected.risk_review_present === true : false;
@@ -128,7 +197,7 @@ for (const file of scenarioFiles) {
       ? scenario.inputs.every(i => !i.expected || i.expected.risk_review_present === true || i.expected.data_volume_must_be !== undefined)
       : false;
     if (!topLevelAsserts && !inputLevelAsserts) {
-      fail(`${file}: Prometheus scenario missing risk_review_present assertion (add to expected or each input.expected)`);
+      fail(`${file}: Planner scenario missing risk_review_present assertion (add to expected or each input.expected)`);
       continue;
     }
   }
@@ -138,6 +207,25 @@ for (const file of scenarioFiles) {
     fail(`${file}: target_agent "${targetAgent}" → no matching agent.md`);
   } else {
     pass(`Scenario valid: ${file} → ${targetAgent}`);
+  }
+
+  // ── Schema ref existence checks (Pass 2 — Phase 3 addition) ─────────────────
+  const schemaRefs = collectSchemaRefs(scenario);
+  for (const { path: refPath, value: refValue } of schemaRefs) {
+    if (!existsSync(join(ROOT, refValue))) {
+      fail(`${file}: schema ref not found — ${refPath}: "${refValue}"`);
+    } else {
+      if (allowlistSchemaRefs[refValue] && allowlistSchemaRefs[refValue] !== refValue) {
+        console.log(`  ℹ️  ${file}: ${refPath} → "${refValue}" will be renamed to "${allowlistSchemaRefs[refValue]}" in Phase 4`);
+      }
+      pass(`Schema ref exists: ${file} [${refPath}]`);
+    }
+  }
+
+  // ── Nested agent/target_agent structural sweep (advisory — no pass/fail yet) ─
+  const nestedHits = collectNestedAgentFields(scenario);
+  if (nestedHits.length > 0) {
+    console.log(`  ℹ️  ${file}: ${nestedHits.length} nested agent field(s): ${nestedHits.map(h => `${h.path}="${h.value}"`).join(', ')}`);
   }
 }
 
@@ -180,12 +268,57 @@ const requiredArtifacts = [
   'docs/agent-engineering/TOOL-ROUTING.md',
   'governance/tool-grants.json',
   'governance/runtime-policy.json',
+  'governance/rename-allowlist.json',
 ];
 for (const artifact of requiredArtifacts) {
   if (existsSync(join(ROOT, artifact))) {
     pass(`Artifact exists: ${artifact}`);
   } else {
     fail(`Missing required artifact: ${artifact}`);
+  }
+}
+
+// Allowlist-driven cross-verification: load active_artifacts and retired_names from
+// governance/rename-allowlist.json and verify (a) every active artifact exists on disk,
+// (b) no retired runtime name appears as an active artifact path.
+const allowlistPath = join(ROOT, 'governance', 'rename-allowlist.json');
+let allowlist = null;
+try {
+  allowlist = JSON.parse(readFileSync(allowlistPath, 'utf8'));
+} catch (e) {
+  fail(`governance/rename-allowlist.json: could not load for allowlist sweep — ${e.message}`);
+}
+
+if (allowlist) {
+  const activeArtifacts = Array.isArray(allowlist.active_artifacts) ? allowlist.active_artifacts : [];
+  const retiredRuntime = Array.isArray(allowlist.retired_names?.runtime) ? allowlist.retired_names.runtime : [];
+  const exceptions = Array.isArray(allowlist.exceptions) ? allowlist.exceptions.map(e => e.path) : [];
+
+  // Expand globs-like entries: entries ending in /** or /* are treated as directory prefixes
+  let missingActive = 0;
+  for (const artifact of activeArtifacts) {
+    if (artifact.includes('*')) continue; // skip glob patterns — disk enumeration not required here
+    if (!existsSync(join(ROOT, artifact))) {
+      missingActive++;
+      fail(`Allowlist active_artifact missing from disk: ${artifact}`);
+    }
+  }
+  if (missingActive === 0) {
+    pass(`Allowlist active_artifacts: all ${activeArtifacts.filter(a => !a.includes('*')).length} non-glob entries exist on disk`);
+  }
+
+  // Verify no retired runtime name appears as an active artifact path (stale allowlist guard)
+  let retiredConflict = 0;
+  for (const retiredName of retiredRuntime) {
+    // Check if any active artifact path fragment equals the retired name
+    const conflict = activeArtifacts.find(a => a === retiredName || a.endsWith(`/${retiredName}`));
+    if (conflict && !exceptions.includes(conflict)) {
+      retiredConflict++;
+      fail(`Allowlist conflict: retired runtime name "${retiredName}" still present in active_artifacts as "${conflict}"`);
+    }
+  }
+  if (retiredConflict === 0) {
+    pass(`Allowlist retired_names.runtime: no conflicts with active_artifacts`);
   }
 }
 
@@ -284,6 +417,66 @@ if (!existsSync(skillsIndexPath)) {
     }
   }
 }
+
+// ─── Pass 6: Synthetic Rename Negative-Path Checks ───────────────────────────
+header('Pass 6: Synthetic Rename Negative-Path Checks');
+
+function runSyntheticRenameNegativePathChecks() {
+  // Case (a): stale top-level target_agent — agent file does not exist on disk
+  const caseA = { id: 'synthetic-a', target_agent: 'OldAgent', goal: 'synthetic test — stale target_agent' };
+  if (!existsSync(join(ROOT, `${caseA.target_agent}.agent.md`))) {
+    pass('Synthetic (a): stale target_agent "OldAgent" correctly rejected — OldAgent.agent.md not found');
+  } else {
+    fail('Synthetic (a): stale target_agent guard DID NOT fire — OldAgent.agent.md unexpectedly exists');
+  }
+
+  // Case (b): stale expected.schema — schema file does not exist on disk
+  const caseB = {
+    id: 'synthetic-b',
+    target_agent: 'CoreImplementer-subagent',
+    goal: 'synthetic test — stale expected.schema',
+    expected: { schema: 'schemas/oldname.schema.json' },
+  };
+  const refsB = collectSchemaRefs(caseB);
+  const staleRefB = refsB.find(r => !existsSync(join(ROOT, r.value)));
+  if (staleRefB) {
+    pass(`Synthetic (b): stale expected.schema "${staleRefB.value}" correctly caught — file not found`);
+  } else {
+    fail('Synthetic (b): stale expected.schema guard DID NOT fire — file unexpectedly exists or check is broken');
+  }
+
+  // Case (c): nested input agent field pointing to non-existent agent
+  const caseC = {
+    id: 'synthetic-c',
+    target_agent: 'Orchestrator',
+    goal: 'synthetic test — stale nested agent',
+    input: { subagent_report: { agent: 'OldAgent', task: 'test task' } },
+  };
+  const nestedC = collectNestedAgentFields(caseC);
+  const staleNestedC = nestedC.find(h => h.value === 'OldAgent' && !existsSync(join(ROOT, `${h.value}.agent.md`)));
+  if (staleNestedC) {
+    pass(`Synthetic (c): stale nested agent "OldAgent" at "${staleNestedC.path}" correctly detected`);
+  } else {
+    fail('Synthetic (c): stale nested agent guard DID NOT fire — nested sweep may be broken');
+  }
+
+  // Case (d): stale expected.schema_ref — schema file does not exist on disk
+  const caseD = {
+    id: 'synthetic-d',
+    target_agent: 'CoreImplementer-subagent',
+    goal: 'synthetic test — stale expected.schema_ref',
+    expected: { schema_ref: 'schemas/oldname-ref.schema.json' },
+  };
+  const refsD = collectSchemaRefs(caseD);
+  const staleRefD = refsD.find(r => !existsSync(join(ROOT, r.value)));
+  if (staleRefD) {
+    pass(`Synthetic (d): stale expected.schema_ref "${staleRefD.value}" correctly caught — file not found`);
+  } else {
+    fail('Synthetic (d): stale expected.schema_ref guard DID NOT fire — file unexpectedly exists or check is broken');
+  }
+}
+
+runSyntheticRenameNegativePathChecks();
 
 // ─── Summary ─────────────────────────────────────────────────────────────────
 const totalChecks = totalPassed + totalFailed;

@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://copilot-atlas.local/schemas/challenger.plan-audit.schema.json",
-  "title": "ChallengerPlanAudit",
-  "description": "Output schema for the Challenger adversarial plan reviewer. Validates plan quality, architecture safety, and risk coverage before implementation begins.",
+  "$id": "https://copilot-atlas.local/schemas/plan-auditor.plan-audit.schema.json",
+  "title": "PlanAuditorPlanAudit",
+  "description": "Output schema for the PlanAuditor adversarial plan reviewer. Validates plan quality, architecture safety, and risk coverage before implementation begins.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -18,7 +18,7 @@
   ],
   "properties": {
     "schema_version": { "type": "string", "const": "1.3.0" },
-    "agent": { "type": "string", "const": "Challenger-subagent" },
+    "agent": { "type": "string", "const": "PlanAuditor-subagent" },
     "status": {
       "type": "string",
       "enum": ["APPROVED", "NEEDS_REVISION", "REJECTED", "ABSTAIN"],
@@ -136,13 +136,13 @@
     "audit_scope": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Records the focus areas requested by Atlas and the audit dimensions actually covered in this run.",
+      "description": "Records the focus areas requested by Orchestrator and the audit dimensions actually covered in this run.",
       "required": ["requested_focus_areas", "covered_dimensions"],
       "properties": {
         "requested_focus_areas": {
           "type": "array",
           "items": { "type": "string" },
-          "description": "Focus areas passed by Atlas in the delegation payload. Empty array if Atlas used default full-audit scope."
+          "description": "Focus areas passed by Orchestrator in the delegation payload. Empty array if Orchestrator used default full-audit scope."
         },
         "covered_dimensions": {
           "type": "array",
@@ -153,7 +153,7 @@
     },
     "recommendation": {
       "type": "string",
-      "description": "Concise recommendation for Atlas: proceed, revise specific phases, or replan entirely."
+      "description": "Concise recommendation for Orchestrator: proceed, revise specific phases, or replan entirely."
     },
     "scoring": {
       "type": "object",
@@ -191,7 +191,7 @@
     "failure_classification": {
       "type": "string",
       "enum": ["fixable", "needs_replan", "escalate"],
-      "description": "Required when status is NEEDS_REVISION or REJECTED. Note: 'transient' is not applicable for plan audits. fixable: addressable within existing phase structure. needs_replan: fundamental flaw requiring Prometheus redesign. escalate: destructive or ambiguous risk requiring human decision."
+      "description": "Required when status is NEEDS_REVISION or REJECTED. Note: 'transient' is not applicable for plan audits. fixable: addressable within existing phase structure. needs_replan: fundamental flaw requiring Planner redesign. escalate: destructive or ambiguous risk requiring human decision."
     }
   }
 }

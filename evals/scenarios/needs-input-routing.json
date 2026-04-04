@@ -1,21 +1,21 @@
 {
   "scenario_id": "needs-input-routing",
   "title": "NEEDS_INPUT Routing with Shared Clarification Contract",
-  "description": "Validates that Atlas correctly routes NEEDS_INPUT responses from acting agents through the clarification flow, using the shared clarification-request.schema.json contract",
-  "agent": "Atlas",
+  "description": "Validates that Orchestrator correctly routes NEEDS_INPUT responses from acting agents through the clarification flow, using the shared clarification-request.schema.json contract",
+  "agent": "Orchestrator",
   "category": "orchestration",
   "design_notes": {
     "excluded_agents": {
-      "Oracle-subagent": "Read-only research agent. Status enum: COMPLETE, ABSTAIN, INSUFFICIENT_EVIDENCE. No NEEDS_INPUT status — research agents surface insufficient evidence, not clarification requests.",
-      "Scout-subagent": "Read-only discovery agent. Status enum: COMPLETE, ABSTAIN. No NEEDS_INPUT status — discovery agents return whatever they find without requiring user decisions."
+      "Researcher-subagent": "Read-only research agent. Status enum: COMPLETE, ABSTAIN, INSUFFICIENT_EVIDENCE. No NEEDS_INPUT status — research agents surface insufficient evidence, not clarification requests.",
+      "CodeMapper-subagent": "Read-only discovery agent. Status enum: COMPLETE, ABSTAIN. No NEEDS_INPUT status — discovery agents return whatever they find without requiring user decisions."
     }
   },
   "inputs": [
     {
       "label": "sisyphus-needs-input",
-      "description": "Sisyphus returns NEEDS_INPUT with a valid clarification_request",
+      "description": "CoreImplementer returns NEEDS_INPUT with a valid clarification_request",
       "input": {
-        "subagent": "Sisyphus-subagent",
+        "subagent": "CoreImplementer-subagent",
         "response": {
           "status": "NEEDS_INPUT",
           "failure_classification": "fixable",
@@ -24,16 +24,30 @@
               {
                 "id": "option-a",
                 "description": "Use synchronous file parsing",
-                "pros": ["Simpler implementation"],
-                "cons": ["Blocks the main thread"],
-                "affected_files": ["src/parser.ts"]
+                "pros": [
+                  "Simpler implementation"
+                ],
+                "cons": [
+                  "Blocks the main thread"
+                ],
+                "affected_files": [
+                  "src/parser.ts"
+                ]
               },
               {
                 "id": "option-b",
                 "description": "Use async streaming parser",
-                "pros": ["Non-blocking", "Better for large files"],
-                "cons": ["More complex error handling"],
-                "affected_files": ["src/parser.ts", "src/stream-utils.ts"]
+                "pros": [
+                  "Non-blocking",
+                  "Better for large files"
+                ],
+                "cons": [
+                  "More complex error handling"
+                ],
+                "affected_files": [
+                  "src/parser.ts",
+                  "src/stream-utils.ts"
+                ]
               }
             ],
             "impact_analysis": "This affects the parser module's threading model and error handling strategy.",
@@ -51,9 +65,9 @@
     },
     {
       "label": "needs-input-missing-clarification",
-      "description": "Subagent returns NEEDS_INPUT but without clarification_request — Atlas must handle gracefully",
+      "description": "Subagent returns NEEDS_INPUT but without clarification_request — Orchestrator must handle gracefully",
       "input": {
-        "subagent": "Frontend-Engineer-subagent",
+        "subagent": "UIImplementer-subagent",
         "response": {
           "status": "NEEDS_INPUT",
           "failure_classification": "fixable"
@@ -68,14 +82,20 @@
       "label": "needs-input-separate-from-failure",
       "description": "NEEDS_INPUT routing is separate from failure_classification routing",
       "input": {
-        "subagent": "DevOps-subagent",
+        "subagent": "PlatformEngineer-subagent",
         "response": {
           "status": "NEEDS_INPUT",
           "failure_classification": "needs_replan",
           "clarification_request": {
             "options": [
-              { "id": "dev", "description": "Deploy to development environment" },
-              { "id": "staging", "description": "Deploy to staging environment" }
+              {
+                "id": "dev",
+                "description": "Deploy to development environment"
+              },
+              {
+                "id": "staging",
+                "description": "Deploy to staging environment"
+              }
             ],
             "impact_analysis": "Environment choice affects security posture and data exposure risk.",
             "recommended_option": "dev",
@@ -93,9 +113,9 @@
     "NEEDS_INPUT with clarification_request routes through askQuestions",
     "NEEDS_INPUT without clarification_request escalates to user with context",
     "NEEDS_INPUT routing takes priority over failure_classification routing",
-    "Atlas retries the subagent with user selection after clarification",
+    "Orchestrator retries the subagent with user selection after clarification",
     "clarification_request payload conforms to schemas/clarification-request.schema.json",
-    "Oracle and Scout schemas do not include clarification_request (intentional — read-only agents)",
+    "Researcher and CodeMapper schemas do not include clarification_request (intentional — read-only agents)",
     "All 5 acting agent schemas reference clarification-request.schema.json via $ref"
   ]
 }

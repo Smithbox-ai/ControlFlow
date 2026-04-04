@@ -1,8 +1,8 @@
 {
   "scenario_id": "dryrun-executability-01",
-  "target_agent": "DryRun-subagent",
+  "target_agent": "ExecutabilityVerifier-subagent",
   "goal": "Detect unexecutable plan task with vague specification",
-  "description": "Given a plan with a task that says only 'implement the feature' without file paths, test specifics, or verification commands, DryRun should return FAIL with BLOCKED walkthrough step and low checklist score.",
+  "description": "Given a plan with a task that says only 'implement the feature' without file paths, test specifics, or verification commands, ExecutabilityVerifier should return FAIL with BLOCKED walkthrough step and low checklist score.",
   "input": {
     "plan_excerpt": "Phase 1 Step 1: Implement the authentication feature. Tests: add appropriate tests. Verify: run tests.",
     "expected_verdict": "BLOCKED"

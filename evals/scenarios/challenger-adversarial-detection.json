@@ -1,18 +1,22 @@
 {
   "scenario_id": "challenger-adversarial-detection",
-  "title": "Challenger Adversarial Detection",
-  "description": "Validates Challenger can detect deliberately planted flaws in a multi-phase plan",
-  "agent": "Challenger-subagent",
+  "title": "PlanAuditor Adversarial Detection",
+  "description": "Validates PlanAuditor can detect deliberately planted flaws in a multi-phase plan",
+  "agent": "PlanAuditor-subagent",
   "category": "adversarial",
   "inputs": [
     {
       "label": "circular-dependency",
       "description": "Plan where Phase 3 depends on Phase 5 and Phase 5 depends on Phase 3",
-      "planted_flaws": ["circular_dependency"],
+      "planted_flaws": [
+        "circular_dependency"
+      ],
       "input": {
         "plan_path": "plans/test-circular-deps.md",
         "plan_summary": "5-phase plan with hidden circular dependency between Phase 3 and Phase 5",
-        "focus_areas": ["architecture"]
+        "focus_areas": [
+          "architecture"
+        ]
       },
       "expected_detection": {
         "must_find_category": "dependency_conflict",
@@ -22,12 +26,16 @@
     },
     {
       "label": "file-collision-in-wave",
-      "description": "Two phases in the same wave both modify Atlas.agent.md",
-      "planted_flaws": ["parallel_file_collision"],
+      "description": "Two phases in the same wave both modify Orchestrator.agent.md",
+      "planted_flaws": [
+        "parallel_file_collision"
+      ],
       "input": {
         "plan_path": "plans/test-file-collision.md",
-        "plan_summary": "4-phase plan where Phase 1 (Wave 1) and Phase 2 (Wave 1) both modify Atlas.agent.md",
-        "focus_areas": ["dependency_conflict"]
+        "plan_summary": "4-phase plan where Phase 1 (Wave 1) and Phase 2 (Wave 1) both modify Orchestrator.agent.md",
+        "focus_areas": [
+          "dependency_conflict"
+        ]
       },
       "expected_detection": {
         "must_find_category": "dependency_conflict",
@@ -38,11 +46,15 @@
     {
       "label": "missing-tests",
       "description": "Phase 4 creates new schema but declares no tests or acceptance criteria",
-      "planted_flaws": ["missing_test_coverage"],
+      "planted_flaws": [
+        "missing_test_coverage"
+      ],
       "input": {
         "plan_path": "plans/test-no-tests.md",
         "plan_summary": "3-phase plan where Phase 2 creates a new JSON schema with no validation tests",
-        "focus_areas": ["test_coverage"]
+        "focus_areas": [
+          "test_coverage"
+        ]
       },
       "expected_detection": {
         "must_find_category": "test_coverage",
@@ -53,11 +65,15 @@
     {
       "label": "destructive-without-rollback",
       "description": "Plan includes bulk schema rewrite with no rollback strategy",
-      "planted_flaws": ["missing_rollback"],
+      "planted_flaws": [
+        "missing_rollback"
+      ],
       "input": {
         "plan_path": "plans/test-no-rollback.md",
         "plan_summary": "6-phase plan that rewrites 7 JSON schemas in one phase with no incremental migration",
-        "focus_areas": ["destructive_risk"]
+        "focus_areas": [
+          "destructive_risk"
+        ]
       },
       "expected_detection": {
         "must_find_category": "destructive_risk",
@@ -68,11 +84,15 @@
     {
       "label": "security-untrusted-input",
       "description": "Plan parses user-supplied binary files without input validation step",
-      "planted_flaws": ["security_gap"],
+      "planted_flaws": [
+        "security_gap"
+      ],
       "input": {
         "plan_path": "plans/test-security-gap.md",
         "plan_summary": "4-phase plan that adds binary file parsing without input validation or bounds checking",
-        "focus_areas": ["security"]
+        "focus_areas": [
+          "security"
+        ]
       },
       "expected_detection": {
         "must_find_category": "security",
@@ -83,11 +103,16 @@
     {
       "label": "unbounded-large-table-query",
       "description": "Plan adds a query over a 2M-row table with no pagination, no index reference, and no performance acceptance criteria",
-      "planted_flaws": ["missing_pagination", "no_performance_acceptance_criteria"],
+      "planted_flaws": [
+        "missing_pagination",
+        "no_performance_acceptance_criteria"
+      ],
       "input": {
         "plan_path": "plans/test-unbounded-query.md",
         "plan_summary": "3-phase plan that adds a GET /adjustments endpoint fetching all rows from forecast_adjustments (2M rows) with no LIMIT, no pagination, and no index strategy. Acceptance criteria contain no latency or throughput targets.",
-        "focus_areas": ["performance"]
+        "focus_areas": [
+          "performance"
+        ]
       },
       "expected_detection": {
         "must_find_category": "performance",
@@ -97,13 +122,13 @@
     }
   ],
   "assertions": [
-    "Challenger detects ALL planted flaws",
+    "PlanAuditor detects ALL planted flaws",
     "Each planted flaw appears in findings with correct category",
     "Severity is at least the expected minimum",
     "Status is never APPROVED when CRITICAL flaws are present",
     "Each finding has a non-empty suggested_fix",
-    "Output conforms to schemas/challenger.plan-audit.schema.json",
-    "Challenger detects missing pagination on large-table queries as a performance MAJOR or CRITICAL finding",
+    "Output conforms to schemas/plan-auditor.plan-audit.schema.json",
+    "PlanAuditor detects missing pagination on large-table queries as a performance MAJOR or CRITICAL finding",
     "audit_scope.covered_dimensions includes performance when focus_areas includes performance"
   ]
 }

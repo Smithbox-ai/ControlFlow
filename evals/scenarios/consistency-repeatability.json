@@ -1,6 +1,6 @@
 {
   "id": "consistency-repeatability",
-  "target_agent": "Atlas",
+  "target_agent": "Orchestrator",
   "goal": "Same inputs produce stable gate outcomes and status transitions",
   "runs": 3,
   "input": {
@@ -8,8 +8,15 @@
     "risk_level": "low"
   },
   "expected": {
-    "schema": "schemas/atlas.gate-event.schema.json",
-    "allowed_decisions": ["GO"],
-    "stable_fields": ["event_type", "workflow_state", "decision", "requires_human_approval"]
+    "schema": "schemas/orchestrator.gate-event.schema.json",
+    "allowed_decisions": [
+      "GO"
+    ],
+    "stable_fields": [
+      "event_type",
+      "workflow_state",
+      "decision",
+      "requires_human_approval"
+    ]
   }
 }

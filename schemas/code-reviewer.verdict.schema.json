@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://copilot-atlas.local/schemas/code-review.verdict.schema.json",
-  "title": "CodeReviewVerdict",
+  "$id": "https://copilot-atlas.local/schemas/code-reviewer.verdict.schema.json",
+  "title": "CodeReviewerVerdict",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -18,7 +18,7 @@
   ],
   "properties": {
     "schema_version": { "type": "string", "const": "1.2.0" },
-    "agent": { "type": "string", "const": "Code-Review-subagent" },
+    "agent": { "type": "string", "const": "CodeReviewer-subagent" },
     "status": {
       "type": "string",
       "enum": ["APPROVED", "NEEDS_REVISION", "FAILED", "ABSTAIN"]
@@ -52,14 +52,14 @@
           "validation_status": {
             "type": "string",
             "enum": ["confirmed", "rejected", "unvalidated"],
-            "description": "MUST be populated for every CRITICAL or MAJOR issue. confirmed: reviewer verified the issue exists and is reproducible. rejected: issue was a false positive after investigation. unvalidated: reviewer did not attempt verification. Atlas blocks only on issues with validation_status = 'confirmed'."
+            "description": "MUST be populated for every CRITICAL or MAJOR issue. confirmed: reviewer verified the issue exists and is reproducible. rejected: issue was a false positive after investigation. unvalidated: reviewer did not attempt verification. Orchestrator blocks only on issues with validation_status = 'confirmed'."
           }
         }
       }
     },
     "validated_blocking_issues": {
       "type": "array",
-      "description": "Subset of issues that are both CRITICAL or MAJOR severity AND have validation_status = 'confirmed'. Atlas uses this array — not the raw issues array — as the authoritative list of blockers. An empty array means no confirmed blockers even if unvalidated issues exist.",
+      "description": "Subset of issues that are both CRITICAL or MAJOR severity AND have validation_status = 'confirmed'. Orchestrator uses this array — not the raw issues array — as the authoritative list of blockers. An empty array means no confirmed blockers even if unvalidated issues exist.",
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -154,7 +154,7 @@
     "failure_classification": {
       "type": "string",
       "enum": ["transient", "fixable", "needs_replan", "escalate"],
-      "description": "Required when status is NEEDS_REVISION or FAILED. Classifies the failure type for Atlas routing."
+      "description": "Required when status is NEEDS_REVISION or FAILED. Classifies the failure type for Orchestrator routing."
     }
   }
 }

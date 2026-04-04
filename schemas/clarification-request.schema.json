@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://copilot-atlas.local/schemas/clarification-request.schema.json",
   "title": "ClarificationRequest",
-  "description": "Shared schema fragment for structured clarification payloads. Used by acting subagents when returning NEEDS_INPUT status. Atlas routes these payloads to the user via askQuestions.",
+  "description": "Shared schema fragment for structured clarification payloads. Used by acting subagents when returning NEEDS_INPUT status. Orchestrator routes these payloads to the user via askQuestions.",
   "type": "object",
   "additionalProperties": false,
   "required": ["options", "impact_analysis", "recommended_option", "recommended_option_rationale"],

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://copilot-atlas.local/schemas/atlas.gate-event.schema.json",
-  "title": "AtlasGateEvent",
+  "$id": "https://copilot-atlas.local/schemas/orchestrator.gate-event.schema.json",
+  "title": "OrchestratorGateEvent",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -18,7 +18,7 @@
   ],
   "properties": {
     "schema_version": { "type": "string", "const": "1.1.0" },
-    "agent": { "type": "string", "const": "Atlas" },
+    "agent": { "type": "string", "const": "Orchestrator" },
     "event_type": {
       "type": "string",
       "enum": [
@@ -60,12 +60,12 @@
     "skeptic_status": {
       "type": "string",
       "enum": ["COMPLETE", "ABSTAIN", "NOT_RUN"],
-      "description": "Status of Skeptic mirage detection for this gate."
+      "description": "Status of AssumptionVerifier mirage detection for this gate."
     },
     "dryrun_status": {
       "type": "string",
       "enum": ["PASS", "FAIL", "WARN", "NOT_RUN"],
-      "description": "Status of DryRun executability check for this gate."
+      "description": "Status of ExecutabilityVerifier executability check for this gate."
     },
     "trace_id": {
       "type": "string",

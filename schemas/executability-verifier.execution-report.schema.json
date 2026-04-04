@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://copilot-atlas.local/schemas/dryrun.execution-report.schema.json",
-  "title": "DryRunExecutionReport",
-  "description": "Output schema for the DryRun cold-start executability simulator. Validates that plan tasks are specific enough for zero-context execution.",
+  "$id": "https://copilot-atlas.local/schemas/executability-verifier.execution-report.schema.json",
+  "title": "ExecutabilityVerifierExecutionReport",
+  "description": "Output schema for the ExecutabilityVerifier cold-start executability simulator. Validates that plan tasks are specific enough for zero-context execution.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -17,7 +17,7 @@
   ],
   "properties": {
     "schema_version": { "type": "string", "const": "1.0.0" },
-    "agent": { "type": "string", "const": "DryRun-subagent" },
+    "agent": { "type": "string", "const": "ExecutabilityVerifier-subagent" },
     "status": {
       "type": "string",
       "enum": ["PASS", "FAIL", "WARN", "ABSTAIN"],

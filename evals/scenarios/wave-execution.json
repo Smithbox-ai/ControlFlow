@@ -1,14 +1,40 @@
 {
   "id": "wave-execution",
-  "target_agent": "Atlas",
-  "goal": "Atlas executes phases in correct wave order, respects parallelism limits, and waits for wave completion before advancing",
+  "target_agent": "Orchestrator",
+  "goal": "Orchestrator executes phases in correct wave order, respects parallelism limits, and waits for wave completion before advancing",
   "input": {
     "plan": {
       "phases": [
-        {"id": "P1", "wave": 1, "title": "Schema extensions"},
-        {"id": "P2", "wave": 2, "title": "Agent A", "dependencies": ["P1"]},
-        {"id": "P3", "wave": 2, "title": "Agent B", "dependencies": ["P1"]},
-        {"id": "P4", "wave": 3, "title": "Integration", "dependencies": ["P2", "P3"]}
+        {
+          "id": "P1",
+          "wave": 1,
+          "title": "Schema extensions"
+        },
+        {
+          "id": "P2",
+          "wave": 2,
+          "title": "Agent A",
+          "dependencies": [
+            "P1"
+          ]
+        },
+        {
+          "id": "P3",
+          "wave": 2,
+          "title": "Agent B",
+          "dependencies": [
+            "P1"
+          ]
+        },
+        {
+          "id": "P4",
+          "wave": 3,
+          "title": "Integration",
+          "dependencies": [
+            "P2",
+            "P3"
+          ]
+        }
       ],
       "max_parallel_agents": 3
     }

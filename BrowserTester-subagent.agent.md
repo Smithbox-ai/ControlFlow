@@ -106,7 +106,7 @@ For each test scenario, follow this execution order:
 - No claiming completion without health check evidence.
 
 ### Human Approval Gates
-Approval gates: delegated to conductor (Atlas) for escalation of critical accessibility violations or security findings. BrowserTester does not independently approve remediation actions.
+Approval gates: delegated to conductor (Orchestrator) for escalation of critical accessibility violations or security findings. BrowserTester does not independently approve remediation actions.
 
 ### Tool Selection Rules
 1. Health check first — always verify application health before testing.
@@ -140,4 +140,4 @@ Return a schema-compliant execution report (`schemas/browser-tester.execution-re
 - If uncertain and cannot verify safely: `ABSTAIN`.
 
 ### Uncertainty Protocol
-Return `NEEDS_INPUT` with a structured `clarification_request` per `docs/agent-engineering/CLARIFICATION-POLICY.md`. Do not ask the user directly — all clarification is centralized in Atlas.
+Return `NEEDS_INPUT` with a structured `clarification_request` per `docs/agent-engineering/CLARIFICATION-POLICY.md`. Do not ask the user directly — all clarification is centralized in Orchestrator.

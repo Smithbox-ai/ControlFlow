@@ -1,5 +1,5 @@
 {
-  "_comment": "Atlas operational knobs only. Scoring thresholds live in docs/agent-engineering/SCORING-SPEC.md. File-count complexity boundaries live in plans/project-context.md.",
+  "_comment": "Orchestrator operational knobs only. Scoring thresholds live in docs/agent-engineering/SCORING-SPEC.md. File-count complexity boundaries live in plans/project-context.md.",
 
   "approval_required_actions": [
     "destructive_file_delete",
@@ -15,39 +15,39 @@
 
   "review_pipeline_by_tier": {
     "TRIVIAL": {
-      "challenger": false,
-      "skeptic": false,
-      "dryrun": false,
+      "plan_auditor": false,
+      "assumption_verifier": false,
+      "executability_verifier": false,
       "code_review": true
     },
     "SMALL": {
-      "challenger": false,
-      "skeptic": false,
-      "dryrun": false,
+      "plan_auditor": true,
+      "assumption_verifier": false,
+      "executability_verifier": false,
       "code_review": true
     },
     "MEDIUM": {
-      "challenger": true,
-      "skeptic": true,
-      "dryrun": false,
+      "plan_auditor": true,
+      "assumption_verifier": true,
+      "executability_verifier": false,
       "code_review": true
     },
     "LARGE": {
-      "challenger": true,
-      "skeptic": true,
-      "dryrun": true,
+      "plan_auditor": true,
+      "assumption_verifier": true,
+      "executability_verifier": true,
       "code_review": true
     }
   },
 
   "max_iterations_by_tier": {
     "TRIVIAL": 2,
-    "SMALL": 3,
+    "SMALL": 2,
     "MEDIUM": 5,
     "LARGE": 5
   },
 
-  "challenger_prometheus_loop": {
+  "plan_auditor_planner_loop": {
     "max_iterations": 2,
     "convergence_check": true
   },

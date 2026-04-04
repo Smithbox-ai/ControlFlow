@@ -1,7 +1,7 @@
 {
   "id": "failure-retry",
-  "target_agent": "Atlas",
-  "goal": "Atlas correctly routes failure classifications to retry, replan, or escalate per the routing table",
+  "target_agent": "Orchestrator",
+  "goal": "Orchestrator correctly routes failure classifications to retry, replan, or escalate per the routing table",
   "input": {
     "failure_scenarios": [
       {

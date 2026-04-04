@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://copilot-atlas.local/schemas/oracle.research-findings.schema.json",
-  "title": "OracleResearchFindings",
+  "$id": "https://copilot-atlas.local/schemas/researcher.research-findings.schema.json",
+  "title": "ResearcherResearchFindings",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -20,7 +20,7 @@
   ],
   "properties": {
     "schema_version": { "type": "string", "const": "1.0.0" },
-    "agent": { "type": "string", "const": "Oracle-subagent" },
+    "agent": { "type": "string", "const": "Researcher-subagent" },
     "status": {
       "type": "string",
       "enum": ["COMPLETE", "ABSTAIN", "INSUFFICIENT_EVIDENCE"]

@@ -1,13 +1,13 @@
 {
   "scenario_id": "atlas-challenger-integration",
-  "title": "Atlas Challenger Integration",
-  "description": "Validates that Atlas correctly routes plans to Challenger for adversarial review based on trigger conditions",
-  "agent": "Atlas",
+  "title": "Orchestrator PlanAuditor Integration",
+  "description": "Validates that Orchestrator correctly routes plans to PlanAuditor for adversarial review based on trigger conditions",
+  "agent": "Orchestrator",
   "category": "orchestration",
   "inputs": [
     {
       "label": "complex-plan-triggers-challenger",
-      "description": "A 5-phase plan should trigger Challenger review",
+      "description": "A 5-phase plan should trigger PlanAuditor review",
       "input": {
         "plan": {
           "phase_count": 5,
@@ -18,12 +18,15 @@
       "expected_behavior": {
         "challenger_invoked": true,
         "trigger_reason": "phase_count >= 3",
-        "delegation_includes": ["plan_path", "plan_summary"]
+        "delegation_includes": [
+          "plan_path",
+          "plan_summary"
+        ]
       }
     },
     {
       "label": "low-confidence-triggers-challenger",
-      "description": "A 2-phase plan with confidence 0.7 should trigger Challenger review",
+      "description": "A 2-phase plan with confidence 0.7 should trigger PlanAuditor review",
       "input": {
         "plan": {
           "phase_count": 2,
@@ -38,7 +41,7 @@
     },
     {
       "label": "simple-plan-skips-challenger",
-      "description": "A 2-phase plan with high confidence should skip Challenger",
+      "description": "A 2-phase plan with high confidence should skip PlanAuditor",
       "input": {
         "plan": {
           "phase_count": 2,
@@ -53,7 +56,7 @@
     },
     {
       "label": "destructive-plan-triggers-challenger",
-      "description": "A 2-phase plan with destructive operations should trigger Challenger review",
+      "description": "A 2-phase plan with destructive operations should trigger PlanAuditor review",
       "input": {
         "plan": {
           "phase_count": 2,
@@ -68,12 +71,17 @@
     },
     {
       "label": "challenger-rejected-escalates",
-      "description": "When Challenger returns REJECTED, Atlas must escalate to user",
+      "description": "When PlanAuditor returns REJECTED, Orchestrator must escalate to user",
       "input": {
         "challenger_response": {
           "status": "REJECTED",
           "failure_classification": "needs_replan",
-          "findings": [{"severity": "CRITICAL", "category": "security"}]
+          "findings": [
+            {
+              "severity": "CRITICAL",
+              "category": "security"
+            }
+          ]
         }
       },
       "expected_behavior": {
@@ -83,22 +91,27 @@
     },
     {
       "label": "challenger-needs-revision-routes-to-prometheus",
-      "description": "When Challenger returns NEEDS_REVISION, Atlas routes back to Prometheus",
+      "description": "When PlanAuditor returns NEEDS_REVISION, Orchestrator routes back to Planner",
       "input": {
         "challenger_response": {
           "status": "NEEDS_REVISION",
           "failure_classification": "fixable",
-          "findings": [{"severity": "MAJOR", "category": "test_coverage"}]
+          "findings": [
+            {
+              "severity": "MAJOR",
+              "category": "test_coverage"
+            }
+          ]
         }
       },
       "expected_behavior": {
-        "routes_to": "Prometheus",
+        "routes_to": "Planner",
         "max_iterations": 2
       }
     },
     {
       "label": "semantic-risk-high-data-volume-triggers-challenger",
-      "description": "A 2-phase, high-confidence, non-destructive plan with applicable HIGH data_volume risk must trigger Challenger",
+      "description": "A 2-phase, high-confidence, non-destructive plan with applicable HIGH data_volume risk must trigger PlanAuditor",
       "input": {
         "plan": {
           "phase_count": 2,
@@ -117,13 +130,19 @@
       "expected_behavior": {
         "challenger_invoked": true,
         "trigger_reason": "semantic_risk_high_impact_unresolved",
-        "delegation_includes": ["plan_path", "plan_summary", "focus_areas"],
-        "focus_areas_must_include": ["performance"]
+        "delegation_includes": [
+          "plan_path",
+          "plan_summary",
+          "focus_areas"
+        ],
+        "focus_areas_must_include": [
+          "performance"
+        ]
       }
     },
     {
       "label": "semantic-risk-resolved-skips-challenger",
-      "description": "A 2-phase, high-confidence plan with applicable HIGH data_volume risk that is resolved must skip Challenger",
+      "description": "A 2-phase, high-confidence plan with applicable HIGH data_volume risk that is resolved must skip PlanAuditor",
       "input": {
         "plan": {
           "phase_count": 2,
@@ -146,15 +165,15 @@
     }
   ],
   "assertions": [
-    "Challenger is invoked for plans with 3+ phases",
-    "Challenger is invoked for plans with confidence < 0.9",
-    "Challenger is invoked for plans with destructive operations",
-    "Challenger is NOT invoked for simple plans (< 3 phases, high confidence, non-destructive, no unresolved HIGH-impact risk_review entries)",
-    "Atlas passes plan_path (not inline plan) to Challenger",
+    "PlanAuditor is invoked for plans with 3+ phases",
+    "PlanAuditor is invoked for plans with confidence < 0.9",
+    "PlanAuditor is invoked for plans with destructive operations",
+    "PlanAuditor is NOT invoked for simple plans (< 3 phases, high confidence, non-destructive, no unresolved HIGH-impact risk_review entries)",
+    "Orchestrator passes plan_path (not inline plan) to PlanAuditor",
     "REJECTED status transitions to WAITING_APPROVAL",
-    "NEEDS_REVISION routes back to Prometheus with max 2 iterations",
-    "ABSTAIN from Challenger does not block pipeline",
-    "Challenger is invoked for plans with any risk_review entry applicability=applicable AND impact=HIGH AND disposition != resolved",
-    "When triggered by semantic risk, Atlas derives focus_areas from risk category mapping and includes them in delegation"
+    "NEEDS_REVISION routes back to Planner with max 2 iterations",
+    "ABSTAIN from PlanAuditor does not block pipeline",
+    "PlanAuditor is invoked for plans with any risk_review entry applicability=applicable AND impact=HIGH AND disposition != resolved",
+    "When triggered by semantic risk, Orchestrator derives focus_areas from risk category mapping and includes them in delegation"
   ]
 }

@@ -8,8 +8,19 @@
   },
   "expected": {
     "schema": "schemas/browser-tester.execution-report.schema.json",
-    "required_status": ["COMPLETE", "NEEDS_INPUT", "FAILED", "ABSTAIN"],
-    "must_include": ["health_check", "scenarios_run", "scenarios_passed", "accessibility_issues", "definition_of_done"],
+    "required_status": [
+      "COMPLETE",
+      "NEEDS_INPUT",
+      "FAILED",
+      "ABSTAIN"
+    ],
+    "must_include": [
+      "health_check",
+      "scenarios_run",
+      "scenarios_passed",
+      "accessibility_issues",
+      "definition_of_done"
+    ],
     "invariants": {
       "health_first_gate": true,
       "source_code_read_only": true,
@@ -21,7 +32,10 @@
         "must_include_reason": "Target application health check failed"
       },
       "on_scenario_failure": {
-        "must_include": ["evidence_path", "failure_classification"]
+        "must_include": [
+          "evidence_path",
+          "failure_classification"
+        ]
       }
     }
   }

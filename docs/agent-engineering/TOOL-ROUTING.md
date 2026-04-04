@@ -24,8 +24,8 @@ External documentation lookup is **mandatory** before finalizing output when:
 - The plan depends on API behavior that cannot be verified from local code alone.
 - The user explicitly references an external resource, standard, or specification.
 
-### Rule 3: Context7/MCP Routing (Prometheus)
-When Prometheus has Context7 tools granted:
+### Rule 3: Context7/MCP Routing (Planner)
+When Planner has Context7 tools granted:
 1. If the plan involves a third-party library: call `resolve-library-id` first.
 2. If library ID resolves: call `get-library-docs` to fetch current documentation.
 3. Use fetched docs to validate plan assumptions before finalizing phases.
@@ -40,16 +40,16 @@ Prefer least-privilege grants: do not grant tools solely for speculative future 
 
 | Agent | fetch | githubRepo | Context7 | Notes |
 |-------|-------|-----------|----------|-------|
-| Atlas | ✅ | ✅ | ❌ | Orchestration; delegates research |
-| Prometheus | ✅ | ✅ | ✅ | Planning; use Context7 for library docs |
-| Oracle | ✅ | ❌ | ❌ | Deep research; fetch for evidence |
-| Scout | ❌ | ❌ | ❌ | Read-only local discovery |
-| Code-Review | ❌ | ❌ | ❌ | Verification only |
-| Challenger | ❌ | ❌ | ❌ | Read-only plan audit; local codebase cross-reference only |
-| Sisyphus | ✅ | ✅ | ❌ | Implementation; fetch for API reference |
-| Frontend-Engineer | ✅ | ✅ | ❌ | Implementation; fetch for component docs |
-| DevOps | ✅ | ✅ | ❌ | Infrastructure; fetch for provider docs |
-| DocWriter | ✅ | ❌ | ❌ | Documentation; fetch for external refs |
+| Orchestrator | ✅ | ✅ | ❌ | Orchestration; delegates research |
+| Planner | ✅ | ✅ | ✅ | Planning; use Context7 for library docs |
+| Researcher | ✅ | ❌ | ❌ | Deep research; fetch for evidence |
+| CodeMapper | ❌ | ❌ | ❌ | Read-only local discovery |
+| CodeReviewer | ❌ | ❌ | ❌ | Verification only |
+| PlanAuditor | ❌ | ❌ | ❌ | Read-only plan audit; local codebase cross-reference only |
+| CoreImplementer | ✅ | ✅ | ❌ | Implementation; fetch for API reference |
+| UIImplementer | ✅ | ✅ | ❌ | Implementation; fetch for component docs |
+| PlatformEngineer | ✅ | ✅ | ❌ | Infrastructure; fetch for provider docs |
+| TechnicalWriter | ✅ | ❌ | ❌ | Documentation; fetch for external refs |
 | BrowserTester | ✅ | ❌ | ❌ | Testing; fetch for test framework docs |
-| Skeptic | ❌ | ❌ | ❌ | Read-only local mirage detection |
-| DryRun | ❌ | ❌ | ❌ | Read-only local executability simulation |
+| AssumptionVerifier | ❌ | ❌ | ❌ | Read-only local mirage detection |
+| ExecutabilityVerifier | ❌ | ❌ | ❌ | Read-only local executability simulation |

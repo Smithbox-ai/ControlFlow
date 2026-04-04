@@ -1,7 +1,7 @@
 {
   "id": "prometheus-large-data-risk-discovery",
-  "target_agent": "Prometheus",
-  "goal": "Prometheus applies the Semantic Risk Discovery Gate at step 0.5 and correctly identifies large-data and performance risks before plan finalization",
+  "target_agent": "Planner",
+  "goal": "Planner applies the Semantic Risk Discovery Gate at step 0.5 and correctly identifies large-data and performance risks before plan finalization",
   "inputs": [
     {
       "label": "forecast-table-pagination-gap",
@@ -11,7 +11,7 @@
         "context": "The forecast_adjustments table currently has ~2M rows and grows by ~50K rows per day."
       },
       "expected": {
-        "schema": "schemas/prometheus.plan.schema.json",
+        "schema": "schemas/planner.plan.schema.json",
         "risk_review_present": true,
         "risk_review_must_include": [
           {
@@ -37,7 +37,7 @@
         "context": "Single-file change to config/app.yaml. No database or network calls involved."
       },
       "expected": {
-        "schema": "schemas/prometheus.plan.schema.json",
+        "schema": "schemas/planner.plan.schema.json",
         "risk_review_present": true,
         "data_volume_must_be": "not_applicable",
         "performance_must_not_be": "applicable",
@@ -52,7 +52,7 @@
         "context": "Production PostgreSQL database. Backfill must not lock the table."
       },
       "expected": {
-        "schema": "schemas/prometheus.plan.schema.json",
+        "schema": "schemas/planner.plan.schema.json",
         "risk_review_present": true,
         "risk_review_must_include": [
           {
@@ -72,12 +72,12 @@
     }
   ],
   "assertions": [
-    "Prometheus populates risk_review array in every plan output",
+    "Planner populates risk_review array in every plan output",
     "risk_review covers all 7 categories: data_volume, performance, concurrency, access_control, migration_rollback, dependency, operability",
     "Queries on large tables result in data_volume applicability: applicable with impact HIGH",
     "Trivial non-data changes result in data_volume applicability: not_applicable",
     "HIGH-impact open_question entries trigger a dedicated research phase before implementation phases",
     "migration_rollback is flagged for database schema change tasks",
-    "Output conforms to schemas/prometheus.plan.schema.json version 1.2.0 including risk_review field"
+    "Output conforms to schemas/planner.plan.schema.json version 1.2.0 including risk_review field"
   ]
 }

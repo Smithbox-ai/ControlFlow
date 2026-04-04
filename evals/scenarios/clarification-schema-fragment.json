@@ -2,7 +2,7 @@
   "scenario_id": "clarification-schema-fragment",
   "title": "Shared Clarification Request Schema Validation",
   "description": "Validates the standalone clarification-request.schema.json as a reusable contract fragment for NEEDS_INPUT payloads",
-  "agent": "Atlas",
+  "agent": "Orchestrator",
   "category": "contract",
   "inputs": [
     {
@@ -13,16 +13,34 @@
           {
             "id": "option-a",
             "description": "Use inline styles for the component",
-            "pros": ["Simple implementation", "No build step changes"],
-            "cons": ["Harder to maintain", "No theme support"],
-            "affected_files": ["src/components/Button.tsx"]
+            "pros": [
+              "Simple implementation",
+              "No build step changes"
+            ],
+            "cons": [
+              "Harder to maintain",
+              "No theme support"
+            ],
+            "affected_files": [
+              "src/components/Button.tsx"
+            ]
           },
           {
             "id": "option-b",
             "description": "Use CSS modules for the component",
-            "pros": ["Scoped styles", "Theme support", "Better maintainability"],
-            "cons": ["Requires build config update"],
-            "affected_files": ["src/components/Button.tsx", "src/components/Button.module.css", "webpack.config.js"]
+            "pros": [
+              "Scoped styles",
+              "Theme support",
+              "Better maintainability"
+            ],
+            "cons": [
+              "Requires build config update"
+            ],
+            "affected_files": [
+              "src/components/Button.tsx",
+              "src/components/Button.module.css",
+              "webpack.config.js"
+            ]
           }
         ],
         "impact_analysis": "This decision affects the styling architecture for all future components in the project.",
@@ -53,8 +71,14 @@
       "description": "A clarification request missing impact_analysis should fail validation",
       "input": {
         "options": [
-          { "id": "a", "description": "Option A" },
-          { "id": "b", "description": "Option B" }
+          {
+            "id": "a",
+            "description": "Option A"
+          },
+          {
+            "id": "b",
+            "description": "Option B"
+          }
         ],
         "recommended_option": "a",
         "recommended_option_rationale": "Option A is simpler."
@@ -67,10 +91,22 @@
       "description": "A clarification request with 4 options should fail validation (maxItems: 3)",
       "input": {
         "options": [
-          { "id": "a", "description": "Option A" },
-          { "id": "b", "description": "Option B" },
-          { "id": "c", "description": "Option C" },
-          { "id": "d", "description": "Option D" }
+          {
+            "id": "a",
+            "description": "Option A"
+          },
+          {
+            "id": "b",
+            "description": "Option B"
+          },
+          {
+            "id": "c",
+            "description": "Option C"
+          },
+          {
+            "id": "d",
+            "description": "Option D"
+          }
         ],
         "impact_analysis": "Too many choices.",
         "recommended_option": "a",
@@ -86,6 +122,6 @@
     "Each option must have id and description",
     "impact_analysis, recommended_option, and recommended_option_rationale are all required",
     "Schema is self-contained and can be referenced via $ref from execution report schemas",
-    "Oracle and Scout schemas are intentionally excluded from clarification_request adoption (read-only agents without NEEDS_INPUT status)"
+    "Researcher and CodeMapper schemas are intentionally excluded from clarification_request adoption (read-only agents without NEEDS_INPUT status)"
   ]
 }

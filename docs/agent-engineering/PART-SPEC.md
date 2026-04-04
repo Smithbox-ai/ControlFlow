@@ -1,21 +1,21 @@
 # P.A.R.T Specification (Core)
 
 ## Purpose
-This specification defines deterministic instruction architecture for Copilot Atlas agents.
+This specification defines deterministic instruction architecture for ControlFlow agents.
 
 P.A.R.T is mandatory for all core agents:
-- `Atlas.agent.md`
-- `Prometheus.agent.md`
-- `Oracle-subagent.agent.md`
-- `Scout-subagent.agent.md`
-- `Code-Review-subagent.agent.md`
-- `Challenger-subagent.agent.md`
+- `Orchestrator.agent.md`
+- `Planner.agent.md`
+- `Researcher-subagent.agent.md`
+- `CodeMapper-subagent.agent.md`
+- `CodeReviewer-subagent.agent.md`
+- `PlanAuditor-subagent.agent.md`
 
 P.A.R.T is mandatory for all implementation agents:
-- `Sisyphus-subagent.agent.md`
-- `Frontend-Engineer-subagent.agent.md`
-- `DevOps-subagent.agent.md`
-- `DocWriter-subagent.agent.md`
+- `CoreImplementer-subagent.agent.md`
+- `UIImplementer-subagent.agent.md`
+- `PlatformEngineer-subagent.agent.md`
+- `TechnicalWriter-subagent.agent.md`
 - `BrowserTester-subagent.agent.md`
 
 ## Section Order (MANDATORY)

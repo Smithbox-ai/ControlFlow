@@ -1,8 +1,8 @@
 {
   "scenario_id": "atlas-retry-backoff",
-  "title": "Atlas Retry and Backoff Policy",
-  "description": "Validates Atlas retry budget, throttling, and escalation behavior under failure conditions",
-  "agent": "Atlas",
+  "title": "Orchestrator Retry and Backoff Policy",
+  "description": "Validates Orchestrator retry budget, throttling, and escalation behavior under failure conditions",
+  "agent": "Orchestrator",
   "category": "reliability",
   "inputs": [
     {
@@ -43,8 +43,14 @@
       "description": "When 2+ subagents in a wave return transient failures, reduce parallelism by 50%",
       "input": {
         "wave_failures": [
-          {"agent": "Sisyphus-subagent", "failure_classification": "transient"},
-          {"agent": "Frontend-Engineer-subagent", "failure_classification": "transient"}
+          {
+            "agent": "CoreImplementer-subagent",
+            "failure_classification": "transient"
+          },
+          {
+            "agent": "UIImplementer-subagent",
+            "failure_classification": "transient"
+          }
         ],
         "current_parallelism": 4
       },
@@ -58,9 +64,18 @@
       "description": "3 failures with same classification on same phase triggers escalation",
       "input": {
         "consecutive_failures": [
-          {"classification": "fixable", "attempt": 1},
-          {"classification": "fixable", "attempt": 2},
-          {"classification": "fixable", "attempt": 3}
+          {
+            "classification": "fixable",
+            "attempt": 1
+          },
+          {
+            "classification": "fixable",
+            "attempt": 2
+          },
+          {
+            "classification": "fixable",
+            "attempt": 3
+          }
         ]
       },
       "expected_behavior": {

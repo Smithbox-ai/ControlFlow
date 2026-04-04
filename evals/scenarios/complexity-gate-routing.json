@@ -1,8 +1,8 @@
 {
   "scenario_id": "complexity-gate-routing-01",
-  "target_agent": "Atlas",
+  "target_agent": "Orchestrator",
   "goal": "Verify complexity tier determines correct pipeline depth",
-  "description": "Atlas should route plans through different review pipeline depths based on complexity_tier: TRIVIAL skips PLAN_REVIEW entirely, SMALL runs Challenger only, MEDIUM runs Challenger+Skeptic, LARGE runs full pipeline with DryRun.",
+  "description": "Orchestrator should route plans through different review pipeline depths based on complexity_tier: TRIVIAL skips PLAN_REVIEW entirely, SMALL runs PlanAuditor only, MEDIUM runs PlanAuditor+AssumptionVerifier, LARGE runs full pipeline with ExecutabilityVerifier.",
   "inputs": [
     {
       "complexity_tier": "TRIVIAL",

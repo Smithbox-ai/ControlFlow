@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Reusable domain-specific patterns and best practices for agent consumption. Prometheus selects relevant skills during planning and includes them as `skill_references` in plan phases. Implementation agents read referenced skills before starting work.
+Reusable domain-specific patterns and best practices for agent consumption. Planner selects relevant skills during planning and includes them as `skill_references` in plan phases. Implementation agents read referenced skills before starting work.
 
 ## Directory Structure
 
@@ -31,7 +31,7 @@ Each pattern file follows this structure:
 
 ## Discovery Protocol
 
-1. Prometheus reads `skills/index.md` during planning
+1. Planner reads `skills/index.md` during planning
 2. Matches task domain keywords against skill domain entries
 3. Selects ≤3 most relevant skills per task
 4. Includes selected skill paths as `skill_references` in plan phases

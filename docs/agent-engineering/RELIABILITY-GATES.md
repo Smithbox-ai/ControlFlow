@@ -1,6 +1,6 @@
 # Reliability Gates (Core)
 
-This document defines enforceable reliability controls for Copilot Atlas core agents.
+This document defines enforceable reliability controls for ControlFlow core agents.
 
 ## 1) Consistency
 Goal: reduce outcome and trajectory variance on identical inputs.
@@ -117,27 +117,27 @@ Goal: plans must be actionable by a cold-start executor without additional clari
 
 Required controls:
 - Every phase must specify concrete file paths, input/output contracts, and verification commands.
-- Plans are audited for cold-start executability by Challenger (executability_checklist in schema).
-- If a plan cannot be executed from the artifact alone, Challenger raises at minimum a MAJOR finding.
+- Plans are audited for cold-start executability by PlanAuditor (executability_checklist in schema).
+- If a plan cannot be executed from the artifact alone, PlanAuditor raises at minimum a MAJOR finding.
 
 Acceptance gate:
-- Challenger populates executability_checklist for the first 3 tasks of every audited plan.
+- PlanAuditor populates executability_checklist for the first 3 tasks of every audited plan.
 - Plans with any executability failure produce a MAJOR or CRITICAL finding — they do not silently pass.
 
 ## 9) Semantic Risk Coverage
 Goal: plans must surface non-functional and contextual risks before phase decomposition, not after.
 
 Required controls:
-- Prometheus evaluates all 7 semantic risk categories (`data_volume`, `performance`, `concurrency`, `access_control`, `migration_rollback`, `dependency`, `operability`) at step 0.5 of the Mandatory Workflow — after clarification, before research delegation.
+- Planner evaluates all 7 semantic risk categories (`data_volume`, `performance`, `concurrency`, `access_control`, `migration_rollback`, `dependency`, `operability`) at step 0.5 of the Mandatory Workflow — after clarification, before research delegation.
 - Every plan must emit a `risk_review` array with one entry per category.
 - Any category with `applicability: applicable` AND `impact: HIGH` that cannot be resolved from available evidence must set `disposition: research_phase_added` and include a dedicated research phase before implementation phases begin.
-- Atlas triggers Challenger whenever any `risk_review` entry has `applicability: applicable` AND `impact: HIGH` AND `disposition` is not `resolved` — even for plans with fewer than 3 phases and confidence ≥ 0.9.
-- Challenger maps applicable HIGH-impact risk entries to its audit focus areas (see Semantic Risk Taxonomy in `plans/project-context.md`).
+- Orchestrator triggers PlanAuditor whenever any `risk_review` entry has `applicability: applicable` AND `impact: HIGH` AND `disposition` is not `resolved` — even for plans with fewer than 3 phases and confidence ≥ 0.9.
+- PlanAuditor maps applicable HIGH-impact risk entries to its audit focus areas (see Semantic Risk Taxonomy in `plans/project-context.md`).
 
 Acceptance gate:
 - Plans with `HIGH`-impact applicable risk entries and no corresponding research phase or `resolved` disposition are non-compliant.
-- Challenger must check the `risk_review` field when `audit_scope` includes `performance` focus area.
-- A missing `risk_review` array in the plan schema is a schema validation failure — the plan is rejected before Challenger review.
+- PlanAuditor must check the `risk_review` field when `audit_scope` includes `performance` focus area.
+- A missing `risk_review` array in the plan schema is a schema validation failure — the plan is rejected before PlanAuditor review.
 
 ## 10) Scoring Reliability
 Goal: quantitative scores must be reproducible given identical findings.
@@ -145,7 +145,7 @@ Goal: quantitative scores must be reproducible given identical findings.
 Required controls:
 - Scoring uses discrete, countable inputs (mirage count, orphaned requirements, blocked tasks) — not subjective ratings.
 - Formulas are mathematical operations on counted evidence, defined in `docs/agent-engineering/SCORING-SPEC.md`.
-- Cross-validated ceilings are applied deterministically: same Skeptic/DryRun evidence → same ceiling applied.
+- Cross-validated ceilings are applied deterministically: same AssumptionVerifier/ExecutabilityVerifier evidence → same ceiling applied.
 - Verdict thresholds are fixed numeric boundaries (≥75%, 60-74%, <60%).
 
 Acceptance gate:
@@ -168,7 +168,7 @@ Acceptance gate:
 Goal: selected skills must match the task domain and be loadable by implementation agents.
 
 Required controls:
-- Prometheus selects skills from `skills/index.md` based on keyword matching against the domain mapping table.
+- Planner selects skills from `skills/index.md` based on keyword matching against the domain mapping table.
 - Selected skill file paths are included in phase `skill_references` and resolve to existing files.
 - Implementation agents load referenced skills before executing phase tasks.
 

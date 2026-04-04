@@ -1,8 +1,8 @@
 {
   "scenario_id": "behavioral-plan-quality-01",
-  "target_agent": "Prometheus",
-  "goal": "Verify Prometheus output includes complexity_tier, risk_review, and scoring-compatible phase structure",
-  "description": "Given a realistic multi-file task, Prometheus should emit a plan with complexity_tier classification, all 7 risk_review categories evaluated, and phases with executor_agent and optional skill_references.",
+  "target_agent": "Planner",
+  "goal": "Verify Planner output includes complexity_tier, risk_review, and scoring-compatible phase structure",
+  "description": "Given a realistic multi-file task, Planner should emit a plan with complexity_tier classification, all 7 risk_review categories evaluated, and phases with executor_agent and optional skill_references.",
   "input": {
     "task_description": "Add pagination to the /api/users endpoint with cursor-based navigation, including database query optimization and test coverage"
   },

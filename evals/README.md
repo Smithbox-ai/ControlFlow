@@ -10,11 +10,11 @@ This folder contains scenario fixtures used to validate reliability for core age
 5. Safety via mandatory human approval gates for high-risk actions.
 6. Failure taxonomy routing (transient, fixable, needs_replan, escalate).
 7. Wave-based execution ordering and batch approval.
-8. Agent-specific contracts (DevOps rollback, BrowserTester health-first, DocWriter parity).
+8. Agent-specific contracts (PlatformEngineer rollback, BrowserTester health-first, TechnicalWriter parity).
 9. Clarification triggering via askQuestions for enumerated ambiguity classes.
 10. Tool routing compliance (Context7/MCP usage when third-party docs are needed).
-11. NEEDS_INPUT routing from subagents through Atlas to user via askQuestions.
-12. Semantic risk coverage — Prometheus `risk_review` array is present and covers all 7 categories in every plan output.
+11. NEEDS_INPUT routing from subagents through Orchestrator to user via askQuestions.
+12. Semantic risk coverage — Planner `risk_review` array is present and covers all 7 categories in every plan output.
 
 ## Suggested execution flow
 1. Run each scenario against the corresponding agent contract.
@@ -50,7 +50,7 @@ This folder contains scenario fixtures used to validate reliability for core age
 - `scenarios/agent-triggering-quality.json`
 - `scenarios/prometheus-ambiguity-plus-schema.json`
 
-### Challenger adversarial and integration
+### PlanAuditor adversarial and integration
 - `scenarios/challenger-contract.json`
 - `scenarios/challenger-adversarial-detection.json`
 - `scenarios/challenger-replan-loop.json`
@@ -81,7 +81,7 @@ npm test
 | Pass | What it checks |
 |------|----------------|
 | **1 — Schema Validity** | All `schemas/*.schema.json` compile under `ajv` JSON Schema 2020-12. |
-| **2 — Scenario Integrity** | All `evals/scenarios/*.json` have the required identity fields and point to real agent files. Prometheus scenarios must assert `risk_review_present: true`. |
+| **2 — Scenario Integrity** | All `evals/scenarios/*.json` have the required identity fields and point to real agent files. Planner scenarios must assert `risk_review_present: true`. |
 | **3 — Reference Integrity** | All backtick schema/doc references inside `*.agent.md` resolve to existing files. |
 | **3b — Required Artifacts** | Shared repo-local dependencies like `.github/copilot-instructions.md`, `plans/project-context.md`, and governance docs exist. |
 | **3c — Tool Grant Consistency** | Every agent frontmatter `tools:` list matches the repository's canonical least-privilege tool set. |

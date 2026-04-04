@@ -1,13 +1,18 @@
 {
   "scenario_id": "dryrun-contract-01",
-  "target_agent": "DryRun-subagent",
-  "goal": "Verify DryRun output conforms to dryrun.execution-report.schema.json with required fields",
-  "description": "Structural validation that DryRun produces schema-compliant output with tasks_simulated array (max 3), pre_execution_checklist with 8 boolean fields, walkthrough_steps, and valid status enum.",
+  "target_agent": "ExecutabilityVerifier-subagent",
+  "goal": "Verify ExecutabilityVerifier output conforms to dryrun.execution-report.schema.json with required fields",
+  "description": "Structural validation that ExecutabilityVerifier produces schema-compliant output with tasks_simulated array (max 3), pre_execution_checklist with 8 boolean fields, walkthrough_steps, and valid status enum.",
   "expected": {
-    "status_enum": ["PASS", "FAIL", "WARN", "ABSTAIN"],
+    "status_enum": [
+      "PASS",
+      "FAIL",
+      "WARN",
+      "ABSTAIN"
+    ],
     "tasks_simulated_max": 3,
     "checklist_items_count": 8,
     "walkthrough_steps_max": 7,
-    "schema_ref": "schemas/dryrun.execution-report.schema.json"
+    "schema_ref": "schemas/executability-verifier.execution-report.schema.json"
   }
 }

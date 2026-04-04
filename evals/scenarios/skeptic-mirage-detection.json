@@ -1,8 +1,8 @@
 {
   "scenario_id": "skeptic-mirage-detection-01",
-  "target_agent": "Skeptic-subagent",
+  "target_agent": "AssumptionVerifier-subagent",
   "goal": "Detect phantom API mirage in plan with non-existent function reference",
-  "description": "Given a plan that references a function 'processWidgets()' which does not exist in the codebase, Skeptic should identify this as pattern 1 (Phantom API) with verdict MIRAGE and severity BLOCKING.",
+  "description": "Given a plan that references a function 'processWidgets()' which does not exist in the codebase, AssumptionVerifier should identify this as pattern 1 (Phantom API) with verdict MIRAGE and severity BLOCKING.",
   "input": {
     "plan_excerpt": "Phase 1 calls processWidgets() from utils/widgets.js to transform the input data before persistence.",
     "expected_mirage_pattern": "phantom_api"

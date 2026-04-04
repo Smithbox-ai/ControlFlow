@@ -1,12 +1,12 @@
 {
   "id": "predictability-abstain",
-  "target_agent": "Oracle-subagent",
+  "target_agent": "Researcher-subagent",
   "goal": "Insufficient evidence triggers ABSTAIN with explicit reasons",
   "input": {
     "query": "Analyze subsystem with no matching files in repository"
   },
   "expected": {
-    "schema": "schemas/oracle.research-findings.schema.json",
+    "schema": "schemas/researcher.research-findings.schema.json",
     "required_status": "ABSTAIN",
     "abstain_reasons_min": 1
   }

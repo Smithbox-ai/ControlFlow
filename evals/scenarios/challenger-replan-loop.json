@@ -1,13 +1,13 @@
 {
   "scenario_id": "challenger-replan-loop",
-  "title": "Challenger-Prometheus Replan Loop Cap",
-  "description": "Validates that Atlas caps the Challenger→Prometheus revision loop at 2 iterations",
-  "agent": "Atlas",
+  "title": "PlanAuditor-Planner Replan Loop Cap",
+  "description": "Validates that Orchestrator caps the PlanAuditor→Planner revision loop at 2 iterations",
+  "agent": "Orchestrator",
   "category": "orchestration",
   "inputs": [
     {
       "label": "first-revision-succeeds",
-      "description": "Challenger finds issues, Prometheus revises, Challenger approves on second pass",
+      "description": "PlanAuditor finds issues, Planner revises, PlanAuditor approves on second pass",
       "input": {
         "iteration_1": {
           "challenger_status": "NEEDS_REVISION",
@@ -25,7 +25,7 @@
     },
     {
       "label": "two-revisions-then-approve",
-      "description": "Challenger finds issues twice, Prometheus revises twice, Challenger approves on third pass",
+      "description": "PlanAuditor finds issues twice, Planner revises twice, PlanAuditor approves on third pass",
       "input": {
         "iteration_1": {
           "challenger_status": "NEEDS_REVISION",
@@ -48,7 +48,7 @@
     },
     {
       "label": "cap-exceeded-escalates",
-      "description": "After 2 revision rounds, if Challenger still rejects, escalate to user",
+      "description": "After 2 revision rounds, if PlanAuditor still rejects, escalate to user",
       "input": {
         "iteration_1": {
           "challenger_status": "NEEDS_REVISION",
@@ -59,22 +59,22 @@
           "failure_classification": "fixable"
         },
         "iteration_3_would_be": {
-          "note": "Atlas does NOT run a 3rd revision. Instead, escalates."
+          "note": "Orchestrator does NOT run a 3rd revision. Instead, escalates."
         }
       },
       "expected_behavior": {
         "total_revision_rounds": 2,
         "escalated": true,
         "state_transition": "WAITING_APPROVAL",
-        "user_sees": "Challenger findings from both rounds plus Prometheus revision attempts"
+        "user_sees": "PlanAuditor findings from both rounds plus Planner revision attempts"
       }
     }
   ],
   "assertions": [
-    "Maximum 2 Challenger→Prometheus revision rounds before escalation",
-    "Each revision round sends Challenger findings to Prometheus as revision context",
-    "If Challenger approves within 2 rounds, pipeline proceeds to ACTING",
-    "If 2 rounds exhausted without approval, Atlas escalates to user",
+    "Maximum 2 PlanAuditor→Planner revision rounds before escalation",
+    "Each revision round sends PlanAuditor findings to Planner as revision context",
+    "If PlanAuditor approves within 2 rounds, pipeline proceeds to ACTING",
+    "If 2 rounds exhausted without approval, Orchestrator escalates to user",
     "Escalation includes accumulated findings from all rounds"
   ]
 }

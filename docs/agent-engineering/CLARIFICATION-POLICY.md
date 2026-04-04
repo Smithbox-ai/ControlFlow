@@ -4,8 +4,8 @@
 Define when agents must ask for user clarification vs making reasonable assumptions.
 
 ## Ownership
-- **askQuestions owners:** Prometheus, Atlas.
-- **All other agents:** Return structured `NEEDS_INPUT` status with `clarification_request` to the conductor (Atlas). Do not attempt direct user interaction.
+- **askQuestions owners:** Planner, Orchestrator.
+- **All other agents:** Return structured `NEEDS_INPUT` status with `clarification_request` to the conductor (Orchestrator). Do not attempt direct user interaction.
 
 ## Mandatory Clarification Classes
 
@@ -40,7 +40,7 @@ The following ambiguity classes REQUIRE user clarification before proceeding:
 
 ## Clarification Format
 
-### For agents with askQuestions (Prometheus, Atlas):
+### For agents with askQuestions (Planner, Orchestrator):
 Present **2–3 concrete options** with:
 - Architecture implications for each option.
 - Affected files/components.
@@ -63,7 +63,7 @@ Return `NEEDS_INPUT` status with `clarification_request` object:
   "recommended_option": "A"
 }
 ```
-Atlas will extract this and present to the user via `askQuestions`.
+Orchestrator will extract this and present to the user via `askQuestions`.
 
 ## Threshold Rule
 Clarification is mandatory ONLY when the ambiguity would **materially change the output** (different files modified, different architecture, different user-facing behavior). If all options lead to equivalent outcomes, make a reasonable assumption and proceed.
@@ -75,4 +75,4 @@ When a subagent's status would be `NEEDS_INPUT`, return a structured `clarificat
 - `impact_analysis`: what changes if the wrong option is chosen.
 - `recommended_option`: the agent’s recommendation with rationale.
 
-Atlas extracts this and calls `vscode/askQuestions`, then retries with the user’s selection. Full contract: `schemas/clarification-request.schema.json`. Do not attempt direct user interaction.
+Orchestrator extracts this and calls `vscode/askQuestions`, then retries with the user’s selection. Full contract: `schemas/clarification-request.schema.json`. Do not attempt direct user interaction.

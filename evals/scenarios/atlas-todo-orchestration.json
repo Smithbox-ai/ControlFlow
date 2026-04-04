@@ -1,32 +1,66 @@
 {
   "id": "atlas-todo-orchestration",
-  "target_agent": "Atlas",
-  "goal": "Atlas creates phase todo items at plan start, marks the relevant todo completed after a phase review passes, and reconciles all todos at plan completion",
+  "target_agent": "Orchestrator",
+  "goal": "Orchestrator creates phase todo items at plan start, marks the relevant todo completed after a phase review passes, and reconciles all todos at plan completion",
   "input": {
     "plan": {
       "phases": [
-        {"id": "P1", "wave": 1, "title": "Database migrations"},
-        {"id": "P2", "wave": 2, "title": "API layer changes", "dependencies": ["P1"]},
-        {"id": "P3", "wave": 2, "title": "Frontend updates", "dependencies": ["P1"]}
+        {
+          "id": "P1",
+          "wave": 1,
+          "title": "Database migrations"
+        },
+        {
+          "id": "P2",
+          "wave": 2,
+          "title": "API layer changes",
+          "dependencies": [
+            "P1"
+          ]
+        },
+        {
+          "id": "P3",
+          "wave": 2,
+          "title": "Frontend updates",
+          "dependencies": [
+            "P1"
+          ]
+        }
       ]
     },
     "phase_review": {
       "phase_id": "P1",
       "review_status": "APPROVED",
-      "tests": {"individual": "PASS", "full_suite": "PASS"},
-      "build": {"state": "PASS"},
-      "lint": {"state": "PASS"}
+      "tests": {
+        "individual": "PASS",
+        "full_suite": "PASS"
+      },
+      "build": {
+        "state": "PASS"
+      },
+      "lint": {
+        "state": "PASS"
+      }
     }
   },
   "expected": {
-    "must_use_tool_sequence": ["todo", "todo", "todo", "todo"],
+    "must_use_tool_sequence": [
+      "todo",
+      "todo",
+      "todo",
+      "todo"
+    ],
     "todo_created_for_each_phase": true,
     "todo_title_format": "Phase {N} — {Title}",
     "todo_tool_calls": {
       "on_plan_start": {
         "action": "create",
         "count": 3,
-        "titles": ["Phase 1 — Database migrations", "Phase 2 — API layer changes", "Phase 3 — Frontend updates"]
+        "titles": [
+          "Phase 1 — Database migrations",
+          "Phase 2 — API layer changes",
+          "Phase 3 — Frontend updates"
+        ]
       },
       "on_phase_review_pass": {
         "action": "complete",
@@ -45,7 +79,10 @@
         "trigger": "prior_phase_todo_open",
         "must_use_todo_tool": true,
         "must_occur_before_next_phase_start": true,
-        "applicable_phase_transitions": ["P1→P2", "P1→P3"]
+        "applicable_phase_transitions": [
+          "P1→P2",
+          "P1→P3"
+        ]
       }
     },
     "pre_phase_gate_checks_prior_todo": true,

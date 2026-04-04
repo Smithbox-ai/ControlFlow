@@ -1,8 +1,8 @@
 {
   "scenario_id": "challenger-contract",
-  "title": "Challenger Schema Compliance",
-  "description": "Validates that Challenger-subagent produces output conforming to challenger.plan-audit.schema.json",
-  "agent": "Challenger-subagent",
+  "title": "PlanAuditor Schema Compliance",
+  "description": "Validates that PlanAuditor-subagent produces output conforming to challenger.plan-audit.schema.json",
+  "agent": "PlanAuditor-subagent",
   "category": "contract",
   "inputs": [
     {
@@ -15,13 +15,21 @@
       },
       "expected_output": {
         "schema_version": "1.1.0",
-        "agent": "Challenger-subagent",
+        "agent": "PlanAuditor-subagent",
         "status": "APPROVED",
         "confidence_min": 0.8,
-        "required_fields": ["plan_reference", "findings", "risk_summary", "recommendation"],
+        "required_fields": [
+          "plan_reference",
+          "findings",
+          "risk_summary",
+          "recommendation"
+        ],
         "risk_summary_constraints": {
           "critical_count": 0,
-          "overall_risk": ["LOW", "MEDIUM"]
+          "overall_risk": [
+            "LOW",
+            "MEDIUM"
+          ]
         }
       }
     },
@@ -31,20 +39,31 @@
       "input": {
         "plan_path": "plans/sample-flawed-plan.md",
         "plan_summary": "5-phase plan with missing tests in Phase 3 and overlapping file edits in Wave 2",
-        "focus_areas": ["test_coverage", "dependency_conflict"]
+        "focus_areas": [
+          "test_coverage",
+          "dependency_conflict"
+        ]
       },
       "expected_output": {
         "schema_version": "1.1.0",
-        "agent": "Challenger-subagent",
+        "agent": "PlanAuditor-subagent",
         "status": "NEEDS_REVISION",
-        "required_fields": ["findings", "risk_summary", "recommendation", "failure_classification"],
+        "required_fields": [
+          "findings",
+          "risk_summary",
+          "recommendation",
+          "failure_classification"
+        ],
         "findings_min_count": 1,
-        "failure_classification_values": ["fixable", "needs_replan"]
+        "failure_classification_values": [
+          "fixable",
+          "needs_replan"
+        ]
       }
     },
     {
       "label": "valid-abstain-output",
-      "description": "When plan artifact is inaccessible, Challenger must ABSTAIN",
+      "description": "When plan artifact is inaccessible, PlanAuditor must ABSTAIN",
       "input": {
         "plan_path": "plans/nonexistent-plan.md",
         "plan_summary": "",
@@ -52,7 +71,7 @@
       },
       "expected_output": {
         "schema_version": "1.1.0",
-        "agent": "Challenger-subagent",
+        "agent": "PlanAuditor-subagent",
         "status": "ABSTAIN",
         "abstain_constraints": {
           "is_abstaining": true,
@@ -71,20 +90,27 @@
       "expected_output": {
         "schema_version": "1.1.0",
         "status": "APPROVED",
-        "required_fields": ["executability_checklist"],
+        "required_fields": [
+          "executability_checklist"
+        ],
         "executability_checklist_constraints": {
           "min_count": 1,
           "max_count": 3,
-          "each_item_has": ["task_id", "checks_passed", "total_checks", "executable"]
+          "each_item_has": [
+            "task_id",
+            "checks_passed",
+            "total_checks",
+            "executable"
+          ]
         }
       }
     }
   ],
   "assertions": [
-    "Output matches schemas/challenger.plan-audit.schema.json version 1.1.0",
+    "Output matches schemas/plan-auditor.plan-audit.schema.json version 1.1.0",
     "status is one of: APPROVED, NEEDS_REVISION, REJECTED, ABSTAIN",
     "failure_classification is present when status is NEEDS_REVISION or REJECTED",
-    "failure_classification is one of: fixable, needs_replan, escalate (transient NOT valid for Challenger)",
+    "failure_classification is one of: fixable, needs_replan, escalate (transient NOT valid for PlanAuditor)",
     "abstain.is_abstaining is true when status is ABSTAIN",
     "abstain.reasons has at least one entry when is_abstaining is true",
     "findings array contains objects with severity, category, description, affected_phases",

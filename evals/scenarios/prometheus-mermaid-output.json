@@ -1,8 +1,8 @@
 {
   "scenario_id": "prometheus-mermaid-output",
-  "title": "Prometheus Mermaid Visualization Requirement",
-  "description": "Validates that Prometheus includes Mermaid architecture diagrams for plans with 3+ phases",
-  "agent": "Prometheus",
+  "title": "Planner Mermaid Visualization Requirement",
+  "description": "Validates that Planner includes Mermaid architecture diagrams for plans with 3+ phases",
+  "agent": "Planner",
   "category": "contract",
   "inputs": [
     {
@@ -10,16 +10,20 @@
       "description": "A plan with 3 phases must include at least one Mermaid diagram (phase dependency DAG)",
       "input": {
         "task_description": "Implement a 3-phase feature with independent research, implementation, and documentation phases",
-        "constraints": ["Must produce Mermaid visualizations per plan quality standards"]
+        "constraints": [
+          "Must produce Mermaid visualizations per plan quality standards"
+        ]
       },
       "expected_output": {
         "schema_version": "1.0.0",
-        "agent": "Prometheus",
+        "agent": "Planner",
         "phases_min_count": 3,
         "diagrams_required": true,
         "diagrams_min_count": 1,
         "diagrams_must_include_type": "flowchart",
-        "required_fields": ["diagrams"]
+        "required_fields": [
+          "diagrams"
+        ]
       }
     },
     {
@@ -31,7 +35,7 @@
       },
       "expected_output": {
         "schema_version": "1.0.0",
-        "agent": "Prometheus",
+        "agent": "Planner",
         "phases_max_count": 2,
         "diagrams_required": false
       }
@@ -41,15 +45,22 @@
       "description": "A complex plan should include both dependency DAG and sequence/state diagram",
       "input": {
         "task_description": "Implement a 6-phase migration with 3 waves, inter-phase contracts, and state machine logic",
-        "constraints": ["Includes state machine transitions", "Has inter-phase data contracts"]
+        "constraints": [
+          "Includes state machine transitions",
+          "Has inter-phase data contracts"
+        ]
       },
       "expected_output": {
         "schema_version": "1.0.0",
-        "agent": "Prometheus",
+        "agent": "Planner",
         "phases_min_count": 3,
         "diagrams_required": true,
         "diagrams_min_count": 2,
-        "diagrams_allowed_types": ["flowchart", "sequenceDiagram", "stateDiagram-v2"]
+        "diagrams_allowed_types": [
+          "flowchart",
+          "sequenceDiagram",
+          "stateDiagram-v2"
+        ]
       }
     }
   ],
@@ -59,6 +70,6 @@
     "Each diagram has non-empty title and mermaid_source fields",
     "Diagram mermaid_source is valid Mermaid syntax",
     "Plans with fewer than 3 phases may omit diagrams",
-    "Output conforms to schemas/prometheus.plan.schema.json"
+    "Output conforms to schemas/planner.plan.schema.json"
   ]
 }

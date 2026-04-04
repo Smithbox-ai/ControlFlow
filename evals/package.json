@@ -1,7 +1,7 @@
 {
-  "name": "atlas-evals",
+  "name": "controlflow-evals",
   "version": "1.0.0",
-  "description": "Structural validation harness for Copilot Atlas agent system",
+  "description": "Structural validation harness for Copilot ControlFlow agent system",
   "type": "module",
   "scripts": {
     "test": "node validate.mjs"

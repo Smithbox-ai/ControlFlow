@@ -1,19 +1,26 @@
 {
   "id": "prometheus-ambiguity-plus-schema",
-  "target_agent": "Prometheus",
+  "target_agent": "Planner",
   "goal": "Ambiguous planning request triggers askQuestions first; after clarification the response begins with the schema-compliant JSON object before any markdown plan output",
   "input": {
     "query": "Improve the performance of the system",
     "context": "Repository contains both a Node.js API service and a React frontend. Request does not specify which subsystem or what kind of performance improvement is needed."
   },
   "expected": {
-    "schema": "schemas/prometheus.plan.schema.json",
+    "schema": "schemas/planner.plan.schema.json",
     "risk_review_present": true,
     "must_use_tool": "vscode/askQuestions",
     "clarification_options_min": 2,
     "clarification_options_max": 3,
-    "clarification_payload_fields": ["options", "impact_analysis", "recommended_option"],
-    "options_must_include": ["architecture_implications", "affected_files"],
+    "clarification_payload_fields": [
+      "options",
+      "impact_analysis",
+      "recommended_option"
+    ],
+    "options_must_include": [
+      "architecture_implications",
+      "affected_files"
+    ],
     "must_block_planning_until_resolved": true,
     "after_clarification": {
       "response_begins_with_schema_object": true,
