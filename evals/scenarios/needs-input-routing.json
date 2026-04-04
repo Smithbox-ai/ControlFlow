@@ -12,7 +12,7 @@
   },
   "inputs": [
     {
-      "label": "sisyphus-needs-input",
+      "label": "core-implementer-needs-input",
       "description": "CoreImplementer returns NEEDS_INPUT with a valid clarification_request",
       "input": {
         "subagent": "CoreImplementer-subagent",

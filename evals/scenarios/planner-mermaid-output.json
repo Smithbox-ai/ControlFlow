@@ -1,5 +1,5 @@
 {
-  "scenario_id": "prometheus-mermaid-output",
+  "scenario_id": "planner-mermaid-output",
   "title": "Planner Mermaid Visualization Requirement",
   "description": "Validates that Planner includes Mermaid architecture diagrams for plans with 3+ phases",
   "agent": "Planner",

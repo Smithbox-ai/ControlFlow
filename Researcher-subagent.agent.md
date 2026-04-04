@@ -94,7 +94,7 @@ If still < 3 after the extra cycle, report findings with explicit `uncertainties
 Return a structured text report. Do NOT output raw JSON to chat.
 
 Include these fields clearly labeled:
-- **Status** — COMPLETE or ABSTAIN.
+- **Status** — COMPLETE, ABSTAIN, or INSUFFICIENT_EVIDENCE.
 - **Confidence** — numeric 0–1.
 - **Key Findings** — numbered list, each with evidence citations (file path + line numbers).
 - **Open Questions** — unresolved items with uncertainty explanations.

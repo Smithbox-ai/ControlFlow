@@ -99,9 +99,9 @@ The table (transient/fixable/needs_replan/escalate with actions and max retries)
 
 The plan document template is defined in Planner (~55 lines) and an equivalent structure is in Orchestrator output requirements. These templates are essential for plan quality but represent ~900 tokens of overhead per invocation.
 
-**Recommendation (advisory only, do not implement without plan):** Extract templates to a shared `plans/plan-templates.md` file and replace in-prompt content with a file reference. This is the highest-impact reduction but carries non-trivial risk — if agents fail to load the external file, plan output quality degrades silently.  
+**Recommendation (advisory only, do not implement without plan):** Extract templates to the shared `plans/templates/` directory and replace in-prompt content with a file reference. This is the highest-impact reduction but carries non-trivial risk — if agents fail to load the external file, plan output quality degrades silently.  
 **Potential token savings: ~800–900 tokens**  
-**Risk:** Medium — template availability depends on the agent reading `plans/plan-templates.md` successfully before generating output.  
+**Risk:** Medium — template availability depends on the agent reading from `plans/templates/` successfully before generating output.  
 **Decision:** Do NOT implement without evaluating how often plan generation fails when referenced files are unavailable.
 
 ---
@@ -185,5 +185,5 @@ Planner Plan Document Template (~55 lines, ~825 tokens) replaced with file refer
 
 | Finding | Action | Risk | Token Savings |
 |---------|--------|------|--------------|
-| 3 — Plan templates | Extract to `plans/plan-templates.md` | Medium | ~800–900 tokens |
+| 3 — Plan templates | Extract to `plans/templates/` | Medium | ~800–900 tokens |
 | 5 — Lite-mode bypass | Use specialized agents directly for simple tasks | Low | ~5,000+ tokens (bypassing Orchestrator) |

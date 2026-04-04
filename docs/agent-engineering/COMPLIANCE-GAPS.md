@@ -36,7 +36,7 @@ Changes applied across 5 phases:
 - **`schemas/plan-auditor.plan-audit.schema.json`** bumped to `1.2.0`. Added optional `audit_scope` field recording `requested_focus_areas` and `covered_dimensions`.
 - **`docs/agent-engineering/RELIABILITY-GATES.md`**: Added Section 9 — Semantic Risk Coverage with required controls and acceptance gate.
 - **`plans/project-context.md`**: Added Semantic Risk Taxonomy table; updated Typical Workflow PlanAuditor description.
-- **Eval scenarios**: Created `evals/scenarios/prometheus-large-data-risk-discovery.json` (3 inputs). Updated `prometheus-schema-output.json`, `prometheus-ambiguity-plus-schema.json` (add `risk_review_present` assertions). Updated `challenger-adversarial-detection.json` (add unbounded-query case + `audit_scope` assertion). Updated `atlas-challenger-integration.json` (add 2 semantic risk trigger/skip cases + 2 assertions).
+- **Eval scenarios**: Created `evals/scenarios/planner-large-data-risk-discovery.json` (3 inputs). Updated `planner-schema-output.json`, `planner-ambiguity-plus-schema.json` (add `risk_review_present` assertions). Updated `plan-auditor-adversarial-detection.json` (add unbounded-query case + `audit_scope` assertion). Updated `orchestrator-plan-auditor-integration.json` (add 2 semantic risk trigger/skip cases + 2 assertions).
 - **`evals/validate.mjs`**: Pass 2 now verifies Planner scenarios assert `risk_review_present`.
 
 ### Adversarial Plan Review (NEW)
@@ -107,13 +107,13 @@ Comprehensive modernization of the Orchestrator agent system. Changes across 9 p
 2. **Quantitative Scoring:** 7-dimension weighted scoring system for PlanAuditor (plan-level) and 5-dimension for CodeReviewer (code-level). Cross-validated ceilings between AssumptionVerifier, PlanAuditor, and ExecutabilityVerifier. Single source of truth: `docs/agent-engineering/SCORING-SPEC.md`.
 3. **5-Iteration Plan Review Loop:** Orchestrator PLAN_REVIEW upgraded from 2 to 5 max iterations with convergence detection (stagnation threshold: <5% improvement over 2 consecutive iterations).
 4. **Complexity Gate:** Planner classifies tasks as TRIVIAL/SMALL/MEDIUM/LARGE. Orchestrator adjusts pipeline depth accordingly (TRIVIAL skips review entirely, LARGE forces full pipeline).
-5. **Template Externalization:** Embedded templates extracted to `plans/templates/` (4 files). Reduces Orchestrator token overhead by ~800-900 tokens per invocation.
+5. **Template Externalization:** Embedded templates extracted to `plans/templates/` (5 files). Reduces Orchestrator token overhead by ~800-900 tokens per invocation.
 6. **Skill Library:** `skills/` directory with index and 7 domain pattern files (TDD, error handling, security, performance, API design, completeness traceability, integration validation). Planner selects relevant skills during planning.
 7. **Per-Issue Validation:** CodeReviewer now executes 4-step validation protocol for CRITICAL/MAJOR findings. False positives documented with rejection reasons.
 8. **Regression Tracking:** Verified items tracked across plan review iterations. Regressions automatically become BLOCKING issues.
 9. **Observability:** trace_id (UUID v4) propagated through all gate events and delegation payloads for log correlation.
 
-Agent count: 11 → 13. Schema count: 13 → 15. Eval scenario count: 29 → 35.
+Agent count: 11 → 13. Schema count: 13 → 15. Eval scenario count: 29 → 37.
 
 ## Gap Details
 

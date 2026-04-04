@@ -1,5 +1,5 @@
 {
-  "id": "frontend-contract",
+  "id": "ui-implementer-contract",
   "target_agent": "UIImplementer-subagent",
   "goal": "Execution report is schema-compliant and includes a11y/responsive evidence",
   "input": {

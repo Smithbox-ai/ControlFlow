@@ -1,7 +1,7 @@
 {
-  "id": "prometheus-ambiguity-plus-schema",
+  "id": "planner-ambiguity-plus-schema",
   "target_agent": "Planner",
-  "goal": "Ambiguous planning request triggers askQuestions first; after clarification the response begins with the schema-compliant JSON object before any markdown plan output",
+  "goal": "Ambiguous planning request triggers askQuestions first; after clarification, Planner creates a markdown plan file and provides a concise handoff message",
   "input": {
     "query": "Improve the performance of the system",
     "context": "Repository contains both a Node.js API service and a React frontend. Request does not specify which subsystem or what kind of performance improvement is needed."
@@ -23,11 +23,10 @@
     ],
     "must_block_planning_until_resolved": true,
     "after_clarification": {
-      "response_begins_with_schema_object": true,
-      "markdown_plan_created_after_schema_output": true,
-      "handoff_present": true,
+      "plan_file_created": true,
+      "handoff_message_present": true,
       "risk_review_present": true
     },
-    "must_not": "emit markdown plan before schema JSON object or plan without first clarifying scope"
+    "must_not": "output raw JSON to chat or plan without first clarifying scope"
   }
 }

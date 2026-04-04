@@ -1,5 +1,5 @@
 {
-  "id": "devops-contract",
+  "id": "platform-engineer-contract",
   "target_agent": "PlatformEngineer-subagent",
   "goal": "Execution report is schema-compliant, includes health checks, rollback evidence on failure, and approval gate compliance",
   "input": {

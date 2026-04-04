@@ -1,5 +1,5 @@
 {
-  "scenario_id": "challenger-adversarial-detection",
+  "scenario_id": "plan-auditor-adversarial-detection",
   "title": "PlanAuditor Adversarial Detection",
   "description": "Validates PlanAuditor can detect deliberately planted flaws in a multi-phase plan",
   "agent": "PlanAuditor-subagent",

@@ -1,5 +1,5 @@
 {
-  "id": "atlas-phase-verification",
+  "id": "orchestrator-phase-verification",
   "target_agent": "Orchestrator",
   "goal": "Orchestrator does not mark a phase complete until tests, build, lint/problems, and review evidence are all verified",
   "input": {
@@ -49,10 +49,10 @@
       }
     },
     "expected": {
-      "atlas_blocks_phase": false,
+      "orchestrator_blocks_phase": false,
       "reason": "validated_blocking_issues is empty — no confirmed blockers despite unvalidated CRITICAL finding",
-      "atlas_notes_unvalidated_issues": true,
-      "atlas_does_not_block_on_unvalidated": true
+      "orchestrator_notes_unvalidated_issues": true,
+      "orchestrator_does_not_block_on_unvalidated": true
     }
   },
   "validated_blocking_issues_scenario_positive": {
@@ -78,7 +78,7 @@
       }
     },
     "expected": {
-      "atlas_blocks_phase": true,
+      "orchestrator_blocks_phase": true,
       "reason": "confirmed CRITICAL issue present in validated_blocking_issues"
     }
   }

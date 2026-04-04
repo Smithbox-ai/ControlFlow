@@ -42,8 +42,8 @@ Produce implementation plans that are deterministic, schema-compliant, and execu
   - **operability**: applicable if the task deploys new services, changes infrastructure, or alters observability surfaces.
   Record findings in the `risk_review` array. Any category with `applicability: applicable` AND `impact: HIGH` that cannot be resolved from available evidence MUST set `disposition: research_phase_added` and trigger a dedicated research phase BEFORE implementation phases.
 0.7. Complexity Gate: AFTER semantic risk evaluation and BEFORE research delegation, classify the task complexity and emit `complexity_tier` in the plan output:
-  - **TRIVIAL** (≤2 files, single concern): Skip AssumptionVerifier and ExecutabilityVerifier dispatch. PlanAuditor evaluates only Correctness and Completeness dimensions. 1-iteration review max.
-  - **SMALL** (3–5 files, single domain): Skip Performance and Security scoring dimensions. AssumptionVerifier runs lite mode (top 5 patterns only). 2-iteration review max.
+  - **TRIVIAL** (≤2 files, single concern): Skip PLAN_REVIEW entirely. No PlanAuditor, AssumptionVerifier, or ExecutabilityVerifier.
+  - **SMALL** (3–5 files, single domain): Run PlanAuditor only. Skip AssumptionVerifier and ExecutabilityVerifier. 2-iteration review max.
   - **MEDIUM** (6–15 files, cross-domain): Full review pipeline. All agents active. Up to 5-iteration review.
   - **LARGE** (15+ files, cross-cutting concerns): Full review + mandatory Researcher pre-research phase. All agents active. Up to 5-iteration review.
   Classification heuristic: count unique files in the change set, assess whether changes cross domain boundaries (multiple agent files, schema + agent, frontend + backend), and check for infrastructure/deployment impact.

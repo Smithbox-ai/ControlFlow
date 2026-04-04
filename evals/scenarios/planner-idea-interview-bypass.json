@@ -1,5 +1,5 @@
 {
-  "id": "prometheus-idea-interview-bypass",
+  "id": "planner-idea-interview-bypass",
   "target_agent": "Planner",
   "goal": "A concrete implementation request with file references and measurable acceptance criteria skips the Idea Interview Gate and proceeds directly to the Clarification Gate",
   "input": {

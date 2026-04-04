@@ -1,5 +1,5 @@
 {
-  "scenario_id": "atlas-challenger-integration",
+  "scenario_id": "orchestrator-plan-auditor-integration",
   "title": "Orchestrator PlanAuditor Integration",
   "description": "Validates that Orchestrator correctly routes plans to PlanAuditor for adversarial review based on trigger conditions",
   "agent": "Orchestrator",
@@ -70,7 +70,7 @@
       }
     },
     {
-      "label": "challenger-rejected-escalates",
+      "label": "plan-auditor-rejected-escalates",
       "description": "When PlanAuditor returns REJECTED, Orchestrator must escalate to user",
       "input": {
         "plan_auditor_response": {
@@ -90,7 +90,7 @@
       }
     },
     {
-      "label": "challenger-needs-revision-routes-to-prometheus",
+      "label": "plan-auditor-needs-revision-routes-to-planner",
       "description": "When PlanAuditor returns NEEDS_REVISION, Orchestrator routes back to Planner",
       "input": {
         "plan_auditor_response": {
@@ -171,7 +171,7 @@
     "PlanAuditor is NOT invoked for simple plans (< 3 phases, high confidence, non-destructive, no unresolved HIGH-impact risk_review entries)",
     "Orchestrator passes plan_path (not inline plan) to PlanAuditor",
     "REJECTED status transitions to WAITING_APPROVAL",
-    "NEEDS_REVISION routes back to Planner with max 2 iterations",
+    "NEEDS_REVISION routes back to Planner (max iterations per complexity tier: SMALL=2, MEDIUM/LARGE=5)",
     "ABSTAIN from PlanAuditor does not block pipeline",
     "PlanAuditor is invoked for plans with any risk_review entry applicability=applicable AND impact=HIGH AND disposition != resolved",
     "When triggered by semantic risk, Orchestrator derives focus_areas from risk category mapping and includes them in delegation"

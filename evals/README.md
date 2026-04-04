@@ -31,24 +31,24 @@ Structural validation fixtures for the ControlFlow multi-agent system. These sce
 - `scenarios/robustness-paraphrase.json`
 - `scenarios/predictability-abstain.json`
 - `scenarios/safety-approval-gate.json`
-- `scenarios/prometheus-schema-output.json`
-- `scenarios/atlas-phase-verification.json`
+- `scenarios/planner-schema-output.json`
+- `scenarios/orchestrator-phase-verification.json`
 
 ### Agent contracts
-- `scenarios/sisyphus-contract.json` — CoreImplementer execution contract
-- `scenarios/frontend-contract.json` — UIImplementer execution contract
-- `scenarios/devops-contract.json` — PlatformEngineer execution contract
-- `scenarios/docwriter-contract.json` — TechnicalWriter execution contract
+- `scenarios/core-implementer-contract.json` — CoreImplementer execution contract
+- `scenarios/ui-implementer-contract.json` — UIImplementer execution contract
+- `scenarios/platform-engineer-contract.json` — PlatformEngineer execution contract
+- `scenarios/technical-writer-contract.json` — TechnicalWriter execution contract
 - `scenarios/browser-tester-contract.json` — BrowserTester execution contract
-- `scenarios/dryrun-contract.json` — ExecutabilityVerifier execution contract
-- `scenarios/skeptic-contract.json` — AssumptionVerifier execution contract
+- `scenarios/executability-verifier-contract.json` — ExecutabilityVerifier execution contract
+- `scenarios/assumption-verifier-contract.json` — AssumptionVerifier execution contract
 
 ### Orchestration
 - `scenarios/wave-execution.json`
 - `scenarios/failure-retry.json`
-- `scenarios/atlas-todo-orchestration.json`
-- `scenarios/atlas-phase-executor-routing.json`
-- `scenarios/atlas-retry-backoff.json`
+- `scenarios/orchestrator-todo-orchestration.json`
+- `scenarios/orchestrator-phase-executor-routing.json`
+- `scenarios/orchestrator-retry-backoff.json`
 - `scenarios/complexity-gate-routing.json`
 
 ### Clarification and routing
@@ -57,24 +57,24 @@ Structural validation fixtures for the ControlFlow multi-agent system. These sce
 - `scenarios/skills-mcp-routing.json`
 - `scenarios/agent-triggering-quality.json`
 - `scenarios/needs-input-routing.json`
-- `scenarios/prometheus-ambiguity-plus-schema.json`
+- `scenarios/planner-ambiguity-plus-schema.json`
 
 ### Adversarial review
-- `scenarios/challenger-contract.json` — PlanAuditor contract
-- `scenarios/challenger-adversarial-detection.json` — PlanAuditor defect detection
-- `scenarios/challenger-replan-loop.json` — PlanAuditor revision iteration
-- `scenarios/atlas-challenger-integration.json` — Orchestrator ↔ PlanAuditor integration
-- `scenarios/skeptic-contract.json` — AssumptionVerifier contract
-- `scenarios/skeptic-mirage-detection.json` — AssumptionVerifier mirage detection
-- `scenarios/dryrun-contract.json` — ExecutabilityVerifier contract
-- `scenarios/dryrun-executability.json` — ExecutabilityVerifier walkthrough
+- `scenarios/plan-auditor-contract.json` — PlanAuditor contract
+- `scenarios/plan-auditor-adversarial-detection.json` — PlanAuditor defect detection
+- `scenarios/plan-auditor-replan-loop.json` — PlanAuditor revision iteration
+- `scenarios/orchestrator-plan-auditor-integration.json` — Orchestrator ↔ PlanAuditor integration
+- `scenarios/assumption-verifier-contract.json` — AssumptionVerifier contract
+- `scenarios/assumption-verifier-mirage-detection.json` — AssumptionVerifier mirage detection
+- `scenarios/executability-verifier-contract.json` — ExecutabilityVerifier contract
+- `scenarios/executability-verifier-executability.json` — ExecutabilityVerifier walkthrough
 - `scenarios/iterative-review-convergence.json` — Review loop convergence
 
 ### Planner behavior
-- `scenarios/prometheus-large-data-risk-discovery.json` — Semantic risk discovery
-- `scenarios/prometheus-mermaid-output.json` — Mermaid diagram generation
-- `scenarios/prometheus-idea-interview-trigger.json` — Idea interview activation
-- `scenarios/prometheus-idea-interview-bypass.json` — Idea interview bypass
+- `scenarios/planner-large-data-risk-discovery.json` — Semantic risk discovery
+- `scenarios/planner-mermaid-output.json` — Mermaid diagram generation
+- `scenarios/planner-idea-interview-trigger.json` — Idea interview activation
+- `scenarios/planner-idea-interview-bypass.json` — Idea interview bypass
 - `scenarios/behavioral-plan-quality.json` — Plan quality behavioral checks
 
 ## Running Validations

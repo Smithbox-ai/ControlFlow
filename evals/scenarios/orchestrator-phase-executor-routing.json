@@ -1,5 +1,5 @@
 {
-  "id": "atlas-phase-executor-routing",
+  "id": "orchestrator-phase-executor-routing",
   "target_agent": "Orchestrator",
   "goal": "Orchestrator dispatches each phase to the explicit executor_agent and does not override it with heuristics",
   "input": {

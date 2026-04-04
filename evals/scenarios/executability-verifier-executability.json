@@ -1,5 +1,5 @@
 {
-  "scenario_id": "dryrun-executability-01",
+  "scenario_id": "executability-verifier-executability-01",
   "target_agent": "ExecutabilityVerifier-subagent",
   "goal": "Detect unexecutable plan task with vague specification",
   "description": "Given a plan with a task that says only 'implement the feature' without file paths, test specifics, or verification commands, ExecutabilityVerifier should return FAIL with BLOCKED walkthrough step and low checklist score.",

@@ -1,5 +1,5 @@
 {
-  "id": "prometheus-idea-interview-trigger",
+  "id": "planner-idea-interview-trigger",
   "target_agent": "Planner",
   "goal": "A vague ideation request with no file names, acceptance criteria, or technology specifics triggers the Idea Interview Gate before plan generation",
   "input": {

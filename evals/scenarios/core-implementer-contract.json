@@ -1,5 +1,5 @@
 {
-  "id": "sisyphus-contract",
+  "id": "core-implementer-contract",
   "target_agent": "CoreImplementer-subagent",
   "goal": "Execution report is schema-compliant and includes DoD evidence",
   "input": {

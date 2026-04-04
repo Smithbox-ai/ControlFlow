@@ -1,5 +1,5 @@
 {
-  "scenario_id": "challenger-contract",
+  "scenario_id": "plan-auditor-contract",
   "title": "PlanAuditor Schema Compliance",
   "description": "Validates that PlanAuditor-subagent produces output conforming to schemas/plan-auditor.plan-audit.schema.json",
   "agent": "PlanAuditor-subagent",

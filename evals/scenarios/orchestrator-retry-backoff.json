@@ -1,5 +1,5 @@
 {
-  "scenario_id": "atlas-retry-backoff",
+  "scenario_id": "orchestrator-retry-backoff",
   "title": "Orchestrator Retry and Backoff Policy",
   "description": "Validates Orchestrator retry budget, throttling, and escalation behavior under failure conditions",
   "agent": "Orchestrator",

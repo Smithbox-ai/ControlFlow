@@ -1,5 +1,5 @@
 {
-  "id": "atlas-todo-orchestration",
+  "id": "orchestrator-todo-orchestration",
   "target_agent": "Orchestrator",
   "goal": "Orchestrator creates phase todo items at plan start, marks the relevant todo completed after a phase review passes, and reconciles all todos at plan completion",
   "input": {
@@ -88,7 +88,7 @@
     "pre_phase_gate_checks_prior_todo": true,
     "pre_phase_open_todo_reconcile_required": {
       "if_prior_phase_todo_is_open": true,
-      "atlas_must": "use todo tool to reconcile prior phase todo before starting next phase",
+      "orchestrator_must": "use todo tool to reconcile prior phase todo before starting next phase",
       "before": "next_phase_start"
     },
     "must_not": [

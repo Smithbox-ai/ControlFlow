@@ -1,5 +1,5 @@
 {
-  "id": "docwriter-contract",
+  "id": "technical-writer-contract",
   "target_agent": "TechnicalWriter-subagent",
   "goal": "Execution report is schema-compliant, includes parity verification, and source code is never modified",
   "input": {
