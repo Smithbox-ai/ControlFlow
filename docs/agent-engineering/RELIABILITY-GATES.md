@@ -100,6 +100,8 @@ Acceptance gate:
 ## 7) Retry Reliability
 Goal: prevent silent failures and hung pipelines during parallel agent execution.
 
+> **Source of truth:** Exact numeric values (retry budgets, throttle percentages, escalation thresholds) are authoritative in `governance/runtime-policy.json`. The values below are reference summaries. On any conflict, `runtime-policy.json` wins.
+
 Required controls:
 - Silent failure detection: empty responses, timeouts, and rate-limit errors (HTTP 429) must be caught and logged.
 - Retry budget: each phase has a cumulative retry budget of 5 attempts across all failure classifications. Exceeding the budget triggers mandatory user escalation.
@@ -128,7 +130,7 @@ Acceptance gate:
 Goal: plans must surface non-functional and contextual risks before phase decomposition, not after.
 
 Required controls:
-- Planner evaluates all 7 semantic risk categories (`data_volume`, `performance`, `concurrency`, `access_control`, `migration_rollback`, `dependency`, `operability`) at step 0.5 of the Mandatory Workflow — after clarification, before research delegation.
+- Planner evaluates all 7 semantic risk categories (`data_volume`, `performance`, `concurrency`, `access_control`, `migration_rollback`, `dependency`, `operability`) at Step 3 of the Mandatory Workflow — after clarification, before research delegation.
 - Every plan must emit a `risk_review` array with one entry per category.
 - Any category with `applicability: applicable` AND `impact: HIGH` that cannot be resolved from available evidence must set `disposition: research_phase_added` and include a dedicated research phase before implementation phases begin.
 - Orchestrator triggers PlanAuditor whenever any `risk_review` entry has `applicability: applicable` AND `impact: HIGH` AND `disposition` is not `resolved` — even for plans with fewer than 3 phases and confidence ≥ 0.9.

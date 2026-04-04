@@ -4,7 +4,7 @@
 Reusable domain-specific patterns for agent consumption. Planner selects relevant skills during planning and includes them as `skill_references` in phase definitions. Implementation agents load referenced skills before starting work.
 
 ## Discovery Protocol
-1. Planner reads this index during planning (Step 0.8 — after Complexity Gate).
+1. Planner reads this index during planning (Step 5 — after Complexity Gate).
 2. Match task domain keywords against the Domain column below.
 3. Select ≤3 most relevant skills based on task context.
 4. Include selected skill file paths in each applicable phase's `skill_references` array.

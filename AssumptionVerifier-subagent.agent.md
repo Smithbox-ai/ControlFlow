@@ -128,5 +128,7 @@ Stateless per invocation — no persistent notes. Each invocation starts fresh w
 1. Codebase-first verification: always check file existence, read actual imports, verify schema structure.
 2. Use `search/fileSearch` first for path verification (pattern 5).
 3. Use `search/usages` for API/function verification (pattern 1).
+
+**Clarification role:** This agent returns structured mirage analysis to Orchestrator. It does not interact with the user. If evidence is insufficient, it returns `ABSTAIN` rather than speculative findings.
 4. Use `read/readFile` on lock files for version verification (pattern 2).
 5. Use `search/textSearch` for pattern matching against conventions (pattern 3).

@@ -115,3 +115,5 @@ Stateless per invocation — no persistent state. Each invocation operates with 
 2. Use `read/readFile` to verify code structure matches plan assumptions.
 3. Use `search/textSearch` to verify function/symbol existence.
 4. Minimize tool calls — simulate mentally first, verify only uncertain claims.
+
+**Clarification role:** This agent returns executability verdicts to Orchestrator. It does not interact with the user. If the plan is not parseable or confidence is below threshold, it returns `ABSTAIN`.

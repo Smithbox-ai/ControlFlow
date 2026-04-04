@@ -13,6 +13,8 @@
  *                              no tool policy is hardcoded here)
  *   4. P.A.R.T Section Order — every *.agent.md has Prompt→Archive→Resources→Tools
  *                              in the correct order
+ *   4b. §5/§6 Compliance   — Clarification Triggers (§5) and Tool Routing Rules (§6)
+ *                              are present per PART-SPEC requirements
  *   5. Skill Library        — every file in skills/patterns/ is listed in skills/index.md
  *                             and every index entry resolves to an existing file
  *   6. Synthetic Rename Negative-Path Checks — structural guard checks: stale target_agent,
@@ -381,6 +383,38 @@ for (const agentFile of agentFiles) {
     fail(`${agentFile}: P.A.R.T out of order — found at lines [${positions.map(p => p + 1).join(', ')}]`);
   } else {
     pass(`P.A.R.T order: ${agentFile}`);
+  }
+}
+
+// ─── Pass 4b: §5 Clarification Triggers & §6 Tool Routing Rules ─────────────
+header('Pass 4b: Clarification Triggers (§5) & Tool Routing Rules (§6)');
+
+const EXTERNAL_TOOL_KEYWORDS = ['fetch', 'web/fetch', 'githubRepo', 'web/githubRepo', 'context7', 'io.github.upstash/context7/resolve-library-id', 'io.github.upstash/context7/get-library-docs'];
+
+for (const agentFile of agentFiles) {
+  const content = readFileSync(join(ROOT, agentFile), 'utf8');
+  const tools = parseFrontmatterTools(content) || [];
+
+  // §5: Clarification — agents must have a clarification section OR NEEDS_INPUT delegation statement
+  const hasClarificationSection = /###\s+Clarification/i.test(content);
+  const hasNeedsInputDelegation = /NEEDS_INPUT/.test(content) || /clarification is (?:centralized|delegated|routed)/i.test(content);
+  const hasAbstainOnlyRole = /returns?\s+(?:`?ABSTAIN`?|findings|verdicts?)/i.test(content) && !/NEEDS_INPUT/.test(content);
+
+  if (hasClarificationSection || hasNeedsInputDelegation || hasAbstainOnlyRole) {
+    pass(`§5 Clarification coverage: ${agentFile}`);
+  } else {
+    fail(`${agentFile}: missing §5 Clarification Triggers — needs a ### Clarification section, NEEDS_INPUT delegation, or ABSTAIN-only role statement`);
+  }
+
+  // §6: Tool Routing — required only when agent has external knowledge tools
+  const hasExternalTools = tools.some(t => EXTERNAL_TOOL_KEYWORDS.some(kw => t.includes(kw)));
+  if (hasExternalTools) {
+    const hasRoutingSection = /###\s+(?:External\s+)?Tool\s+Routing/i.test(content) || /###\s+Context7\/MCP\s+Routing/i.test(content);
+    if (hasRoutingSection) {
+      pass(`§6 Tool Routing coverage: ${agentFile}`);
+    } else {
+      fail(`${agentFile}: missing §6 Tool Routing Rules — agent has external tools but no ### External Tool Routing or ### Tool Routing section`);
+    }
   }
 }
 

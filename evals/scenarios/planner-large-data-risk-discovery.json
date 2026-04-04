@@ -1,7 +1,7 @@
 {
   "id": "planner-large-data-risk-discovery",
   "target_agent": "Planner",
-  "goal": "Planner applies the Semantic Risk Discovery Gate at step 0.5 and correctly identifies large-data and performance risks before plan finalization",
+  "goal": "Planner applies the Semantic Risk Discovery Gate at Step 3 and correctly identifies large-data and performance risks before plan finalization",
   "inputs": [
     {
       "label": "forecast-table-pagination-gap",

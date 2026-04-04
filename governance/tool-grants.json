@@ -1,5 +1,6 @@
 {
   "_comment": "Canonical least-privilege tool policy for Orchestrator agent system. This file is the single source of truth for tool grants. evals/validate.mjs compares every agent's frontmatter tools list against this manifest. Any drift is a validation failure. To add a new agent, add an entry here AND create the corresponding .agent.md file.",
+  "_format_note": "Two naming conventions coexist: (1) explicit IDs like 'edit/createFile', 'search/codebase' used by Orchestrator, Planner, and adversarial review agents — grants individual tools; (2) category shorthand like 'edit', 'search' used by implementation and research agents — grants all tools in that category. Both are valid VS Code agent tool references. Prefer explicit IDs for new agents to enforce least-privilege.",
   "Orchestrator.agent.md": [
     "vscode/askQuestions",
     "execute/testFailure",

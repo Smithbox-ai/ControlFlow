@@ -54,7 +54,7 @@ Before each implementation batch, evaluate:
 3. Missing evidence risk.
 4. Safety risk (destructive/irreversible impact).
 
-Emit a gate event with decision: `GO`, `REPLAN`, `ABSTAIN`, or `BLOCKED`.
+Emit a gate event with decision: `GO`, `REPLAN`, or `ABSTAIN`.
 
 ### Human Approval Gate (Mandatory)
 Require explicit user confirmation for:
@@ -162,7 +162,7 @@ Reference: `docs/agent-engineering/TOOL-ROUTING.md`
    - Pause for user approval.
 
 4. **Plan Review Gate (Conditional)**
-   - Trigger conditions: plan has 3+ phases, OR plan confidence < 0.9, OR scope includes destructive/high-risk operations, OR any `risk_review` entry has `applicability: applicable` AND `impact: HIGH` AND `disposition` not `resolved`.
+   - Trigger conditions: plan has ≥ `min_phases` phases (default: 3, see `governance/runtime-policy.json` `plan_review_gate_trigger_conditions.min_phases`), OR plan confidence < `confidence_threshold` (default: 0.9), OR scope includes destructive/high-risk operations, OR any `risk_review` entry has `applicability: applicable` AND `impact: HIGH` AND `disposition` not `resolved`.
    - **Complexity-Aware Routing** _(Authoritative source for tier routing. `governance/runtime-policy.json` `review_pipeline_by_tier` and `max_iterations_by_tier` must match these settings.)_**:** Read `complexity_tier` from Planner plan output and adjust pipeline depth:
      - **TRIVIAL**: Skip PLAN_REVIEW entirely — no PlanAuditor, AssumptionVerifier, or ExecutabilityVerifier. Proceed to Implementation Loop.
      - **SMALL**: Run PlanAuditor only (skip AssumptionVerifier and ExecutabilityVerifier). Max 2 iterations.
@@ -290,7 +290,7 @@ To reduce approval fatigue on multi-phase plans:
 When reporting any gate decision, provide a concise structured summary. Do NOT output raw JSON to chat — it wastes context tokens.
 
 Include these fields clearly labeled in your gate report:
-- **Status / Decision** — GO, REPLAN, ABSTAIN, or BLOCKED.
+- **Status / Decision** — GO, REPLAN, or ABSTAIN.
 - **Confidence** — numeric 0–1.
 - **Requires Human Approval** — yes/no.
 - **Reason** — one-sentence justification.
