@@ -1,19 +1,26 @@
 /**
  * Copilot Atlas — Structural Validation Harness
  *
- * Four passes:
+ * Five passes:
  *   1. Schema Validity      — all schemas/*.schema.json compile without errors
  *   2. Scenario Integrity   — all evals/scenarios/*.json have required fields and
  *                             point to an existing agent.md
  *   3. Reference Integrity  — all *.agent.md schema/doc references resolve to
  *                             existing files; required project artifacts exist
- *   3b. Required Artifacts  — shared project context files exist
- *   3c. Tool Grant Consistency — every agent frontmatter tools list matches
- *                              the repo's least-privilege canonical set
+ *   3b. Required Artifacts  — shared project context files exist (includes governance/tool-grants.json)
+ *   3c. Tool Grant Consistency — every agent frontmatter tools list matches the
+ *                              canonical set in governance/tool-grants.json (manifest-driven;
+ *                              no tool policy is hardcoded here)
  *   4. P.A.R.T Section Order — every *.agent.md has Prompt→Archive→Resources→Tools
  *                              in the correct order
+ *   5. Skill Library        — every file in skills/patterns/ is listed in skills/index.md
+ *                             and every index entry resolves to an existing file
  *
  * Exit 0 on all checks passed, exit 1 on any failure.
+ *
+ * Tool policy source of truth: governance/tool-grants.json
+ * Adding a new agent: create the .agent.md + add an entry to governance/tool-grants.json.
+ * No changes to this file are needed.
  */
 
 import Ajv2020 from 'ajv/dist/2020.js';
@@ -34,58 +41,8 @@ function pass(msg) { console.log(`  \u2705 ${msg}`); totalPassed++; }
 function fail(msg) { console.error(`  \u274c ${msg}`); totalFailed++; }
 function header(title) { console.log(`\n=== ${title} ===`); }
 
-const EXPECTED_AGENT_TOOLS = {
-  'Atlas.agent.md': [
-    'vscode/askQuestions',
-    'execute/testFailure',
-    'execute/getTerminalOutput',
-    'execute/awaitTerminal',
-    'execute/killTerminal',
-    'execute/createAndRunTask',
-    'execute/runInTerminal',
-    'read/problems',
-    'read/readFile',
-    'agent',
-    'edit/createFile',
-    'edit/editFiles',
-    'search/changes',
-    'search/codebase',
-    'search/fileSearch',
-    'search/listDirectory',
-    'search/textSearch',
-    'search/usages',
-    'web/fetch',
-    'web/githubRepo',
-    'todo',
-  ],
-  'Prometheus.agent.md': [
-    'read/readFile',
-    'agent/runSubagent',
-    'edit/createFile',
-    'search/codebase',
-    'search/fileSearch',
-    'search/listDirectory',
-    'search/textSearch',
-    'search/usages',
-    'web/fetch',
-    'web/githubRepo',
-    'vscode/askQuestions',
-    'vscode/getProjectSetupInfo',
-    'io.github.upstash/context7/get-library-docs',
-    'io.github.upstash/context7/resolve-library-id',
-  ],
-  'Oracle-subagent.agent.md': ['search', 'usages', 'problems', 'changes', 'fetch', 'agent'],
-  'Scout-subagent.agent.md': ['search', 'usages', 'problems', 'changes', 'testFailure'],
-  'Sisyphus-subagent.agent.md': ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'agent'],
-  'Frontend-Engineer-subagent.agent.md': ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo'],
-  'DevOps-subagent.agent.md': ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo'],
-  'DocWriter-subagent.agent.md': ['search', 'usages', 'problems', 'changes', 'edit', 'fetch'],
-  'BrowserTester-subagent.agent.md': ['search', 'usages', 'problems', 'changes', 'edit', 'fetch'],
-  'Code-Review-subagent.agent.md': ['search', 'usages', 'problems', 'changes', 'runCommands', 'runTasks'],
-  'Challenger-subagent.agent.md': ['read/readFile', 'read/problems', 'search/codebase', 'search/fileSearch', 'search/textSearch', 'search/listDirectory', 'search/usages'],
-  'Skeptic-subagent.agent.md': ['read/readFile', 'search/codebase', 'search/fileSearch', 'search/listDirectory', 'search/textSearch', 'search/usages'],
-  'DryRun-subagent.agent.md': ['read/readFile', 'search/codebase', 'search/fileSearch', 'search/listDirectory', 'search/textSearch'],
-};
+// Tool policy is loaded from governance/tool-grants.json at Pass 3c runtime.
+// To update tool grants for an agent, edit governance/tool-grants.json — no changes here needed.
 
 function parseFrontmatterTools(content) {
   const match = content.match(/^tools:\s*\[(.*?)\]$/m);
@@ -221,6 +178,8 @@ const requiredArtifacts = [
   'docs/agent-engineering/RELIABILITY-GATES.md',
   'docs/agent-engineering/CLARIFICATION-POLICY.md',
   'docs/agent-engineering/TOOL-ROUTING.md',
+  'governance/tool-grants.json',
+  'governance/runtime-policy.json',
 ];
 for (const artifact of requiredArtifacts) {
   if (existsSync(join(ROOT, artifact))) {
@@ -233,13 +192,21 @@ for (const artifact of requiredArtifacts) {
 // ─── Pass 3c: Tool Grant Consistency ────────────────────────────────────────
 header('Pass 3c: Tool Grant Consistency');
 
+const toolGrantsPath = join(ROOT, 'governance', 'tool-grants.json');
+let canonicalToolGrants = {};
+try {
+  canonicalToolGrants = JSON.parse(readFileSync(toolGrantsPath, 'utf8'));
+} catch (e) {
+  fail(`governance/tool-grants.json: could not load — ${e.message}`);
+}
+
 for (const agentFile of agentFiles) {
   const content = readFileSync(join(ROOT, agentFile), 'utf8');
   const actualTools = parseFrontmatterTools(content);
-  const expectedTools = EXPECTED_AGENT_TOOLS[agentFile];
+  const expectedTools = canonicalToolGrants[agentFile];
 
   if (!expectedTools) {
-    fail(`${agentFile}: missing canonical tool-set entry in validator`);
+    fail(`${agentFile}: missing canonical tool-set entry in governance/tool-grants.json`);
     continue;
   }
 
@@ -253,7 +220,7 @@ for (const agentFile of agentFiles) {
   const matches = actual.length === expected.length && actual.every((tool, index) => tool === expected[index]);
 
   if (!matches) {
-    fail(`${agentFile}: tool-set drift detected — expected [${expected.join(', ')}], got [${actual.join(', ')}]`);
+    fail(`${agentFile}: tool-set drift detected — expected [${expected.join(', ')}] (governance/tool-grants.json), got [${actual.join(', ')}]`);
   } else {
     pass(`Tool grants canonical: ${agentFile}`);
   }
@@ -281,7 +248,44 @@ for (const agentFile of agentFiles) {
   }
 }
 
-// ─── Summary ──────────────────────────────────────────────────────────────────
+// ─── Pass 5: Skill Library Consistency ───────────────────────────────────────
+header('Pass 5: Skill Library Consistency');
+
+const skillsIndexPath = join(ROOT, 'skills', 'index.md');
+const skillsPatternsDir = join(ROOT, 'skills', 'patterns');
+
+if (!existsSync(skillsIndexPath)) {
+  fail('skills/index.md: missing');
+} else if (!existsSync(skillsPatternsDir)) {
+  fail('skills/patterns/: directory missing');
+} else {
+  const indexContent = readFileSync(skillsIndexPath, 'utf8');
+
+  const indexedSkills = new Set();
+  for (const [, skillPath] of indexContent.matchAll(/`(skills\/patterns\/[^`]+)`/g)) {
+    indexedSkills.add(skillPath);
+  }
+
+  for (const skillPath of indexedSkills) {
+    if (!existsSync(join(ROOT, skillPath))) {
+      fail(`skills/index.md: references missing file → ${skillPath}`);
+    }
+  }
+
+  const patternFiles = readdirSync(skillsPatternsDir)
+    .filter(f => f.endsWith('.md'))
+    .map(f => `skills/patterns/${f}`);
+
+  for (const patternFile of patternFiles) {
+    if (!indexedSkills.has(patternFile)) {
+      fail(`${patternFile}: not listed in skills/index.md`);
+    } else {
+      pass(`Skill registered: ${patternFile}`);
+    }
+  }
+}
+
+// ─── Summary ─────────────────────────────────────────────────────────────────
 const totalChecks = totalPassed + totalFailed;
 const bar = '\u2550'.repeat(50);
 console.log(`\n${bar}`);

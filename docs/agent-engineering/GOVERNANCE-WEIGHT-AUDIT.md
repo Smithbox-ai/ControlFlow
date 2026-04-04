@@ -38,7 +38,7 @@ Token estimates are approximate: **1 line ≈ 15 tokens** (mixed prose + YAML/JS
 | Batch Approval | 8 | 120 | Complexity-conditional (multi-wave plans) |
 | Output Requirements (plan templates) | 60 | 900 | **High overhead** — templates duplicated in Prometheus |
 
-**Total estimated: ~350 lines ≈ 5,250 tokens**
+**Total estimated: ~313 lines ≈ 4,695 tokens** *(updated 2026-04-04 post-template externalization; original pre-modernization estimate was ~350 lines ≈ 5,250 tokens)*
 
 ---
 

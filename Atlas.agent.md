@@ -120,6 +120,8 @@ Maintain awareness of current orchestration state at all times:
 - `plans/project-context.md` (if present)
 - `schemas/skeptic.plan-audit.schema.json`
 - `schemas/dryrun.execution-report.schema.json`
+- `governance/runtime-policy.json` (Atlas operational knobs: approval actions, review routing, max iterations, retry budgets, stagnation thresholds)
+- `plans/templates/session-outcome-template.md` (fill and append to `plans/session-outcomes.md` at Completion Gate)
 - Plan artifacts directory: `plans/` (default location for all plan and completion files)
 
 ## Tools
@@ -198,6 +200,7 @@ Reference: `docs/agent-engineering/TOOL-ROUTING.md`
 6. **Completion Gate**
    - Run cross-phase consistency review.
    - Verify all phase todo items are marked completed. If any are not, reconcile them before producing the completion summary.
+   - Append a session-outcome entry to `plans/session-outcomes.md` using `plans/templates/session-outcome-template.md` BEFORE producing the final completion summary. This preserves the stop-rule contract (user sees the completion summary after telemetry is flushed, not before).
    - Produce completion summary.
 
 ### Phase Verification Checklist (Mandatory)

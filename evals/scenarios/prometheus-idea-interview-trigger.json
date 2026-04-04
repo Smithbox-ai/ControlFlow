@@ -1,0 +1,19 @@
+{
+  "id": "prometheus-idea-interview-trigger",
+  "target_agent": "Prometheus",
+  "goal": "A vague ideation request with no file names, acceptance criteria, or technology specifics triggers the Idea Interview Gate before plan generation",
+  "input": {
+    "query": "Can we make the agent system smarter and more reliable?",
+    "context": "No specific files mentioned. No concrete acceptance criteria. No explicit technology or constraint named."
+  },
+  "expected": {
+    "schema": "schemas/prometheus.plan.schema.json",
+    "risk_review_present": true,
+    "must_use_tool": "vscode/askQuestions",
+    "idea_interview_triggered": true,
+    "clarification_payload_fields": ["options", "impact_analysis", "recommended_option"],
+    "must_block_plan_generation_until_interview_complete": true,
+    "structured_prompt_assembled_before_clarification_gate": true,
+    "must_not": "proceed to Clarification Gate or planning before completing the idea interview"
+  }
+}

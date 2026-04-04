@@ -1,0 +1,17 @@
+{
+  "id": "prometheus-idea-interview-bypass",
+  "target_agent": "Prometheus",
+  "goal": "A concrete implementation request with file references and measurable acceptance criteria skips the Idea Interview Gate and proceeds directly to the Clarification Gate",
+  "input": {
+    "query": "Add a Pass 5 to evals/validate.mjs that verifies every file in skills/patterns/ is listed in skills/index.md. Done when validate.mjs exits 0 and the new pass is labelled in the file header comment.",
+    "context": "Specific file paths named (evals/validate.mjs, skills/patterns/, skills/index.md). Concrete acceptance criteria present (exit code 0, labelled pass). Technology specified (Node.js, validate.mjs)."
+  },
+  "expected": {
+    "schema": "schemas/prometheus.plan.schema.json",
+    "risk_review_present": true,
+    "idea_interview_triggered": false,
+    "must_not": "invoke vscode/askQuestions for an idea interview when concrete signals are present",
+    "may_use_clarification_gate": true,
+    "clarification_gate_triggered_only_if_mandatory_class_applies": true
+  }
+}

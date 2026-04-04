@@ -76,13 +76,13 @@ Four mechanisms from the bishx multi-agent planning system were evaluated. Two w
 1. **Executability Audit** — Challenger now simulates cold-start execution on the first 3 plan tasks. Encoded in `challenger.plan-audit.schema.json` as `executability_checklist`. Prompt addition: ~6 lines in Challenger. Gate: any task that fails executability → MAJOR finding minimum.
 4. **Validated Blocking Findings** — Code-Review now classifies each CRITICAL/MAJOR issue as `confirmed`/`rejected`/`unvalidated` and emits `validated_blocking_issues`. Atlas blocks only on confirmed blockers. Encoded in `code-review.verdict.schema.json` as `validation_status` per issue and `validated_blocking_issues` array. Prompt addition: ~3 lines in Code-Review, ~2 lines in Atlas.
 
-**Rejected (removed, 2026-04-01):**
-2. **Ceiling Scores** — REJECTED for Atlas. In bishx, ceilings are cross-validated between 4-6 independent reviewer streams (Skeptic, TDD, Completeness reviewers each bound separate dimensions). Atlas has no equivalent multi-stream structure; a single Challenger agent cannot cross-validate its own dimension scores. Ceiling fields added prompt/schema complexity without a structural signal source. Removed from `challenger.plan-audit.schema.json` and Challenger prompt.
-3. **Repeat-Finding Escalation** — REJECTED for Atlas. In bishx, escalation runs across up to 10 planning iterations. Atlas caps at 2 Challenger→Prometheus rounds, with existing retry budgets and escalation thresholds already covering stop conditions. Recurrence escalation duplicated existing controls more than it added net value. Removed from `atlas.gate-event.schema.json`, `atlas.delegation-protocol.schema.json`, Challenger findings schema, and Atlas prompt.
+**Adopted in Modernization (2026-04-04) — previously rejected, now implemented:**
+2. **Ceiling Scores** — ADOPTED in Atlas Modernization (Phase 2). Cross-validated ceilings are now active between Skeptic, Challenger, and DryRun agent streams. When multiple review agents are present (MEDIUM/LARGE tier), each agent bounds specific scoring dimensions based on evidence it produces. Single source of truth: `docs/agent-engineering/SCORING-SPEC.md` — Cross-Validated Ceilings section. The original rejection reason (single Challenger stream) no longer applies because Skeptic and DryRun now provide distinct evidence streams.
+3. **Repeat-Finding Escalation** — ADOPTED as Regression Tracking in Atlas Modernization (Phase 8). Verified items from previous plan-review iterations are tracked via `plans/templates/verified-items-template.md`. Any item verified in iteration N that fails in iteration N+1 becomes an automatic BLOCKING regression issue, regardless of severity. This provides repeat-finding escalation within the 5-iteration review loop. Single source of truth: `docs/agent-engineering/SCORING-SPEC.md` — Regression Detection Rules.
 
 **Explicitly NOT Adopted (with rationale):**
 - **Persistent hook/session architecture** — bishx uses shell hooks (`stop-hook.sh`, `discover-skills.sh`) for persistent state across sessions. Atlas runs in VS Code Copilot agent context which has no equivalent shell lifecycle hooks. NOTES.md policy covers the same need.
-- **10-iteration revision loops** — bishx allows up to 10 planning iterations. Atlas caps at 2 Challenger→Prometheus rounds to prevent endless loops. Existing retry budgets and escalation thresholds provide sufficient loop-stop controls.
+- **10-iteration revision loops** — bishx allows up to 10 planning iterations. Atlas caps at 5 iterations with convergence detection (stagnation: <5% improvement over 2 consecutive iterations). Existing retry budgets and per-phase escalation thresholds provide sufficient loop-stop controls.
 - **10 separate reviewer agents** — bishx splits planning review into 6 specialist agents (Skeptic, TDD, Completeness, Integration, Security, Performance) plus Critic and Dry-Run Simulator. Atlas consolidates this into Challenger (adversarial auditor) and Code-Review (post-implementation verifier). Fewer agents → less orchestration overhead and context fragmentation.
 - **bd (beads) task tracker integration** — bishx uses a local CLI tool (`bd`) for task tracking. Atlas uses the VS Code `#todos` tool which is natively integrated.
 
@@ -117,4 +117,4 @@ Agent count: 11 → 13. Schema count: 13 → 15. Eval scenario count: 29 → 35.
 
 ## Gap Details
 
-No remaining gaps. All 11 agents are fully compliant with the 9-item P.A.R.T checklist as of 2026-04-01.
+No remaining gaps. All 13 agents are fully compliant with the 9-item P.A.R.T checklist. (Agent count increased from 11 → 13 in modernization 2026-04-04 with the addition of Skeptic-subagent and DryRun-subagent.)

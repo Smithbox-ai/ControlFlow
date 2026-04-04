@@ -64,3 +64,28 @@ Mitigation:
 - Each agent references one primary schema contract.
 - Human approval gate is explicit in Atlas and Code-Review paths.
 - Predictability path (`ABSTAIN`) is present in all agents.
+
+## Phase 3: Modernization (Completed, 2026-04-04)
+
+Comprehensive bishx-inspired upgrade across 9 implementation phases.
+
+**New agents (2):**
+- `Skeptic-subagent.agent.md` — mirage detection with 17 patterns, quantitative scoring.
+- `DryRun-subagent.agent.md` — cold-start plan executability simulation.
+
+**New infrastructure:**
+- `docs/agent-engineering/SCORING-SPEC.md` — single source of truth for 7-dimension weighted scoring, cross-validated ceilings, and regression tracking.
+- `plans/templates/` — externalized plan, phase-completion, plan-completion, and verified-items templates.
+- `skills/` — skill library with index and 4 domain pattern files (TDD, error handling, security, performance).
+- `governance/tool-grants.json` — canonical machine-readable tool policy for validator enforcement.
+- `governance/runtime-policy.json` — Atlas operational knobs (review routing, retry budgets, stagnation thresholds).
+
+**Agent enhancements:**
+- Atlas: PLAN_REVIEW loop extended to 5 iterations with complexity-adaptive routing, convergence detection, regression tracking, trace_id observability.
+- Prometheus: Complexity Gate (TRIVIAL/SMALL/MEDIUM/LARGE), Skill Selection step, Semantic Risk Discovery Gate.
+- Challenger: 7-dimension scoring, focus-area routing, validated blocking findings.
+- Code-Review: 5-dimension weighted scoring, per-issue validation protocol.
+
+**Eval coverage:** 29 → 35 eval scenarios. Schema count: 13 → 15.
+
+Full implementation details: `plans/atlas-modernization-plan.md`.

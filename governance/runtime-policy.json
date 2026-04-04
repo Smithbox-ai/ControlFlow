@@ -1,0 +1,88 @@
+{
+  "_comment": "Atlas operational knobs only. Scoring thresholds live in docs/agent-engineering/SCORING-SPEC.md. File-count complexity boundaries live in plans/project-context.md.",
+
+  "approval_required_actions": [
+    "destructive_file_delete",
+    "bulk_contract_rewrite",
+    "git_force_push",
+    "git_reset_hard",
+    "drop_table",
+    "rm_rf",
+    "amend_published_commit",
+    "merge_to_protected_branch",
+    "push_to_shared_infrastructure"
+  ],
+
+  "review_pipeline_by_tier": {
+    "TRIVIAL": {
+      "challenger": false,
+      "skeptic": false,
+      "dryrun": false,
+      "code_review": true
+    },
+    "SMALL": {
+      "challenger": false,
+      "skeptic": false,
+      "dryrun": false,
+      "code_review": true
+    },
+    "MEDIUM": {
+      "challenger": true,
+      "skeptic": true,
+      "dryrun": false,
+      "code_review": true
+    },
+    "LARGE": {
+      "challenger": true,
+      "skeptic": true,
+      "dryrun": true,
+      "code_review": true
+    }
+  },
+
+  "max_iterations_by_tier": {
+    "TRIVIAL": 2,
+    "SMALL": 3,
+    "MEDIUM": 5,
+    "LARGE": 5
+  },
+
+  "challenger_prometheus_loop": {
+    "max_iterations": 2,
+    "convergence_check": true
+  },
+
+  "retry_budgets": {
+    "max_retries_per_phase": 5,
+    "transient_max": 3,
+    "fixable_max": 1,
+    "needs_replan_max": 1,
+    "escalate_max": 0,
+    "per_wave_transient_reduction_threshold": 2,
+    "per_wave_parallelism_reduction_factor": 0.5
+  },
+
+  "stagnation_detection": {
+    "same_phase_failure_escalation_threshold": 3,
+    "same_classification_repeat_escalation": true
+  },
+
+  "session_telemetry": {
+    "template": "plans/templates/session-outcome-template.md",
+    "log_file": "plans/session-outcomes.md",
+    "write_timing": "before_completion_summary",
+    "archive_threshold_entries": 50
+  },
+
+  "plan_review_gate_trigger_conditions": {
+    "min_phases": 3,
+    "confidence_threshold": 0.9,
+    "high_risk_scope_triggers_review": true,
+    "applicable_high_impact_risk_triggers_review": true
+  },
+
+  "batch_approval": {
+    "approval_per": "wave",
+    "exception_destructive_phases": "per_phase"
+  }
+}

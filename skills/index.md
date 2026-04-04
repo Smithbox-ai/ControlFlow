@@ -18,6 +18,9 @@ Reusable domain-specific patterns for agent consumption. Prometheus selects rele
 | Error Handling | `skills/patterns/error-handling-patterns.md` | Sisyphus, Frontend-Engineer, DevOps | error, exception, retry, fallback, boundary |
 | Security | `skills/patterns/security-patterns.md` | Sisyphus, Frontend-Engineer, Code-Review, Challenger | auth, input validation, injection, XSS, CSRF, secrets |
 | Performance | `skills/patterns/performance-patterns.md` | Sisyphus, Frontend-Engineer, Code-Review, Challenger | query, N+1, pagination, cache, batch, index |
+| Completeness | `skills/patterns/completeness-traceability.md` | Prometheus, Challenger, Code-Review | requirements, coverage, traceability, orphan, RTM, scope |
+| Integration | `skills/patterns/integration-validator.md` | Prometheus, Challenger, Sisyphus | dependency, contract, interface, collision, compatibility, wave |
+| Idea-to-Prompt | `skills/patterns/idea-to-prompt.md` | Prometheus | idea, vague, abstract, brainstorm, concept, interview |
 
 ## Loading Protocol
 - **Planning phase:** Prometheus includes `skill_references: ["skills/patterns/<domain>.md"]` in phase definition.
