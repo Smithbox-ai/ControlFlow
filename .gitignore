@@ -1,2 +1,57 @@
+# ── Node.js ───────────────────────────────────────────────
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm/
+.pnpm-store/
+
+# ── Plans (work-in-progress documents, not for public) ────
 plans/
+
+# ── Agent internal state (session scratchpad) ─────────────
+NOTES.md
+
+# ── Secrets & credentials ─────────────────────────────────
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.secret
+
+# ── Logs ──────────────────────────────────────────────────
+logs/
+*.log
+
+# ── Build & temp artifacts ────────────────────────────────
+dist/
+build/
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# ── Windows OS artifacts ──────────────────────────────────
+Thumbs.db
+Thumbs.db:encryptable
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# ── macOS OS artifacts ────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# ── VS Code user-specific settings ───────────────────────
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+.vscode/*.code-workspace
