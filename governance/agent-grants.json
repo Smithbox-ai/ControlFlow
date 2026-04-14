@@ -16,5 +16,8 @@
   "Planner.agent.md": [
     "CodeMapper-subagent",
     "Researcher-subagent"
+  ],
+  "Researcher-subagent.agent.md": [
+    "CodeMapper-subagent"
   ]
 }

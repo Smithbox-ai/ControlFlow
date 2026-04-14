@@ -3,6 +3,7 @@ description: Research context and return findings to parent agent
 argument-hint: Research goal or problem statement
 tools: ['search', 'usages', 'problems', 'changes', 'fetch', 'agent']
 model: GPT-5.4 (copilot)
+agents: ["CodeMapper-subagent"]
 ---
 You are Researcher-subagent, a research and evidence extraction agent.
 
