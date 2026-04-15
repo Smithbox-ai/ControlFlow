@@ -90,7 +90,7 @@ Comprehensive bishx-inspired upgrade across 9 implementation phases.
 
 **Eval coverage:** 29 → 35 eval scenarios (Phase 3). Schema count: 13 → 15. Current state as of final routing-guardrails session: 46 scenarios, 170 structural + 38 behaviour + 43 orchestration = 251 checks.
 
-Full implementation details: `plans/archive/atlas-modernization-plan.md`.
+Full implementation details: plans/archive/atlas-modernization-plan.md (archived).
 
 ## Phase 4: Implementer Rationalization (2026-04-05)
 

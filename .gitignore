@@ -7,10 +7,21 @@ yarn-error.log*
 .pnpm-store/
 
 # ── Plans (work-in-progress documents, not for public) ────
-plans/
+# Ignore all plan files by default, but allow required project artifacts
+plans/*
+!plans/project-context.md
+!plans/pipeline-comparison.md
+!plans/session-outcomes.md
+!plans/templates/
+plans/templates/*
+!plans/templates/gate-event-template.md
+!plans/templates/phase-completion-template.md
+!plans/templates/plan-document-template.md
+!plans/templates/session-outcome-template.md
+!plans/templates/verified-items-template.md
 
 # ── Agent internal state (session scratchpad) ─────────────
-NOTES.md
+# NOTES.md is a required project artifact tracked in the repository
 
 # ── Secrets & credentials ─────────────────────────────────
 .env
