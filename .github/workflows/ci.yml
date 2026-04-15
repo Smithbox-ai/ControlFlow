@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  eval:
+    name: Eval Suite
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: evals/package-lock.json
+
+      - name: Install eval dependencies
+        run: cd evals && npm ci
+
+      - name: Run evals
+        run: cd evals && npm test

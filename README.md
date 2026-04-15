@@ -1,6 +1,28 @@
 # ControlFlow
 
+[![CI](https://github.com/Smithbox-ai/ControlFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/Smithbox-ai/ControlFlow/actions/workflows/ci.yml)
+![Agents](https://img.shields.io/badge/agents-13-blue)
+![Eval Checks](https://img.shields.io/badge/eval%20checks-302-brightgreen)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 A multi-agent orchestration system for VS Code Copilot. ControlFlow replaces single-agent workflows with a coordinated team of 13 specialized agents governed by deterministic **P.A.R.T contracts** (Prompt → Archive → Resources → Tools), structured text outputs, and reliability gates.
+
+## How It Works
+
+**Turn any vague idea into working code in three steps:**
+
+```
+1. @Planner  "Add OAuth login with Google"
+   → Idea interview → phased plan → Mermaid architecture diagram
+
+2. Approve the plan
+
+3. @Orchestrator  (runs automatically)
+   → PlanAuditor reviews → CoreImplementer + TechnicalWriter execute in parallel
+   → CodeReviewer gates each phase → done
+```
+
+Each agent operates within strict P.A.R.T contracts — deterministic status outputs, least-privilege tool grants, and explicit failure classification — so you get predictable, auditable results instead of unpredictable single-agent sprawl.
 
 ## Key Features
 
