@@ -1,0 +1,68 @@
+{
+  "id": "budget-early-stop",
+  "target_agent": "Orchestrator",
+  "category": "reliability",
+  "goal": "Resource budget early-stop fires only when a cap is reached, classifies as 'escalate', and is orthogonal to retry_budgets (never compounded).",
+  "input": {
+    "budget_context": {
+      "token_cap": 1000,
+      "wall_clock_s": 60,
+      "cost_usd": 1.0
+    },
+    "cases": [
+      {
+        "label": "positive-token-cap-reached",
+        "tokens_used_so_far": 1000,
+        "wall_clock_elapsed_s": 5,
+        "cost_usd_so_far": 0.2,
+        "expected_early_stop": true,
+        "expected_classification": "escalate"
+      },
+      {
+        "label": "positive-wall-clock-reached",
+        "tokens_used_so_far": 400,
+        "wall_clock_elapsed_s": 60,
+        "cost_usd_so_far": 0.3,
+        "expected_early_stop": true,
+        "expected_classification": "escalate"
+      },
+      {
+        "label": "positive-cost-reached",
+        "tokens_used_so_far": 500,
+        "wall_clock_elapsed_s": 30,
+        "cost_usd_so_far": 1.0,
+        "expected_early_stop": true,
+        "expected_classification": "escalate"
+      },
+      {
+        "label": "negative-below-all-caps",
+        "tokens_used_so_far": 500,
+        "wall_clock_elapsed_s": 30,
+        "cost_usd_so_far": 0.4,
+        "expected_early_stop": false
+      },
+      {
+        "label": "negative-all-caps-null-unbounded",
+        "budget_context_override": {
+          "token_cap": null,
+          "wall_clock_s": null,
+          "cost_usd": null
+        },
+        "tokens_used_so_far": 999999,
+        "wall_clock_elapsed_s": 999999,
+        "cost_usd_so_far": 999.0,
+        "expected_early_stop": false
+      }
+    ]
+  },
+  "expected": {
+    "budget_axes": ["token_cap", "wall_clock_s", "cost_usd"],
+    "all_axes_optional": true,
+    "early_stop_classification": "escalate",
+    "orthogonal_to_retry_budgets": true,
+    "never_compounded_with_retry_counters": true,
+    "default_enabled_is_false": true,
+    "governance_ref": "governance/runtime-policy.json",
+    "skill_ref": "skills/patterns/budget-tracking.md"
+  }
+}

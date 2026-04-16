@@ -1,0 +1,253 @@
+
+=== Pass 1: Schema Validity ===
+  тЬЕ Schema compiles: assumption-verifier.plan-audit.schema.json
+  тЬЕ Schema compiles: browser-tester.execution-report.schema.json
+  тЬЕ Schema compiles: clarification-request.schema.json
+  тЬЕ Schema compiles: code-mapper.discovery.schema.json
+  тЬЕ Schema compiles: code-reviewer.verdict.schema.json
+  тЬЕ Schema compiles: core-implementer.execution-report.schema.json
+  тЬЕ Schema compiles: executability-verifier.execution-report.schema.json
+  тЬЕ Schema compiles: orchestrator.delegation-protocol.schema.json
+  тЬЕ Schema compiles: orchestrator.gate-event.schema.json
+  тЬЕ Schema compiles: plan-auditor.plan-audit.schema.json
+  тЬЕ Schema compiles: planner.plan.schema.json
+  тЬЕ Schema compiles: platform-engineer.execution-report.schema.json
+  тЬЕ Schema compiles: researcher.research-findings.schema.json
+  тЬЕ Schema compiles: technical-writer.execution-report.schema.json
+  тЬЕ Schema compiles: ui-implementer.execution-report.schema.json
+
+=== Pass 2: Scenario Integrity ===
+  тЬЕ Scenario valid: agent-triggering-quality.json тЖТ Orchestrator
+  тЬЕ Schema ref exists: agent-triggering-quality.json [expected.schema]
+  тД╣я╕П  agent-triggering-quality.json: 1 nested agent field(s): input.subagent_report.agent="CoreImplementer-subagent"
+  тЬЕ Scenario valid: assumption-verifier-contract.json тЖТ AssumptionVerifier-subagent
+  тЬЕ Schema ref exists: assumption-verifier-contract.json [expected.schema_ref]
+  тЬЕ Scenario valid: assumption-verifier-mirage-detection.json тЖТ AssumptionVerifier-subagent
+  тЬЕ Scenario valid: behavioral-plan-quality.json тЖТ Planner
+  тЬЕ Scenario valid: browser-tester-contract.json тЖТ BrowserTester-subagent
+  тЬЕ Schema ref exists: browser-tester-contract.json [expected.schema]
+  тЬЕ Scenario valid: budget-early-stop.json тЖТ Orchestrator
+  тЬЕ Scenario valid: clarification-askquestions.json тЖТ Planner
+  тЬЕ Schema ref exists: clarification-askquestions.json [expected.schema]
+  тЬЕ Scenario valid: clarification-schema-fragment.json тЖТ Orchestrator
+  тЬЕ Scenario valid: code-mapper-contract.json тЖТ CodeMapper-subagent
+  тЬЕ Schema ref exists: code-mapper-contract.json [expected.schema]
+  тЬЕ Scenario valid: code-reviewer-contract.json тЖТ CodeReviewer-subagent
+  тЬЕ Schema ref exists: code-reviewer-contract.json [expected.schema]
+  тЬЕ Scenario valid: complexity-gate-routing.json тЖТ Orchestrator
+  тЬЕ Scenario valid: consistency-repeatability.json тЖТ Orchestrator
+  тЬЕ Schema ref exists: consistency-repeatability.json [expected.schema]
+  тЬЕ Scenario valid: core-implementer-contract.json тЖТ CoreImplementer-subagent
+  тЬЕ Schema ref exists: core-implementer-contract.json [expected.schema]
+  тЬЕ Scenario valid: executability-verifier-contract.json тЖТ ExecutabilityVerifier-subagent
+  тЬЕ Schema ref exists: executability-verifier-contract.json [expected.schema_ref]
+  тЬЕ Scenario valid: executability-verifier-executability.json тЖТ ExecutabilityVerifier-subagent
+  тЬЕ Scenario valid: failure-retry.json тЖТ Orchestrator
+  тЬЕ Scenario valid: implementer-role-differentiation.json тЖТ Orchestrator
+  тЬЕ Scenario valid: iterative-review-convergence.json тЖТ Orchestrator
+  тЬЕ Scenario valid: memory-architecture-references.json тЖТ Orchestrator
+  тЬЕ Scenario valid: needs-input-routing.json тЖТ Orchestrator
+  тЬЕ Scenario valid: orchestrator-high-risk-review-override.json тЖТ Orchestrator
+  тЬЕ Scenario valid: orchestrator-phase-executor-routing.json тЖТ Orchestrator
+  тЬЕ Schema ref exists: orchestrator-phase-executor-routing.json [expected.schema]
+  тЬЕ Scenario valid: orchestrator-phase-verification.json тЖТ Orchestrator
+  тЬЕ Scenario valid: orchestrator-plan-auditor-integration.json тЖТ Orchestrator
+  тЬЕ Scenario valid: orchestrator-retry-backoff.json тЖТ Orchestrator
+  тД╣я╕П  orchestrator-retry-backoff.json: 2 nested agent field(s): inputs[2].input.wave_failures[0].agent="CoreImplementer-subagent", inputs[2].input.wave_failures[1].agent="UIImplementer-subagent"
+  тЬЕ Scenario valid: orchestrator-state-runtime-consistency.json тЖТ Orchestrator
+  тЬЕ Scenario valid: orchestrator-todo-orchestration.json тЖТ Orchestrator
+  тЬЕ Scenario valid: plan-auditor-adversarial-detection.json тЖТ PlanAuditor-subagent
+  тЬЕ Scenario valid: plan-auditor-contract.json тЖТ PlanAuditor-subagent
+  тД╣я╕П  plan-auditor-contract.json: 3 nested agent field(s): inputs[0].expected_output.agent="PlanAuditor-subagent", inputs[1].expected_output.agent="PlanAuditor-subagent", inputs[2].expected_output.agent="PlanAuditor-subagent"
+  тЬЕ Scenario valid: plan-auditor-replan-loop.json тЖТ Orchestrator
+  тЬЕ Scenario valid: planner-ambiguity-plus-schema.json тЖТ Planner
+  тЬЕ Schema ref exists: planner-ambiguity-plus-schema.json [expected.schema]
+  тЬЕ Scenario valid: planner-complexity-classification.json тЖТ Planner
+  тЬЕ Scenario valid: planner-idea-interview-bypass.json тЖТ Planner
+  тЬЕ Schema ref exists: planner-idea-interview-bypass.json [expected.schema]
+  тЬЕ Scenario valid: planner-idea-interview-trigger.json тЖТ Planner
+  тЬЕ Schema ref exists: planner-idea-interview-trigger.json [expected.schema]
+  тЬЕ Scenario valid: planner-large-data-risk-discovery.json тЖТ Planner
+  тЬЕ Schema ref exists: planner-large-data-risk-discovery.json [inputs[0].expected.schema]
+  тЬЕ Schema ref exists: planner-large-data-risk-discovery.json [inputs[1].expected.schema]
+  тЬЕ Schema ref exists: planner-large-data-risk-discovery.json [inputs[2].expected.schema]
+  тЬЕ Scenario valid: planner-mermaid-output.json тЖТ Planner
+  тД╣я╕П  planner-mermaid-output.json: 4 nested agent field(s): inputs[0].expected.agent="Planner", inputs[1].expected.agent="Planner", inputs[2].expected.agent="Planner", inputs[3].expected.agent="Planner"
+  тЬЕ Scenario valid: planner-orchestrator-handoff.json тЖТ Planner
+  тЬЕ Scenario valid: planner-reviewed-flow-routing.json тЖТ Planner
+  тЬЕ Scenario valid: planner-schema-output.json тЖТ Planner
+  тЬЕ Schema ref exists: planner-schema-output.json [expected.schema]
+  тЬЕ Scenario valid: planner-terminal-status-artifacts.json тЖТ Planner
+  тЬЕ Scenario valid: platform-engineer-contract.json тЖТ PlatformEngineer-subagent
+  тЬЕ Schema ref exists: platform-engineer-contract.json [expected.schema]
+  тЬЕ Scenario valid: predictability-abstain.json тЖТ Researcher-subagent
+  тЬЕ Schema ref exists: predictability-abstain.json [expected.schema]
+  тЬЕ Scenario valid: reflection-loop-trigger.json тЖТ Orchestrator
+  тЬЕ Scenario valid: robustness-paraphrase.json тЖТ Planner
+  тЬЕ Schema ref exists: robustness-paraphrase.json [expected.schema]
+  тЬЕ Scenario valid: safety-approval-gate.json тЖТ Orchestrator
+  тЬЕ Schema ref exists: safety-approval-gate.json [expected.schema]
+  тЬЕ Scenario valid: skills-mcp-routing.json тЖТ Planner
+  тЬЕ Schema ref exists: skills-mcp-routing.json [expected.schema]
+  тЬЕ Scenario valid: technical-writer-contract.json тЖТ TechnicalWriter-subagent
+  тЬЕ Schema ref exists: technical-writer-contract.json [expected.schema]
+  тЬЕ Scenario valid: ui-implementer-contract.json тЖТ UIImplementer-subagent
+  тЬЕ Schema ref exists: ui-implementer-contract.json [expected.schema]
+  тЬЕ Scenario valid: wave-execution.json тЖТ Orchestrator
+
+=== Pass 3: Reference Integrity ===
+  тЬЕ References clean: AssumptionVerifier-subagent.agent.md
+  тЬЕ References clean: BrowserTester-subagent.agent.md
+  тЬЕ References clean: CodeMapper-subagent.agent.md
+  тЬЕ References clean: CodeReviewer-subagent.agent.md
+  тЬЕ References clean: CoreImplementer-subagent.agent.md
+  тЬЕ References clean: ExecutabilityVerifier-subagent.agent.md
+  тЬЕ References clean: Orchestrator.agent.md
+  тЬЕ References clean: PlanAuditor-subagent.agent.md
+  тЬЕ References clean: Planner.agent.md
+  тЬЕ References clean: PlatformEngineer-subagent.agent.md
+  тЬЕ References clean: Researcher-subagent.agent.md
+  тЬЕ References clean: TechnicalWriter-subagent.agent.md
+  тЬЕ References clean: UIImplementer-subagent.agent.md
+  тЬЕ References clean: README.md
+  тЬЕ References clean: docs/agent-engineering/AGENT-AS-TOOL.md
+  тЬЕ References clean: docs/agent-engineering/CLARIFICATION-POLICY.md
+  тЬЕ References clean: docs/agent-engineering/MEMORY-ARCHITECTURE.md
+  тЬЕ References clean: docs/agent-engineering/MIGRATION-CORE-FIRST.md
+  тЬЕ References clean: docs/agent-engineering/MODEL-ROUTING.md
+  тЬЕ References clean: docs/agent-engineering/OBSERVABILITY.md
+  тЬЕ References clean: docs/agent-engineering/PART-SPEC.md
+  тЬЕ References clean: docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md
+  тЬЕ References clean: docs/agent-engineering/README.md
+  тЬЕ References clean: docs/agent-engineering/RELIABILITY-GATES.md
+  тЬЕ References clean: docs/agent-engineering/SCORING-SPEC.md
+  тЬЕ References clean: docs/agent-engineering/TOOL-ROUTING.md
+
+=== Pass 3b: Required Project Artifacts ===
+  тЬЕ Artifact exists: .github/copilot-instructions.md
+  тЬЕ Artifact exists: plans/project-context.md
+  тЬЕ Artifact exists: docs/agent-engineering/PART-SPEC.md
+  тЬЕ Artifact exists: docs/agent-engineering/RELIABILITY-GATES.md
+  тЬЕ Artifact exists: docs/agent-engineering/CLARIFICATION-POLICY.md
+  тЬЕ Artifact exists: docs/agent-engineering/TOOL-ROUTING.md
+  тЬЕ Artifact exists: governance/tool-grants.json
+  тЬЕ Artifact exists: governance/runtime-policy.json
+  тЬЕ Artifact exists: governance/rename-allowlist.json
+  тЬЕ Artifact exists: governance/agent-grants.json
+  тЬЕ Allowlist active_artifacts: all 57 non-glob entries exist on disk
+  тЬЕ Allowlist retired_names.runtime: no conflicts with active_artifacts
+
+=== Pass 3c: Tool Grant Consistency ===
+  тЬЕ Tool grants canonical: AssumptionVerifier-subagent.agent.md
+  тЬЕ Tool grants canonical: BrowserTester-subagent.agent.md
+  тЬЕ Tool grants canonical: CodeMapper-subagent.agent.md
+  тЬЕ Tool grants canonical: CodeReviewer-subagent.agent.md
+  тЬЕ Tool grants canonical: CoreImplementer-subagent.agent.md
+  тЬЕ Tool grants canonical: ExecutabilityVerifier-subagent.agent.md
+  тЬЕ Tool grants canonical: Orchestrator.agent.md
+  тЬЕ Tool grants canonical: PlanAuditor-subagent.agent.md
+  тЬЕ Tool grants canonical: Planner.agent.md
+  тЬЕ Tool grants canonical: PlatformEngineer-subagent.agent.md
+  тЬЕ Tool grants canonical: Researcher-subagent.agent.md
+  тЬЕ Tool grants canonical: TechnicalWriter-subagent.agent.md
+  тЬЕ Tool grants canonical: UIImplementer-subagent.agent.md
+
+=== Pass 3d: Agent Grant Consistency ===
+  тЬЕ Agent grants canonical: Orchestrator.agent.md
+  тЬЕ Agent grants canonical: Planner.agent.md
+  тЬЕ Agent grants canonical: Researcher-subagent.agent.md
+
+=== Pass 4: P.A.R.T Section Order ===
+  тЬЕ P.A.R.T order: AssumptionVerifier-subagent.agent.md
+  тЬЕ P.A.R.T order: BrowserTester-subagent.agent.md
+  тЬЕ P.A.R.T order: CodeMapper-subagent.agent.md
+  тЬЕ P.A.R.T order: CodeReviewer-subagent.agent.md
+  тЬЕ P.A.R.T order: CoreImplementer-subagent.agent.md
+  тЬЕ P.A.R.T order: ExecutabilityVerifier-subagent.agent.md
+  тЬЕ P.A.R.T order: Orchestrator.agent.md
+  тЬЕ P.A.R.T order: PlanAuditor-subagent.agent.md
+  тЬЕ P.A.R.T order: Planner.agent.md
+  тЬЕ P.A.R.T order: PlatformEngineer-subagent.agent.md
+  тЬЕ P.A.R.T order: Researcher-subagent.agent.md
+  тЬЕ P.A.R.T order: TechnicalWriter-subagent.agent.md
+  тЬЕ P.A.R.T order: UIImplementer-subagent.agent.md
+
+=== Pass 4b: Clarification Triggers (┬з5) & Tool Routing Rules (┬з6) ===
+  тЬЕ ┬з5 Clarification coverage: AssumptionVerifier-subagent.agent.md
+  тЬЕ ┬з5 Clarification coverage: BrowserTester-subagent.agent.md
+  тЬЕ ┬з6 Tool Routing coverage: BrowserTester-subagent.agent.md
+  тЬЕ ┬з5 Clarification coverage: CodeMapper-subagent.agent.md
+  тЬЕ ┬з5 Clarification coverage: CodeReviewer-subagent.agent.md
+  тЬЕ ┬з5 Clarification coverage: CoreImplementer-subagent.agent.md
+  тЬЕ ┬з6 Tool Routing coverage: CoreImplementer-subagent.agent.md
+  тЬЕ ┬з5 Clarification coverage: ExecutabilityVerifier-subagent.agent.md
+  тЬЕ ┬з5 Clarification coverage: Orchestrator.agent.md
+  тЬЕ ┬з6 Tool Routing coverage: Orchestrator.agent.md
+  тЬЕ ┬з5 Clarification coverage: PlanAuditor-subagent.agent.md
+  тЬЕ ┬з5 Clarification coverage: Planner.agent.md
+  тЬЕ ┬з6 Tool Routing coverage: Planner.agent.md
+  тЬЕ ┬з5 Clarification coverage: PlatformEngineer-subagent.agent.md
+  тЬЕ ┬з6 Tool Routing coverage: PlatformEngineer-subagent.agent.md
+  тЬЕ ┬з5 Clarification coverage: Researcher-subagent.agent.md
+  тЬЕ ┬з6 Tool Routing coverage: Researcher-subagent.agent.md
+  тЬЕ ┬з5 Clarification coverage: TechnicalWriter-subagent.agent.md
+  тЬЕ ┬з6 Tool Routing coverage: TechnicalWriter-subagent.agent.md
+  тЬЕ ┬з5 Clarification coverage: UIImplementer-subagent.agent.md
+  тЬЕ ┬з6 Tool Routing coverage: UIImplementer-subagent.agent.md
+
+=== Pass 5: Skill Library Consistency ===
+  тЬЕ Skill registered: skills/patterns/budget-tracking.md
+  тЬЕ Skill registered: skills/patterns/completeness-traceability.md
+  тЬЕ Skill registered: skills/patterns/error-handling-patterns.md
+  тЬЕ Skill registered: skills/patterns/idea-to-prompt.md
+  тЬЕ Skill registered: skills/patterns/integration-validator.md
+  тЬЕ Skill registered: skills/patterns/llm-behavior-guidelines.md
+  тЬЕ Skill registered: skills/patterns/performance-patterns.md
+  тЬЕ Skill registered: skills/patterns/preflect-core.md
+  тЬЕ Skill registered: skills/patterns/reflection-loop.md
+  тЬЕ Skill registered: skills/patterns/security-patterns.md
+  тЬЕ Skill registered: skills/patterns/tdd-patterns.md
+
+=== Pass 6: Synthetic Rename Negative-Path Checks ===
+  тЬЕ Synthetic (a): stale target_agent "OldAgent" correctly rejected тАФ OldAgent.agent.md not found
+  тЬЕ Synthetic (b): stale expected.schema "schemas/oldname.schema.json" correctly caught тАФ file not found
+  тЬЕ Synthetic (c): stale nested agent "OldAgent" at "input.subagent_report.agent" correctly detected
+  тЬЕ Synthetic (d): stale expected.schema_ref "schemas/oldname-ref.schema.json" correctly caught тАФ file not found
+
+=== Pass 7: Memory Architecture References ===
+  тЬЕ Canonical memory doc exists: docs/agent-engineering/MEMORY-ARCHITECTURE.md
+  тЬЕ Memory-architecture ref present: AssumptionVerifier-subagent.agent.md
+  тЬЕ Memory-architecture ref present: BrowserTester-subagent.agent.md
+  тЬЕ Memory-architecture ref present: CodeMapper-subagent.agent.md
+  тЬЕ Memory-architecture ref present: CodeReviewer-subagent.agent.md
+  тЬЕ Memory-architecture ref present: CoreImplementer-subagent.agent.md
+  тЬЕ Memory-architecture ref present: ExecutabilityVerifier-subagent.agent.md
+  тЬЕ Memory-architecture ref present: Orchestrator.agent.md
+  тЬЕ Memory-architecture ref present: PlanAuditor-subagent.agent.md
+  тЬЕ Memory-architecture ref present: Planner.agent.md
+  тЬЕ Memory-architecture ref present: PlatformEngineer-subagent.agent.md
+  тЬЕ Memory-architecture ref present: Researcher-subagent.agent.md
+  тЬЕ Memory-architecture ref present: TechnicalWriter-subagent.agent.md
+  тЬЕ Memory-architecture ref present: UIImplementer-subagent.agent.md
+  тЬЕ Memory-architecture cross-reference count: 13 / 13 required
+  тЬЕ NOTES.md within budget: 7 тЙд 20 lines
+  тЬЕ Migration manifest exists: plans/artifacts/controlflow-revision/phase-6-migration-manifest.yaml
+
+=== Pass 8: Drift Detection тАФ Roster тЖФ Enum Bidirectional Alignment ===
+  тЬЕ Roster тЖФ enum bidirectional alignment: 8 agents set-equal to enum
+
+=== Pass 9: Drift Detection тАФ Agent Resources Schema Existence ===
+  тЬЕ Agent Resources schemas: all 23 curated references resolve across 13 agents
+
+=== Pass 10: Drift Detection тАФ Cross-Plan File-Overlap ===
+  тЬЕ Cross-plan overlap: 53 paths across 5 plans; all overlaps coordinated via 2 shared anchor-map(s)
+
+=== Pass 11: Drift Detection тАФ Multi-Doc Check-Count Consistency ===
+  тЬЕ Check-count consistency: all 7 sources advertise "357"
+
+тХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХР
+Total: 212  |  Passed: 212  |  Failed: 0
+тХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХР
+
+All checks passed тЬЕ
+

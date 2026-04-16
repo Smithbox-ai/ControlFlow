@@ -3,6 +3,7 @@ description: 'Autonomous planner that writes comprehensive implementation plans 
 tools: [read/readFile, agent/runSubagent, edit/createFile, search/codebase, search/fileSearch, search/listDirectory, search/textSearch, search/usages, web/fetch, web/githubRepo, vscode/askQuestions, vscode/getProjectSetupInfo, io.github.upstash/context7/get-library-docs, io.github.upstash/context7/resolve-library-id]
 agents: ["CodeMapper-subagent", "Researcher-subagent"]
 model: Claude Opus 4.7 (copilot)
+model_role: capable-planner
 handoffs:
   - label: Start implementation with Orchestrator
     agent: Orchestrator
@@ -100,21 +101,18 @@ Do NOT return `ABSTAIN` for scope ambiguity without first attempting clarificati
 - Retain only: accepted assumptions, unresolved risks, scope boundaries, and final file map.
 
 ### Agentic Memory Policy
-- Keep/update `NOTES.md` entries for:
-  - task title
-  - scope boundaries
-  - plan assumptions
-  - unresolved questions
+
+See [docs/agent-engineering/MEMORY-ARCHITECTURE.md](docs/agent-engineering/MEMORY-ARCHITECTURE.md) for the three-layer memory model.
+
+Agent-specific fields:
+- Record task title and scope boundaries in the plan artifact (task-episodic); set active objective in `NOTES.md` at plan creation.
 
 ### PreFlect (Mandatory Before Planning)
-Before finalizing a plan, evaluate:
-1. Scope clarity risk — is the request ambiguous enough to require clarification?
-2. Evidence sufficiency risk — has enough codebase evidence been gathered?
-3. External knowledge risk — does the plan depend on third-party behavior not verified from local code?
-4. Semantic risk completeness — has every `risk_review` category been evaluated? Are any `HIGH`-impact entries still `open_question`? If so, a research phase must be added before implementation phases begin.
 
-If scope ambiguity matches any mandatory clarification class (Step 2), STOP and call `vscode/askQuestions` before proceeding.
-If external knowledge is missing, use Context7 or `web/fetch` before finalizing.
+See [skills/patterns/preflect-core.md](skills/patterns/preflect-core.md) for the canonical four risk classes and decision output.
+
+Agent-specific additions:
+- Idea Interview & Clarification Gates must precede Semantic Risk.
 
 ## Resources
 

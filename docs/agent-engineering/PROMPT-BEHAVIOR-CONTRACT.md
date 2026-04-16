@@ -78,7 +78,7 @@ Before handing off to the next agent or phase, the producing agent must generate
 
 These behavioral invariants are verified by:
 
-- `evals/tests/prompt-behavior-contract.test.mjs` — 56 checks across Planner, Researcher, CodeMapper, CoreImplementer (failure_classification), CodeReviewer (validated_blocking_issues), TechnicalWriter (doc-only scope), AssumptionVerifier (COMPLETE/ABSTAIN), PlanAuditor (executability_checklist), and shared policy
+- `evals/tests/prompt-behavior-contract.test.mjs` — 74 checks across Planner, Researcher, CodeMapper, CoreImplementer (failure_classification), CodeReviewer (validated_blocking_issues), TechnicalWriter (doc-only scope), AssumptionVerifier (COMPLETE/ABSTAIN), PlanAuditor (executability_checklist), and shared policy
 - `evals/tests/orchestration-handoff-contract.test.mjs` — 49 checks on Orchestrator PLAN_REVIEW gating, rerun invalidation, delegation routing, failure handling, phase verification, todo lifecycle, and observability
 
 ## Relationship to Other Specs

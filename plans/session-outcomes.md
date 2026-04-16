@@ -10,6 +10,41 @@ Archive old entries when the log exceeds 50 entries (see `plans/templates/sessio
 
 ## Entry
 
+**Plan ID:** `model-routing-stage-c-plan`
+**Date:** `2026-04-16`
+**Complexity Tier:** `MEDIUM`
+**Total Phases:** `7 / 7`
+
+### Review Pipeline
+
+| Agent | Result | Notes |
+|---|---|---|
+| AssumptionVerifier-subagent | COMPLETE | 2 iterations, 48% → 82%; 0 blocking mirages at final |
+| PlanAuditor-subagent | APPROVED | 4 iterations, 26% → 64% → 88% → 95% |
+| ExecutabilityVerifier-subagent | N/A | MEDIUM tier — not in scope |
+| CodeReviewer-subagent | APPROVED (after fix) | Phase 2 NEEDS_REVISION (1 MAJOR: frontmatter regex scoping) — fixed via nested regex + Test D regression |
+
+**Total review iterations:** `4` / `4`
+**Convergence:** `Converged`
+
+### Outcome
+
+**Status:** `SUCCESS`
+**CodeReviewer false positive rate:** `0 / 1` (`0%`)
+
+Stage B runtime rollout complete (all 13 agents carry `model_role:` frontmatter). Stage C matrix landed (`by_tier` with 5 divergent + 5 `inherit_from: "default"` roles). Drift-check suite grew 23 → 34 (+4 model_role, +4 matrix-completeness, +3 reference-integrity). Total eval suite 358 → 370, all green. Stage D = forward pointer only.
+
+### Lessons Learned
+
+1. Enabling a previously uncounted drift check (MODEL_ROLE_CHECK_ENABLED false → true) causes an arithmetic surprise: the check contributes a Pass 8 count that was invisible to baseline math. Budget the +1 explicitly in the plan.
+2. Frontmatter-scoped regex validation must bound the search to the `---...---` block via a two-step extract (outer `/^---\r?\n([\s\S]*?)\r?\n---\s*$/m`, inner key regex) — single-pass `/^key:/m` is a security-adjacent false positive waiting to happen when file bodies legitimately contain the same token.
+3. Iterative PLAN_REVIEW converges in 3–4 rounds for MEDIUM plans when each iteration produces ≥10% score delta; stagnation detection (<5% over 2 iters) correctly didn't trigger here.
+4. Doc-consolidation phases (Phase 7) must re-assert every regex-matched sentence the drift checks scan for — removing an older `Eval suite (N checks)` line under an archived section without replacing it under the new section fails Check #5 even when numerics are globally consistent.
+
+---
+
+## Entry
+
 **Plan ID:** `planner-architecture-preserving-remediation-plan.revised`
 **Date:** `2026-04-09`
 **Complexity Tier:** `MEDIUM`
@@ -136,3 +171,36 @@ Full 6-phase LARGE-tier remediation of 14 orchestration weak spots identified in
 1. Schema `if/then` enforcement scope must be explicitly listed per-schema in the plan — implicit "all schemas" wording causes auditors to assume executability-verifier is covered when it was intentionally excluded.
 2. When a phase hardening operation has a deliberate scope boundary (7 of 8 schemas), document the excluded item and its rationale in the plan to prevent ACCEPTED_RESIDUAL being misclassified as CLOSED in the closure audit.
 3. Final audit documents (phase 6 patterns) should include a `<!-- markdownlint-disable -->` pragma from creation when the artifact contains fenced code blocks and tables — prevents a predictable round of lint debt in CodeReviewer.
+
+---
+
+## Entry
+
+**Plan ID:** `controlflow-comprehensive-revision-plan`  
+**Date:** 2026-04-16  
+**Complexity Tier:** LARGE  
+**Total Phases:** 10 / 10 (Phase 4 completed in degraded logical-index-only mode per documented `needs_replan` mitigation)
+
+### Review Pipeline
+
+| Agent | Result | Notes |
+|---|---|---|
+| AssumptionVerifier-subagent | COMPLETE | Mirages found: 0 (iter 2; 98.8% confidence) |
+| PlanAuditor-subagent | APPROVED | Final score: ~97% after document-truncation fix |
+| ExecutabilityVerifier-subagent | WARN -> PASS | 4 ambiguities patched before dispatch (actor/gate/parser/DAG) |
+| CodeReviewer-subagent | APPROVED | Validated blocking issues: 0 (Phase 3 reviewed; downstream phases verified via build + eval harness) |
+
+**Total review iterations:** 2 / 5  
+**Convergence:** Converged
+
+### Outcome
+
+**Status:** SUCCESS  
+**CodeReviewer false positive rate:** 0 / 1 (0%) — only one MINOR finding (PROMPT-BEHAVIOR-CONTRACT stale count), folded into Phase 10
+
+### Lessons Learned
+
+1. VS Code-reload smoke tests cannot be performed autonomously; plans with interactive spikes must declare a documented degraded-mode fallback (logical-index-only) so execution can proceed without user interaction.
+2. Pre-creating a shared anchor-map artifact is a valid Orchestrator-level coordination action when two plans contend for the same edit surface and only one is active; the anchor-map acts as a forward-contract for the future plan.
+3. `validate.mjs` cache at `evals/.cache/` must be cleared (`Remove-Item .cache -Recurse`) to see fresh `Total:` output; the cached-run path prints only `All checks passed (cached)`.
+4. When migrating large doc-surface checks, update the `CHECK_COUNT_SOURCES` equality-literals LAST so the equality drift-check does not flap mid-refactor.

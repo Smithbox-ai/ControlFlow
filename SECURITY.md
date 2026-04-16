@@ -33,4 +33,4 @@ ControlFlow incorporates several layers of security by design:
 - **Human approval gates** — destructive or irreversible operations require explicit user confirmation
 - **Agent delegation roster** — Orchestrator and Planner may only delegate to project-internal agents documented in `plans/project-context.md`; external agents are prohibited
 - **Security skill pattern** — `skills/patterns/security-patterns.md` covers auth, input validation, injection prevention, and secrets management
-- **303 offline eval checks** — structural, behavioral, and orchestration validations run without live agents on every PR
+- **370 offline eval checks** — structural, behavioral, orchestration, and drift-detection validations run without live agents on every PR

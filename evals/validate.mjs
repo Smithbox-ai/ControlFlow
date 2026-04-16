@@ -40,6 +40,19 @@ import { createHash } from 'crypto';
 import { readFileSync, readdirSync, existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join, resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import {
+  MODEL_ROLE_CHECK_ENABLED,
+  validateModelRole,
+  validateByTierShape,
+  parseRosterFromProjectContext,
+  compareRosterEnum,
+  parseResourcesSchemaPaths,
+  buildPlanFileMap,
+  findSharedAnchorMaps,
+  findUnresolvedOverlaps,
+  extractCheckCounts,
+  checkCountConsistency,
+} from './drift-checks.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
@@ -810,6 +823,226 @@ function runSyntheticRenameNegativePathChecks() {
 }
 
 runSyntheticRenameNegativePathChecks();
+
+// ─── Pass 7: Memory Architecture References (Phase 6) ────────────────────────
+header('Pass 7: Memory Architecture References');
+
+{
+  const memScenarioPath = join(SCENARIOS_DIR, 'memory-architecture-references.json');
+  if (!existsSync(memScenarioPath)) {
+    fail('memory-architecture-references.json: scenario missing');
+  } else {
+    let memScenario;
+    try {
+      memScenario = JSON.parse(readFileSync(memScenarioPath, 'utf8'));
+    } catch (e) {
+      fail(`memory-architecture-references.json: JSON parse error — ${e.message}`);
+      memScenario = null;
+    }
+    if (memScenario) {
+      const canonicalDoc = memScenario.input?.canonical_doc;
+      const requiredAgents = memScenario.input?.reference_required_in || [];
+      const minAgents = memScenario.input?.minimum_agents_referencing || 13;
+      const manifestPath = memScenario.expected?.migration_manifest_exists;
+      const notesBudget = memScenario.expected?.notes_md_line_budget || 20;
+
+      // Canonical doc exists
+      if (canonicalDoc && existsSync(join(ROOT, canonicalDoc))) {
+        pass(`Canonical memory doc exists: ${canonicalDoc}`);
+      } else {
+        fail(`Canonical memory doc missing: ${canonicalDoc}`);
+      }
+
+      // Each required agent references the canonical doc
+      let referencingCount = 0;
+      for (const agentFile of requiredAgents) {
+        const fp = join(ROOT, agentFile);
+        if (!existsSync(fp)) {
+          fail(`${agentFile}: agent file missing (required for memory-architecture cross-reference)`);
+          continue;
+        }
+        const content = readFileSync(fp, 'utf8');
+        if (content.includes('docs/agent-engineering/MEMORY-ARCHITECTURE.md')) {
+          referencingCount++;
+          pass(`Memory-architecture ref present: ${agentFile}`);
+        } else {
+          fail(`${agentFile}: missing reference to docs/agent-engineering/MEMORY-ARCHITECTURE.md`);
+        }
+      }
+      if (referencingCount >= minAgents) {
+        pass(`Memory-architecture cross-reference count: ${referencingCount} / ${minAgents} required`);
+      } else {
+        fail(`Memory-architecture cross-reference count: ${referencingCount} / ${minAgents} required`);
+      }
+
+      // NOTES.md within budget
+      const notesPath = join(ROOT, 'NOTES.md');
+      if (existsSync(notesPath)) {
+        const lines = readFileSync(notesPath, 'utf8').split('\n');
+        // Trim a single trailing empty line (POSIX newline) from the count
+        const effective = (lines.length > 0 && lines[lines.length - 1] === '') ? lines.length - 1 : lines.length;
+        if (effective <= notesBudget) {
+          pass(`NOTES.md within budget: ${effective} ≤ ${notesBudget} lines`);
+        } else {
+          fail(`NOTES.md exceeds budget: ${effective} > ${notesBudget} lines`);
+        }
+      } else {
+        fail('NOTES.md missing');
+      }
+
+      // Migration manifest exists
+      if (manifestPath && existsSync(join(ROOT, manifestPath))) {
+        pass(`Migration manifest exists: ${manifestPath}`);
+      } else {
+        fail(`Migration manifest missing: ${manifestPath}`);
+      }
+    }
+  }
+}
+
+// ─── Pass 8: Drift Detection — Phase 9 Additive Checks ──────────────────────
+// Non-duplication: see plans/artifacts/controlflow-revision/phase-1-existing-drift-checks.yaml.
+// Only the four checks flagged `missing_checks_target_phase_9` are implemented here.
+// Check #1 (`model_role` resolution) is gated off pending Phase 4 spike re-enable.
+header('Pass 8: Drift Detection — Roster ↔ Enum Bidirectional Alignment');
+
+// Check #1 — model_role resolution (enabled after Phase 2 spike pass).
+if (MODEL_ROLE_CHECK_ENABLED) {
+  const routingPath = join(ROOT, 'governance', 'model-routing.json');
+  let routingJson = null;
+  try {
+    routingJson = JSON.parse(readFileSync(routingPath, 'utf8'));
+  } catch (e) {
+    fail(`Pass 8 Check #1: cannot read governance/model-routing.json — ${e.message}`);
+  }
+  if (routingJson) {
+    let allPass = true;
+    for (const agentFile of agentFiles) {
+      const content = readFileSync(join(ROOT, agentFile), 'utf8');
+      const result = validateModelRole(content, routingJson);
+      if (!result.ok) {
+        for (const err of result.errors) {
+          fail(`Pass 8 Check #1: ${agentFile} — ${err}`);
+        }
+        allPass = false;
+      }
+    }
+    // Fold by_tier matrix shape check into the same pass/fail block (zero count drift).
+    const tierShape = validateByTierShape(routingJson);
+    if (!tierShape.ok) {
+      for (const err of tierShape.errors) {
+        fail(`Pass 8 Check #1: by_tier shape — ${err}`);
+      }
+      allPass = false;
+    }
+    if (allPass) {
+      pass(`model_role resolution + by_tier shape: all ${agentFiles.length} agents carry valid model_role; routing matrix has valid by_tier entries`);
+    }
+  }
+}
+
+// Check #2 — Roster ↔ enum bidirectional alignment
+{
+  const ctxPath = join(ROOT, 'plans', 'project-context.md');
+  const plannerSchemaPath = join(SCHEMAS_DIR, 'planner.plan.schema.json');
+  if (!existsSync(ctxPath)) {
+    fail('Pass 8 Check #2: plans/project-context.md missing');
+  } else if (!existsSync(plannerSchemaPath)) {
+    fail('Pass 8 Check #2: schemas/planner.plan.schema.json missing');
+  } else {
+    const ctxContent = readFileSync(ctxPath, 'utf8');
+    const rosterRaw = parseRosterFromProjectContext(ctxContent);
+    // Executor roster only — exclude "Agent" header if slipped through.
+    const roster = rosterRaw.filter(a => a !== 'Agent');
+    let schemaJson;
+    try { schemaJson = JSON.parse(readFileSync(plannerSchemaPath, 'utf8')); } catch (e) {
+      fail(`Pass 8 Check #2: planner schema JSON parse error — ${e.message}`);
+      schemaJson = null;
+    }
+    if (schemaJson) {
+      const enumValues = schemaJson.properties?.phases?.items?.properties?.executor_agent?.enum ?? [];
+      const cmp = compareRosterEnum(roster, enumValues);
+      if (cmp.equal) {
+        pass(`Roster ↔ enum bidirectional alignment: ${roster.length} agents set-equal to enum`);
+      } else {
+        if (cmp.extraInRoster.length > 0) {
+          fail(`Roster ↔ enum drift: roster has agents missing from enum → [${cmp.extraInRoster.join(', ')}]`);
+        }
+        if (cmp.extraInEnum.length > 0) {
+          fail(`Roster ↔ enum drift: enum has agents missing from roster → [${cmp.extraInEnum.join(', ')}]`);
+        }
+      }
+    }
+  }
+}
+
+// Check #3 — Agent Resources ↔ schemas existence (scoped to curated Resources section)
+header('Pass 9: Drift Detection — Agent Resources Schema Existence');
+{
+  let totalResourceRefs = 0;
+  let brokenRefs = 0;
+  for (const agentFile of agentFiles) {
+    const content = readFileSync(join(ROOT, agentFile), 'utf8');
+    const schemaPaths = parseResourcesSchemaPaths(content);
+    totalResourceRefs += schemaPaths.length;
+    for (const rel of schemaPaths) {
+      if (!existsSync(join(ROOT, rel))) {
+        fail(`${agentFile}: Resources section references missing schema → ${rel}`);
+        brokenRefs++;
+      }
+    }
+  }
+  if (brokenRefs === 0) {
+    pass(`Agent Resources schemas: all ${totalResourceRefs} curated references resolve across ${agentFiles.length} agents`);
+  }
+}
+
+// Check #4 — Cross-plan file-overlap (anchor-map-backed)
+header('Pass 10: Drift Detection — Cross-Plan File-Overlap');
+{
+  const plansDir = join(ROOT, 'plans');
+  const EXCLUDED_PLANS = new Set(['session-outcomes.md']); // per Phase 9 exclusion note
+  let planFiles = [];
+  try {
+    planFiles = readdirSync(plansDir)
+      .filter(f => f.endsWith('.md') && !EXCLUDED_PLANS.has(f))
+      .map(f => `plans/${f}`);
+  } catch (e) {
+    fail(`Pass 10: could not enumerate plans/ → ${e.message}`);
+  }
+  if (planFiles.length > 0) {
+    const fileMap = buildPlanFileMap(planFiles, ROOT);
+    const anchorMaps = findSharedAnchorMaps(ROOT);
+    const unresolved = findUnresolvedOverlaps(fileMap, anchorMaps);
+    if (unresolved.length === 0) {
+      pass(`Cross-plan overlap: ${fileMap.size} paths across ${planFiles.length} plans; all overlaps coordinated via ${anchorMaps.length} shared anchor-map(s)`);
+    } else {
+      for (const u of unresolved.slice(0, 10)) {
+        fail(`Cross-plan overlap without shared anchor-map: "${u.file}" appears in ${u.planA} AND ${u.planB}`);
+      }
+      if (unresolved.length > 10) {
+        fail(`Cross-plan overlap: ${unresolved.length - 10} additional unresolved pair(s) suppressed`);
+      }
+    }
+  }
+}
+
+// Check #5 — Multi-doc check-count consistency
+header('Pass 11: Drift Detection — Multi-Doc Check-Count Consistency');
+{
+  const results = extractCheckCounts(ROOT);
+  const { allPresent, allEqual, counts } = checkCountConsistency(results);
+  if (!allPresent) {
+    for (const r of results) {
+      if (r.count === null) fail(`Check-count missing in ${r.file}: ${r.error}`);
+    }
+  } else if (!allEqual) {
+    const summary = results.map(r => `${r.file}=${r.count}`).join(', ');
+    fail(`Check-count drift across sources: ${summary}`);
+  } else {
+    pass(`Check-count consistency: all ${counts.length} sources advertise "${counts[0]}"`);
+  }
+}
 
 // ─── Summary ─────────────────────────────────────────────────────────────────
 const totalChecks = totalPassed + totalFailed;

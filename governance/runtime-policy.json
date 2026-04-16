@@ -79,5 +79,14 @@
   "batch_approval": {
     "approval_per": "wave",
     "exception_destructive_phases": "per_phase"
+  },
+
+  "budget_defaults": {
+    "enabled": false,
+    "token_cap": null,
+    "wall_clock_s": null,
+    "cost_usd": null,
+    "enable_reflection": false,
+    "notes": "Orthogonal to retry_budgets. Reaching a budget cap classifies as 'escalate', not a failed attempt."
   }
 }

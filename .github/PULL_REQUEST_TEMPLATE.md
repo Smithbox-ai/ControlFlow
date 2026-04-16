@@ -14,7 +14,7 @@ Closes #
 - [ ] Documentation
 
 ## Verification
-- [ ] `cd evals && npm test` passes (all 303+ checks)
+- [ ] `cd evals && npm test` passes (all 370+ checks)
 - [ ] `npm run test:structural` passes
 - [ ] `npm run test:behavior` passes
 - [ ] No broken references (F8 integrity)

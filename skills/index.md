@@ -22,6 +22,9 @@ Reusable domain-specific patterns for agent consumption. Planner selects relevan
 | Integration | `skills/patterns/integration-validator.md` | Planner, PlanAuditor, CoreImplementer | dependency, contract, interface, collision, compatibility, wave |
 | Idea-to-Prompt | `skills/patterns/idea-to-prompt.md` | Planner | idea, vague, abstract, brainstorm, concept, interview |
 | LLM Behavior | `skills/patterns/llm-behavior-guidelines.md` | CoreImplementer, UIImplementer, CodeReviewer, Planner, PlatformEngineer | overengineering, bloat, abstraction, assumption, surgical, scope drift, simplicity |
+| PreFlect | `skills/patterns/preflect-core.md` | All agents | preflect, pre-action, gate, risk class, scope drift, schema drift, missing evidence, safety |
+| Reflection Loop | `skills/patterns/reflection-loop.md` | Orchestrator, CoreImplementer, UIImplementer, PlatformEngineer | reflection, pre-retry, fix hint, root cause, failure analysis |
+| Budget Tracking | `skills/patterns/budget-tracking.md` | Orchestrator, Planner, CoreImplementer, UIImplementer, PlatformEngineer | budget, token cap, wall-clock, cost, early stop, resource cap |
 
 ## Loading Protocol
 - **Planning phase:** Planner includes `skill_references: ["skills/patterns/<domain>.md"]` in phase definition.

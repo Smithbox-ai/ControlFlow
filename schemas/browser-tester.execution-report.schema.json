@@ -22,6 +22,11 @@
   ],
   "properties": {
     "schema_version": { "type": "string", "const": "1.0.0" },
+    "trace_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Optional UUIDv4 for cross-agent trace correlation."
+    },
     "agent": { "type": "string", "const": "BrowserTester-subagent" },
     "status": { "type": "string", "enum": ["COMPLETE", "NEEDS_INPUT", "FAILED", "ABSTAIN"] },
     "confidence": { "type": "number", "minimum": 0, "maximum": 1 },

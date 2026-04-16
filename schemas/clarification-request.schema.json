@@ -7,6 +7,11 @@
   "additionalProperties": false,
   "required": ["options", "impact_analysis", "recommended_option", "recommended_option_rationale"],
   "properties": {
+    "trace_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Optional UUIDv4 for cross-agent trace correlation."
+    },
     "options": {
       "type": "array",
       "minItems": 2,

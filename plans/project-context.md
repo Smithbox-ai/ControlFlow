@@ -14,8 +14,6 @@ The following agents are available for Orchestrator phase dispatch. The `executo
 | TechnicalWriter-subagent | Documentation | Docs, diagrams, walkthroughs | Capable model (Sonnet) |
 | BrowserTester-subagent | E2E testing | Browser tests, accessibility audits | Capable model (Sonnet) |
 | CodeReviewer-subagent | Post-impl verification | Code review, quality gates | Capable model (Sonnet) |
-| AssumptionVerifier-subagent | Mirage detection | Read-only verification phase, hallucination hunting | Read-only capable model |
-| ExecutabilityVerifier-subagent | Executability verification | Read-only execution-simulation phase | Read-only capable model |
 
 ## Review Pipeline Agents
 
@@ -103,3 +101,4 @@ When a semantic risk entry triggers PlanAuditor review, Orchestrator maps the ri
 - Skills library is stored in `skills/` directory.
 - Template files are stored in `plans/templates/` directory.
 - Implementation agents (CoreImplementer, UIImplementer, PlatformEngineer) share a common execution backbone documented in `docs/agent-engineering/MIGRATION-CORE-FIRST.md`. CoreImplementer is the canonical backbone reference; UI and Platform extend it with domain-specific gates.
+- Model-role routing uses the `by_tier` convention defined in `governance/model-routing.json`; the authoritative spec is `docs/agent-engineering/MODEL-ROUTING.md`. All 13 agents declare a valid `model_role:` frontmatter key matching a role entry in that file.

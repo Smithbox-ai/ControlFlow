@@ -1,0 +1,32 @@
+{
+  "id": "memory-architecture-references",
+  "target_agent": "Orchestrator",
+  "category": "structural",
+  "goal": "Canonical memory architecture doc docs/agent-engineering/MEMORY-ARCHITECTURE.md exists and is referenced by every agent file via its Archive Agentic Memory subsection.",
+  "input": {
+    "canonical_doc": "docs/agent-engineering/MEMORY-ARCHITECTURE.md",
+    "reference_required_in": [
+      "AssumptionVerifier-subagent.agent.md",
+      "BrowserTester-subagent.agent.md",
+      "CodeMapper-subagent.agent.md",
+      "CodeReviewer-subagent.agent.md",
+      "CoreImplementer-subagent.agent.md",
+      "ExecutabilityVerifier-subagent.agent.md",
+      "Orchestrator.agent.md",
+      "PlanAuditor-subagent.agent.md",
+      "Planner.agent.md",
+      "PlatformEngineer-subagent.agent.md",
+      "Researcher-subagent.agent.md",
+      "TechnicalWriter-subagent.agent.md",
+      "UIImplementer-subagent.agent.md"
+    ],
+    "minimum_agents_referencing": 13
+  },
+  "expected": {
+    "canonical_doc_exists": true,
+    "all_agents_reference_canonical_doc": true,
+    "notes_md_within_budget": true,
+    "notes_md_line_budget": 20,
+    "migration_manifest_exists": "plans/artifacts/controlflow-revision/phase-6-migration-manifest.yaml"
+  }
+}

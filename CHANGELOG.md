@@ -6,6 +6,53 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased] — Model Routing Stage C Matrix
+
+### Added
+
+- **Stage C Final (Consolidated)**: Model Routing Stage C has fully landed. Stage D is a forward pointer only.
+  - All 13 agents now declare `model_role:` frontmatter.
+  - `governance/model-routing.json` extended with optional `by_tier` matrix (10 roles × 4 complexity tiers with `inherit_from: "default"` for non-divergent cases).
+  - `evals/drift-checks.mjs` gained `validateModelRole` + `validateByTierShape`.
+  - Drift-check suite grew from 23 → 34 (+11): 4 Check #1 model_role tests (A/B/C/D), 4 matrix-completeness tests (N1/N2/N3/positive), 3 reference-integrity tests (RI-1/RI-2/RI-3).
+  - Structural gained +1 (Check #1 real implementation).
+  - Total eval suite: 358 → 370.
+  - VS Code runtime tolerance PASS recorded in `plans/artifacts/model-routing-stage-c/phase-1-spike-result.md`.
+
+### Changed
+
+- **Eval suite (370 checks)** — 213 structural + 74 behavior + 49 orchestration-handoff + 34 drift-detection. Advertised counts in `README.md`, `.github/copilot-instructions.md`, `CONTRIBUTING.md`, `evals/README.md`, `SECURITY.md`, and `.github/PULL_REQUEST_TEMPLATE.md` reconciled to the measured value and enforced by drift Check #5.
+
+---
+
+## [Unreleased] — ControlFlow Comprehensive Revision
+
+Ten-phase revision and modernization program delivered per `plans/controlflow-comprehensive-revision-plan.md`.
+
+### Added
+
+- **Phase 1 — Researcher validation + `plans_classification`.** Evidence-first confirmation of all 10 audit findings and per-plan classification artifact gating downstream archival decisions.
+- **Phase 2 — CodeMapper drift inventory.** Mechanical cross-reference of agent model pins, tool grants, schema references, skill registrations, executor-enum alignment, and PreFlect baseline line counts.
+- **Phase 3 — Consistency fixes (relabel-only; archival gated).** Phase Executor Agents table reduced to 8 rows matching the `executor_agent` enum; three-way check-count reconciliation; in-place status relabels without destructive moves.
+- **Phase 4 — Model Routing (logical-index-only; spike deferred).** Published `governance/model-routing.json` with 10 logical roles covering all 13 agents and `docs/agent-engineering/MODEL-ROUTING.md`. Runtime opt-in via agent frontmatter `model_role:` is held pending VS Code frontmatter-tolerance verification; drift Check #1 remains gated off.
+- **Phase 5 — Observability & `trace_id` schema hardening.** UUIDv4 `trace_id` added as additive-optional field across 13 report / verdict / audit / discovery / research / clarification / plan schemas; `docs/agent-engineering/OBSERVABILITY.md` documents generation, propagation, and the NDJSON sink convention at `plans/artifacts/observability/<task-id>.ndjson`.
+- **Phase 6 — Agentic Memory layering.** Three-layer memory model (session / task-episodic / repo-persistent) codified in `docs/agent-engineering/MEMORY-ARCHITECTURE.md`; `NOTES.md` scoped to repo-persistent state with reversible migration manifest.
+- **Phase 7 — PreFlect canonicalization.** Single `skills/patterns/preflect-core.md` replaces per-agent PreFlect restatements with pointer + ≤5 domain lines; Orchestrator-enforced cross-plan entry gate against `plans/performance-optimization-plan.md`.
+- **Phase 8 — SOTA pattern integration (additive, no budget compounding).** `skills/patterns/reflection-loop.md` (pre-retry hook; default disabled; draws from existing `retry_budgets`), `skills/patterns/budget-tracking.md` (`budget_defaults` orthogonal to `retry_budgets`), and `docs/agent-engineering/AGENT-AS-TOOL.md` (MCP forward-compatible input contract).
+- **Phase 9 — Additive drift-detection evals.** Four new drift checks (roster ↔ enum bidirectional alignment, agent `Resources` ↔ schemas existence, cross-plan file-overlap with anchor-map gate, multi-doc check-count consistency) in `evals/tests/drift-detection.test.mjs`; `model_role` resolution check staged but gated off until Phase 4 spike re-enables it.
+- **Phase 10 — README & engineering-docs refresh.** Measured-value badges, new Feature rows for the six shipped capabilities, and `docs/agent-engineering/README.md` index for the 11 engineering documents.
+
+### Changed
+
+- **Eval suite (358 checks)** — 212 structural + 74 behavior + 49 orchestration-handoff + 23 drift-detection. Advertised counts in `README.md`, `.github/copilot-instructions.md`, `CONTRIBUTING.md`, `evals/README.md`, `SECURITY.md`, and `.github/PULL_REQUEST_TEMPLATE.md` reconciled to the measured value and enforced by drift Check #5.
+- Phase Executor Agents table reduced to 8 rows aligned with the `executor_agent` enum; AssumptionVerifier and ExecutabilityVerifier reclassified as review-only roles outside the executor enum.
+
+### Notes
+
+- Phase 4 shipped in logical-index-only mode — the runtime opt-in spike on `BrowserTester-subagent.agent.md` is deferred, and `model_role:` is intentionally not yet added to agent frontmatter.
+- All schema changes are additive-optional; `required` arrays are unchanged and existing fixtures continue to validate.
+- Canonical verification remains offline: `cd evals && npm test`.
+
 ## [1.0.0] — 2026-04-15
 
 ### Added

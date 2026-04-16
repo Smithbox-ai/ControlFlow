@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Smithbox-ai/ControlFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/Smithbox-ai/ControlFlow/actions/workflows/ci.yml)
 ![Agents](https://img.shields.io/badge/agents-13-blue)
-![Eval Checks](https://img.shields.io/badge/eval%20checks-303-brightgreen)
+![Eval Checks](https://img.shields.io/badge/eval%20checks-370-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 A multi-agent orchestration system for VS Code Copilot. ControlFlow replaces single-agent workflows with a coordinated team of 13 specialized agents governed by deterministic **P.A.R.T contracts** (Prompt → Archive → Resources → Tools), structured text outputs, and reliability gates.
@@ -16,7 +16,7 @@ A multi-agent orchestration system for VS Code Copilot. ControlFlow replaces sin
 | **Execution** | Sequential, monolithic | Wave-based parallel execution with inter-phase contracts |
 | **Failures** | Silent or catastrophic | Classified (`transient`/`fixable`/`needs_replan`/`escalate`) with automatic retry routing |
 | **Scope drift** | Common — agent "improves" unrelated code | [LLM Behavior Guidelines](skills/patterns/llm-behavior-guidelines.md) enforce surgical changes |
-| **Verification** | Manual | 303 offline eval checks + CodeReviewer gates every phase |
+| **Verification** | Manual | 370 offline eval checks + CodeReviewer gates every phase |
 
 ## Quick Start (60 Seconds)
 
@@ -64,8 +64,15 @@ git clone https://github.com/Smithbox-ai/ControlFlow.git
 | **TDD Integration** | CodeReviewer and implementation agents enforce test-first methodology |
 | **Batch Approval** | One approval per wave; per-phase for destructive operations |
 | **Health-First Testing** | BrowserTester verifies app health before E2E scenarios |
-| **303 Offline Eval Checks** | 180 structural + 74 behavior + 49 orchestration — no live agents needed |
+| **370 Offline Eval Checks** | 213 structural + 74 behavior + 49 orchestration + 34 drift-detection — no live agents needed |
 | **8 Skill Patterns** | Testing, Error Handling, Security, Performance, Completeness, Integration, Idea-to-Prompt, [LLM Behavior Guidelines](skills/patterns/llm-behavior-guidelines.md) |
+| **Model Routing** | Logical role indirection in `governance/model-routing.json` decouples agents from pinned model names. Runtime opt-in (`model_role:` in frontmatter) deferred pending VS Code frontmatter-tolerance verification — currently shipped as logical index only. See [docs/agent-engineering/MODEL-ROUTING.md](docs/agent-engineering/MODEL-ROUTING.md) |
+| **Observability & `trace_id`** | UUIDv4 `trace_id` flows through delegation events and all 13 report/verdict schemas as an additive-optional field; NDJSON event sinks under `plans/artifacts/observability/<task-id>.ndjson`. See [docs/agent-engineering/OBSERVABILITY.md](docs/agent-engineering/OBSERVABILITY.md) |
+| **Memory Layers** | Three-layer memory model — session (volatile), task-episodic (`plans/artifacts/<task-slug>/`), and repo-persistent (`NOTES.md`). See [docs/agent-engineering/MEMORY-ARCHITECTURE.md](docs/agent-engineering/MEMORY-ARCHITECTURE.md) |
+| **Reflection Loop** | Pre-retry analysis hook triggered on `FAILED` / `NEEDS_REVISION`; retries draw from existing `retry_budgets` counters (no compounding). Default disabled. See [skills/patterns/reflection-loop.md](skills/patterns/reflection-loop.md) |
+| **Budget Tracking** | Optional per-task `token_cap`, `wall_clock_s`, and `cost_usd` caps; early-stop classified `escalate`. Orthogonal to `retry_budgets`. See [skills/patterns/budget-tracking.md](skills/patterns/budget-tracking.md) |
+| **Agent-as-Tool** | MCP forward-compatible subagent input contract (`scope`, `context_refs`, `trace_id`, `iteration_index`) preparing agents for native tool surfacing. See [docs/agent-engineering/AGENT-AS-TOOL.md](docs/agent-engineering/AGENT-AS-TOOL.md) |
+| **Drift-Detection Evals** | Roster↔enum bidirectional alignment, agent Resources↔schemas existence, cross-plan file-overlap (anchor-map gated), and multi-doc check-count consistency |
 
 ## Agent Interaction Architecture
 
@@ -310,7 +317,7 @@ All agents classify failures into four categories. Orchestrator routes each cate
 
 ## Evaluation Suite
 
-The `evals/` directory contains structural, behavioral, and orchestration validation fixtures. Run `cd evals && npm test` to verify schema compliance, reference integrity, P.A.R.T section ordering, tool grant consistency, behavioral invariants, and orchestration handoff discipline across all agents (303 checks total: 180 structural + 74 behavior + 49 orchestration). See `evals/README.md` for details.
+The `evals/` directory contains structural, behavioral, orchestration, and drift-detection validation fixtures. Run `cd evals && npm test` to verify schema compliance, reference integrity, P.A.R.T section ordering, tool grant consistency, behavioral invariants, orchestration handoff discipline, and documentation drift across all agents (370 checks total: 213 structural + 74 behavior + 49 orchestration + 34 drift-detection). See `evals/README.md` for details.
 
 ## Project Structure
 

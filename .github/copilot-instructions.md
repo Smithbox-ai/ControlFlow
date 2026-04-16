@@ -5,7 +5,7 @@ Use `plans/project-context.md` as the stable reference for agent roster, complex
 
 ## Build and Test
 ```sh
-cd evals && npm test              # full suite: schema + behavior + orchestration (302 checks, offline)
+cd evals && npm test              # full suite: schema + behavior + orchestration + drift (370 checks, offline)
 npm run test:structural           # schema/P.A.R.T structure only (faster)
 npm run test:behavior             # prompt-behavior + orchestration-handoff regressions only
 ```
@@ -23,6 +23,8 @@ Maintain/update `NOTES.md` for persistent state across context resets:
 - Active objective and current phase.
 - Blockers and unresolved risks.
 - Remove stale entries when superseded.
+
+See `docs/agent-engineering/MEMORY-ARCHITECTURE.md` for the canonical three-layer memory model (session / task-episodic / repo-persistent). `NOTES.md` holds repo-persistent active-objective state only; task-specific history lives in `plans/artifacts/<task-slug>/`.
 
 ## Governance Docs
 Agent engineering policies are in `docs/agent-engineering/`:

@@ -22,6 +22,11 @@
   ],
   "properties": {
     "schema_version": { "type": "string", "const": "1.2.0" },
+    "trace_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Optional UUIDv4 for cross-agent trace correlation."
+    },
     "agent": { "type": "string", "const": "Planner" },
     "status": {
       "type": "string",

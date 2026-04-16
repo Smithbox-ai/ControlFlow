@@ -1,0 +1,49 @@
+{
+  "id": "reflection-loop-trigger",
+  "target_agent": "Orchestrator",
+  "category": "reliability",
+  "goal": "Reflection loop is invoked only on FAILED / NEEDS_REVISION subagent returns (pre-retry hook) and never on APPROVED returns. Reflection does not introduce a new retry counter.",
+  "input": {
+    "enable_reflection": true,
+    "cases": [
+      {
+        "label": "positive-failed",
+        "subagent_response": {
+          "status": "FAILED",
+          "failure_classification": "fixable"
+        },
+        "expected_reflection_invoked": true
+      },
+      {
+        "label": "positive-needs-revision",
+        "subagent_response": {
+          "status": "NEEDS_REVISION"
+        },
+        "expected_reflection_invoked": true
+      },
+      {
+        "label": "negative-approved",
+        "subagent_response": {
+          "status": "APPROVED"
+        },
+        "expected_reflection_invoked": false
+      },
+      {
+        "label": "negative-complete",
+        "subagent_response": {
+          "status": "COMPLETE"
+        },
+        "expected_reflection_invoked": false
+      }
+    ]
+  },
+  "expected": {
+    "reflection_is_pre_retry_hook": true,
+    "reflection_draws_from_existing_retry_budgets": true,
+    "reflection_introduces_no_new_counter": true,
+    "default_enable_reflection_is_false": true,
+    "fix_hint_fields_required": ["root_cause", "proposed_fix", "confidence"],
+    "governance_ref": "governance/runtime-policy.json",
+    "skill_ref": "skills/patterns/reflection-loop.md"
+  }
+}
