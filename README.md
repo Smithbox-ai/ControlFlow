@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Smithbox-ai/ControlFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/Smithbox-ai/ControlFlow/actions/workflows/ci.yml)
 ![Agents](https://img.shields.io/badge/agents-13-blue)
-![Eval Checks](https://img.shields.io/badge/eval%20checks-302-brightgreen)
+![Eval Checks](https://img.shields.io/badge/eval%20checks-303-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 A multi-agent orchestration system for VS Code Copilot. ControlFlow replaces single-agent workflows with a coordinated team of 13 specialized agents governed by deterministic **P.A.R.T contracts** (Prompt → Archive → Resources → Tools), structured text outputs, and reliability gates.
@@ -37,8 +37,9 @@ Each agent operates within strict P.A.R.T contracts — deterministic status out
 - **Failure Taxonomy** — all agents classify failures (`transient`, `fixable`, `needs_replan`, `escalate`) enabling automated retry and routing.
 - **Batch Approval** — one approval per execution wave to reduce approval fatigue, with per-phase approval for destructive operations.
 - **Health-First Testing** — BrowserTester verifies application health before running E2E scenarios to eliminate false positives.
-- **Eval Command Coverage** — test suite covers 302 checks (179 structural + 74 behavior + 49 orchestration) running offline without live agents. F8 reference integrity scan validates all internal links in `README.md` and `docs/agent-engineering/*.md`. Behavior suite includes Design Step contract checks, tier-gated diagram policy assertions, and template structure validation.
-- **Skill Library** — 7 domain-specific skill patterns (Testing, Error Handling, Security, Performance, Completeness, Integration, Idea-to-Prompt) that Planner selects per phase and implementation agents load at execution time.
+- **Eval Command Coverage** — test suite covers 303 checks (180 structural + 74 behavior + 49 orchestration) running offline without live agents. F8 reference integrity scan validates all internal links in `README.md` and `docs/agent-engineering/*.md`. Behavior suite includes Design Step contract checks, tier-gated diagram policy assertions, and template structure validation.
+- **Skill Library** — 8 domain-specific skill patterns (Testing, Error Handling, Security, Performance, Completeness, Integration, Idea-to-Prompt, LLM Behavior Guidelines) that Planner selects per phase and implementation agents load at execution time.
+- **LLM Behavior Guidelines** — a dedicated skill pattern derived from [Andrej Karpathy's observations](https://x.com/karpathy/status/2015883857489522876) that guards against systematic agent anti-patterns: silent assumption-making, over-abstraction, scope drift, and unverifiable task definitions. CoreImplementer, UIImplementer, and CodeReviewer load this skill to enforce surgical changes, simplicity-first implementation, and goal-driven execution with explicit `[Step] → verify: [check]` criteria.
 
 ## Getting Started — When to Use Which Agent
 
@@ -299,7 +300,7 @@ All agents classify failures into four categories. Orchestrator routes each cate
 
 ## Evaluation Suite
 
-The `evals/` directory contains structural, behavioral, and orchestration validation fixtures. Run `cd evals && npm test` to verify schema compliance, reference integrity, P.A.R.T section ordering, tool grant consistency, behavioral invariants, and orchestration handoff discipline across all agents (302 checks total: 179 structural + 74 behavior + 49 orchestration). See `evals/README.md` for details.
+The `evals/` directory contains structural, behavioral, and orchestration validation fixtures. Run `cd evals && npm test` to verify schema compliance, reference integrity, P.A.R.T section ordering, tool grant consistency, behavioral invariants, and orchestration handoff discipline across all agents (303 checks total: 180 structural + 74 behavior + 49 orchestration). See `evals/README.md` for details.
 
 ## Project Structure
 

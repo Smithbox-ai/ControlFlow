@@ -5,7 +5,9 @@ Use `plans/project-context.md` as the stable reference for agent roster, complex
 
 ## Build and Test
 ```sh
-cd evals && npm test   # schema compliance and agent contract validation (no live agents needed)
+cd evals && npm test              # full suite: schema + behavior + orchestration (302 checks, offline)
+npm run test:structural           # schema/P.A.R.T structure only (faster)
+npm run test:behavior             # prompt-behavior + orchestration-handoff regressions only
 ```
 Scenarios are in `evals/scenarios/`. Validate against matching schemas in `schemas/`.
 
@@ -37,9 +39,12 @@ Agent engineering policies are in `docs/agent-engineering/`:
 - Artifacts: plans → `plans/`, schemas → `schemas/`, skill patterns → `skills/patterns/`.
 - All agent outputs use **structured text**. Do NOT output raw JSON to chat — it wastes context tokens.
 - Skill library is at `skills/index.md`. Planner selects ≤3 skills per plan phase.
+- `skills/patterns/llm-behavior-guidelines.md` is a meta-skill for preventing systematic agent anti-patterns (scope drift, over-abstraction, silent assumptions, weak success criteria). CoreImplementer, UIImplementer, CodeReviewer, and Planner load it on non-trivial tasks.
 - Failure taxonomy applies to all agents; PlanAuditor and AssumptionVerifier exclude `transient`.
 - P.A.R.T. section order in every agent file: **Prompt → Archive → Resources → Tools** (see `PART-SPEC.md`).
 - Orchestrator and Planner must delegate only to project-internal agents documented in `plans/project-context.md`; external/third-party agents are strictly prohibited.
+- Adding/editing agents or skills: follow the 4-step process in `CONTRIBUTING.md` (create agent file, schema, eval scenarios, register in `plans/project-context.md`).
+- Tool and agent permission grants are in `governance/` (`agent-grants.json`, `tool-grants.json`, `runtime-policy.json`, `rename-allowlist.json`). Update these when changing an agent's tool profile.
 
 ## Agent System
 13 agents in the ControlFlow system:

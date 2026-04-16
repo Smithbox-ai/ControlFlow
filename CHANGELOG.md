@@ -48,12 +48,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 **Skill library**
 
 - 7 domain-specific skill patterns: Testing, Error Handling, Security, Performance, Completeness, Integration, Idea-to-Prompt
+- LLM Behavior Guidelines meta-skill derived from Karpathy's observations on LLM coding anti-patterns (scope drift, over-abstraction, silent assumptions, unverifiable tasks)
 - Skill index at `skills/index.md`
 
-**Eval suite (302 checks)**
+**Eval suite (303 checks)**
 
 - Pass 1: Schema validity (Ajv strict mode, JSON Schema 2020-12)
-- Pass 2–3: Scenario integrity and cross-scenario structural regression (179 structural checks)
+- Pass 2–3: Scenario integrity and cross-scenario structural regression (180 structural checks)
 - Pass 4: P.A.R.T section order enforcement
 - Pass 4b: Clarification trigger and tool routing section validation
 - Pass 5: Skill library registration integrity

@@ -21,6 +21,7 @@ Reusable domain-specific patterns for agent consumption. Planner selects relevan
 | Completeness | `skills/patterns/completeness-traceability.md` | Planner, PlanAuditor, CodeReviewer | requirements, coverage, traceability, orphan, RTM, scope |
 | Integration | `skills/patterns/integration-validator.md` | Planner, PlanAuditor, CoreImplementer | dependency, contract, interface, collision, compatibility, wave |
 | Idea-to-Prompt | `skills/patterns/idea-to-prompt.md` | Planner | idea, vague, abstract, brainstorm, concept, interview |
+| LLM Behavior | `skills/patterns/llm-behavior-guidelines.md` | CoreImplementer, UIImplementer, CodeReviewer, Planner, PlatformEngineer | overengineering, bloat, abstraction, assumption, surgical, scope drift, simplicity |
 
 ## Loading Protocol
 - **Planning phase:** Planner includes `skill_references: ["skills/patterns/<domain>.md"]` in phase definition.
