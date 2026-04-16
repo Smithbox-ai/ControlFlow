@@ -10,6 +10,7 @@
       "cost_tier": "medium",
       "latency_tier": "medium",
       "consumers": ["Orchestrator.agent.md"],
+      "reasoning_effort_hint": "medium",
       "by_tier": {
         "TRIVIAL": { "inherit_from": "default" },
         "SMALL":   { "inherit_from": "default" },
@@ -23,6 +24,7 @@
       "cost_tier": "high",
       "latency_tier": "slow",
       "consumers": ["Planner.agent.md"],
+      "reasoning_effort_hint": "high",
       "by_tier": {
         "TRIVIAL": {
           "primary": "Claude Sonnet 4.6 (copilot)",
@@ -49,6 +51,7 @@
         "CoreImplementer-subagent.agent.md",
         "PlatformEngineer-subagent.agent.md"
       ],
+      "reasoning_effort_hint": "medium",
       "by_tier": {
         "TRIVIAL": {
           "primary": "GPT-5.4 mini (copilot)",
@@ -67,6 +70,7 @@
       "cost_tier": "medium",
       "latency_tier": "medium",
       "consumers": ["UIImplementer-subagent.agent.md"],
+      "reasoning_effort_hint": "medium",
       "by_tier": {
         "TRIVIAL": { "inherit_from": "default" },
         "SMALL":   { "inherit_from": "default" },
@@ -80,6 +84,7 @@
       "cost_tier": "medium",
       "latency_tier": "medium",
       "consumers": ["TechnicalWriter-subagent.agent.md"],
+      "reasoning_effort_hint": "medium",
       "by_tier": {
         "TRIVIAL": {
           "primary": "GPT-5.4 mini (copilot)",
@@ -101,6 +106,7 @@
         "CodeReviewer-subagent.agent.md",
         "PlanAuditor-subagent.agent.md"
       ],
+      "reasoning_effort_hint": "high",
       "by_tier": {
         "TRIVIAL": {
           "primary": "Claude Sonnet 4.6 (copilot)",
@@ -122,6 +128,7 @@
         "AssumptionVerifier-subagent.agent.md",
         "ExecutabilityVerifier-subagent.agent.md"
       ],
+      "reasoning_effort_hint": "high",
       "by_tier": {
         "TRIVIAL": { "inherit_from": "default" },
         "SMALL":   { "inherit_from": "default" },
@@ -135,6 +142,7 @@
       "cost_tier": "low",
       "latency_tier": "fast",
       "consumers": ["BrowserTester-subagent.agent.md"],
+      "reasoning_effort_hint": "low",
       "by_tier": {
         "TRIVIAL": { "inherit_from": "default" },
         "SMALL":   { "inherit_from": "default" },
@@ -148,6 +156,7 @@
       "cost_tier": "low",
       "latency_tier": "fast",
       "consumers": ["CodeMapper-subagent.agent.md"],
+      "reasoning_effort_hint": "low",
       "by_tier": {
         "TRIVIAL": { "inherit_from": "default" },
         "SMALL":   { "inherit_from": "default" },
@@ -161,6 +170,7 @@
       "cost_tier": "high",
       "latency_tier": "medium",
       "consumers": ["Researcher-subagent.agent.md"],
+      "reasoning_effort_hint": "high",
       "by_tier": {
         "TRIVIAL": {
           "primary": "GPT-5.4 mini (copilot)",

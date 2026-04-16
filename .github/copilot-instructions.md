@@ -5,7 +5,7 @@ Use `plans/project-context.md` as the stable reference for agent roster, complex
 
 ## Build and Test
 ```sh
-cd evals && npm test              # full suite: schema + behavior + orchestration + drift (370 checks, offline)
+cd evals && npm test              # full suite: schema + behavior + orchestration + drift (377 checks, offline)
 npm run test:structural           # schema/P.A.R.T structure only (faster)
 npm run test:behavior             # prompt-behavior + orchestration-handoff regressions only
 ```

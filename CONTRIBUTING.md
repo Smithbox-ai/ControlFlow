@@ -23,7 +23,7 @@ npm install
 npm test
 ```
 
-All 370 checks must pass before any PR can be merged. The suite runs fully offline.
+All 377 checks must pass before any PR can be merged. The suite runs fully offline.
 
 For a faster structural-only pass:
 

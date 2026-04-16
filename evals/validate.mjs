@@ -1044,6 +1044,93 @@ header('Pass 11: Drift Detection — Multi-Doc Check-Count Consistency');
   }
 }
 
+// ─── Pass 12: Governance Policy Assertions (Phase 4) ─────────────────────────
+header('Pass 12: Governance Policy Assertions');
+
+{
+  // Load runtime-policy.json once for assertions A and B
+  const runtimePolicyPath = join(ROOT, 'governance', 'runtime-policy.json');
+  let runtimePolicy = null;
+  try {
+    runtimePolicy = JSON.parse(readFileSync(runtimePolicyPath, 'utf8'));
+  } catch (e) {
+    fail(`Pass 12: cannot read governance/runtime-policy.json — ${e.message}`);
+  }
+
+  if (runtimePolicy) {
+    // A: tool_output_policy structural check
+    const rtp = runtimePolicy.tool_output_policy;
+    if (!rtp) {
+      fail('Pass 12 A: governance/runtime-policy.json missing top-level key tool_output_policy');
+    } else {
+      const expectedRtp = {
+        spill_directory_template: '.cache/tool-output/<task-slug>/',
+        task_slug_pattern: '^[a-zA-Z0-9_-]+$',
+        purge_timing: 'completion_gate_only',
+        max_total_mb: null,
+      };
+      let rtpOk = true;
+      for (const [k, v] of Object.entries(expectedRtp)) {
+        if (rtp[k] !== v) {
+          fail(`Pass 12 A: tool_output_policy.${k} expected ${JSON.stringify(v)}, got ${JSON.stringify(rtp[k])}`);
+          rtpOk = false;
+        }
+      }
+      const extraKeys = Object.keys(rtp).filter(k => !(k in expectedRtp));
+      if (extraKeys.length > 0) {
+        fail(`Pass 12 A: tool_output_policy has unexpected extra keys: ${extraKeys.join(', ')}`);
+        rtpOk = false;
+      }
+      if (rtpOk) pass('Pass 12 A: tool_output_policy structure and values correct');
+    }
+
+    // B: session_telemetry regression guard (full object equality — catches value drift)
+    const st = runtimePolicy.session_telemetry;
+    const expectedSt = {
+      template: 'plans/templates/session-outcome-template.md',
+      log_file: 'plans/session-outcomes.md',
+      write_timing: 'before_completion_summary',
+      archive_threshold_entries: 50,
+    };
+    if (!st) {
+      fail('Pass 12 B: governance/runtime-policy.json missing session_telemetry');
+    } else {
+      let stOk = true;
+      for (const [k, v] of Object.entries(expectedSt)) {
+        if (st[k] !== v) {
+          fail(`Pass 12 B: session_telemetry.${k} expected ${JSON.stringify(v)}, got ${JSON.stringify(st[k])}`);
+          stOk = false;
+        }
+      }
+      if (stOk) pass('Pass 12 B: session_telemetry full object equality verified');
+    }
+  }
+
+  // E: reasoning_effort_hint coverage — every role in model-routing.json must declare it
+  const mrPath = join(ROOT, 'governance', 'model-routing.json');
+  let mrJson = null;
+  try {
+    mrJson = JSON.parse(readFileSync(mrPath, 'utf8'));
+  } catch (e) {
+    fail(`Pass 12 E: cannot read governance/model-routing.json — ${e.message}`);
+  }
+  if (mrJson) {
+    const validHints = new Set(['low', 'medium', 'high']);
+    const roles = Object.entries(mrJson.roles || {});
+    let effortOk = true;
+    for (const [roleName, roleDef] of roles) {
+      if (!('reasoning_effort_hint' in roleDef)) {
+        fail(`Pass 12 E: role "${roleName}" missing reasoning_effort_hint`);
+        effortOk = false;
+      } else if (!validHints.has(roleDef.reasoning_effort_hint)) {
+        fail(`Pass 12 E: role "${roleName}" reasoning_effort_hint "${roleDef.reasoning_effort_hint}" must be "low"|"medium"|"high"`);
+        effortOk = false;
+      }
+    }
+    if (effortOk) pass(`Pass 12 E: reasoning_effort_hint present and valid for all ${roles.length} roles`);
+  }
+}
+
 // ─── Summary ─────────────────────────────────────────────────────────────────
 const totalChecks = totalPassed + totalFailed;
 const bar = '\u2550'.repeat(50);

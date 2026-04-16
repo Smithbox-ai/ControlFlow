@@ -21,7 +21,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- **Eval suite (370 checks)** — 213 structural + 74 behavior + 49 orchestration-handoff + 34 drift-detection. Advertised counts in `README.md`, `.github/copilot-instructions.md`, `CONTRIBUTING.md`, `evals/README.md`, `SECURITY.md`, and `.github/PULL_REQUEST_TEMPLATE.md` reconciled to the measured value and enforced by drift Check #5.
+- **Eval suite (377 checks)** — 216 structural + 74 behavior + 49 orchestration-handoff + 38 drift-detection. Advertised counts in `README.md`, `.github/copilot-instructions.md`, `CONTRIBUTING.md`, `evals/README.md`, `SECURITY.md`, and `.github/PULL_REQUEST_TEMPLATE.md` reconciled to the measured value and enforced by drift Check #5.
 
 ---
 

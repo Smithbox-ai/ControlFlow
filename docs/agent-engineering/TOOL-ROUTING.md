@@ -53,3 +53,8 @@ Prefer least-privilege grants: do not grant tools solely for speculative future 
 | BrowserTester | ✅ | ❌ | ❌ | Testing; fetch for test framework docs |
 | AssumptionVerifier | ❌ | ❌ | ❌ | Read-only local mirage detection |
 | ExecutabilityVerifier | ❌ | ❌ | ❌ | Read-only local executability simulation |
+
+### Rule 6 — Tool Output Spill
+
+Tool outputs exceeding in-context thresholds should be spilled to the directory declared by `tool_output_policy.spill_directory_template` in `governance/runtime-policy.json`, keeping only the path + summary in the agent context. See [MEMORY-ARCHITECTURE.md](MEMORY-ARCHITECTURE.md) L4. Orchestrator performs a whole-directory purge of this cache at the Completion Gate.
+

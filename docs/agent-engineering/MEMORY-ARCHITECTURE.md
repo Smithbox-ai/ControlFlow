@@ -62,6 +62,14 @@ Trigger compaction when any of the following holds:
 
 Compaction must preserve: active scope, unresolved blockers, safety constraints, and any deliverable paths referenced elsewhere.
 
+## Compaction Ladder
+
+- **L1 — Inline truncation**: brief per-message truncation of overly long tool outputs while keeping the message record.
+- **L2 — Summary replacement**: replace verbose tool output with a concise summary plus pointer.
+- **L3 — Chunk discard**: drop resolved/closed intermediate chunks that are no longer referenced.
+- **L4 — Spill to disk**: write oversized raw output to `.cache/tool-output/<task-slug>/` (per `tool_output_policy` in `governance/runtime-policy.json`) and keep only the path + summary in context.
+- **L5 — Hard reset**: reset the agent context, preserving continuity through `NOTES.md` and the task-episodic artifact tree.
+
 ## Pointer Convention for Agent Files
 
 Every `*.agent.md` Archive section's `### Agentic Memory Policy` subsection follows this shape:

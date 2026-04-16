@@ -47,6 +47,8 @@ temp/
 *.swo
 # ── Eval warm cache ────────────────────────────────────────────
 evals/.cache/
+# ── Tool output spill directory ───────────────────────────────
+.cache/tool-output/
 # ── Windows OS artifacts ──────────────────────────────────
 Thumbs.db
 Thumbs.db:encryptable

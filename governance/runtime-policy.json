@@ -69,6 +69,13 @@
     "archive_threshold_entries": 50
   },
 
+  "tool_output_policy": {
+    "spill_directory_template": ".cache/tool-output/<task-slug>/",
+    "task_slug_pattern": "^[a-zA-Z0-9_-]+$",
+    "purge_timing": "completion_gate_only",
+    "max_total_mb": null
+  },
+
   "plan_review_gate_trigger_conditions": {
     "min_phases": 3,
     "confidence_threshold": 0.9,

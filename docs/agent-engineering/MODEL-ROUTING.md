@@ -121,6 +121,36 @@ These tiers are advisory and intended to inform future cost-aware routing (Phase
 
 Fallback resolution is **not** runtime-enforced today; the list documents the intended chain so future routing logic can implement it deterministically without re-deriving safe substitutions.
 
+## Reasoning Effort Hint (Advisory)
+
+`reasoning_effort_hint` is an **advisory-only** metadata field added per-role as a sibling of `primary`, `fallbacks`, `cost_tier`, `latency_tier`, and `consumers`.
+
+### Allowed values
+
+`low` | `medium` | `high`
+
+### Semantics
+
+- Consumers **MAY** use this hint to bias per-call reasoning effort (e.g., number of thinking tokens, chain-of-thought depth).
+- Consumers **MUST** ignore it safely if the value is unrecognized or if the underlying runtime does not support effort control.
+- The field is **NOT** passed through the delegation protocol and is **NOT** enforced at runtime.
+
+### Placement
+
+The field lives at the **per-role** level, as a sibling of `primary`, `fallbacks`, `cost_tier`, `latency_tier`, and `consumers`. It is **not** placed inside `by_tier` sub-objects or `consumers` arrays.
+
+```json
+"capable-planner": {
+  "primary": "...",
+  "fallbacks": [...],
+  "cost_tier": "high",
+  "latency_tier": "slow",
+  "consumers": [...],
+  "reasoning_effort_hint": "high",
+  "by_tier": { ... }
+}
+```
+
 ## Cross-references
 
 - Repository agent-engineering index: `docs/agent-engineering/README.md` (authored in Phase 10).

@@ -10,6 +10,40 @@ Archive old entries when the log exceeds 50 entries (see `plans/templates/sessio
 
 ## Entry
 
+**Plan ID:** `memory-efficiency-improvements-plan`
+**Date:** `2026-04-17`
+**Complexity Tier:** `MEDIUM`
+**Total Phases:** `4 / 4`
+
+### Review Pipeline
+
+| Agent | Result | Notes |
+|---|---|---|
+| AssumptionVerifier-subagent | COMPLETE | 3 iterations: iter1 1 BLOCKING + 2 MINOR → iter2 1 BLOCKING + 1 MINOR → iter3 0 BLOCKING + 1 MINOR (84%) |
+| PlanAuditor-subagent | APPROVED | 3 iterations: 65.6% → 60.8% → 84.5% |
+| ExecutabilityVerifier-subagent | N/A | MEDIUM tier — not in scope |
+| CodeReviewer-subagent | APPROVED (after 2 fixes) | Wave 1: 1 MAJOR (plan-vs-execution scope mismatch on `.gitignore`) → plan amended, APPROVED at 91%. Phase 4: 1 MAJOR (README badge stale count) → badge fixed, APPROVED at 97% |
+
+**Total review iterations:** `3` / `5`
+**Convergence:** `Converged`
+
+### Outcome
+
+**Status:** `SUCCESS`
+**CodeReviewer false positive rate:** `0 / 2` (`0%`)
+
+### Lessons Learned
+
+1. When Orchestrator adds scope to a phase at dispatch time (e.g. closing a prior reviewer's MINOR finding with an extra file edit), the plan file must be amended in-place before CodeReviewer runs, not after. Reviewer correctly flagged `.gitignore` as out-of-scope vs the plan text even though the edit itself was correct.
+2. Eval count-consistency (Pass 11) is a coupled constraint: any new check requires synchronized bumps across all documents publishing the count (7 files). Plan phase scope must list this coupling explicitly; otherwise executors emit out-of-scope edits that are functionally necessary.
+3. Planner `create_file`-only tool surface cannot overwrite an existing plan file. Orchestrator must delete the prior artifact before re-dispatching revision. Consider giving Planner an edit/replace tool to eliminate this friction.
+4. Scope creep into `session_telemetry` telemetry surface (iteration 2) was caught only by AssumptionVerifier — demonstrates value of the parallel mirage check on top of PlanAuditor's structural review. Ideation-to-telemetry drift is a known Planner pattern.
+
+---
+
+
+## Entry
+
 **Plan ID:** `model-routing-stage-c-plan`
 **Date:** `2026-04-16`
 **Complexity Tier:** `MEDIUM`

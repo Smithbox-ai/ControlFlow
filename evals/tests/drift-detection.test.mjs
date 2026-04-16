@@ -529,6 +529,51 @@ console.log('\n=== Check #7 — Reference-integrity: model-routing.json ===');
 }
 
 // ──────────────────────────────────────────────
+// Check #8 — Compaction Ladder presence in MEMORY-ARCHITECTURE.md
+// ──────────────────────────────────────────────
+console.log('\n=== Check #8 — Compaction Ladder presence in MEMORY-ARCHITECTURE.md ===');
+{
+  const ROOT = join(__dirname, '..', '..');
+  const maPath = join(ROOT, 'docs', 'agent-engineering', 'MEMORY-ARCHITECTURE.md');
+  const content = existsSync(maPath) ? readFileSync(maPath, 'utf8') : '';
+
+  check(
+    'C1: MEMORY-ARCHITECTURE.md contains heading "Compaction Ladder"',
+    content.includes('Compaction Ladder')
+  );
+
+  const sentinels = ['L1', 'L2', 'L3', 'L4', 'L5'];
+  check(
+    `C2: MEMORY-ARCHITECTURE.md contains all sentinel labels ${sentinels.join(', ')}`,
+    sentinels.every(s => content.includes(s)),
+    `missing: [${sentinels.filter(s => !content.includes(s)).join(', ')}]`
+  );
+}
+
+// ──────────────────────────────────────────────
+// Check #9 — Rule 6 / Tool Output Spill presence in TOOL-ROUTING.md
+// ──────────────────────────────────────────────
+console.log('\n=== Check #9 — Rule 6 / Tool Output Spill presence in TOOL-ROUTING.md ===');
+{
+  const ROOT = join(__dirname, '..', '..');
+  const trPath = join(ROOT, 'docs', 'agent-engineering', 'TOOL-ROUTING.md');
+  const content = existsSync(trPath) ? readFileSync(trPath, 'utf8') : '';
+
+  const rule6Idx = content.indexOf('Rule 6');
+  const spillIdx = content.indexOf('Tool Output Spill');
+  check(
+    'D1: TOOL-ROUTING.md contains "Rule 6" and "Tool Output Spill" within 100 chars of each other',
+    rule6Idx !== -1 && spillIdx !== -1 && Math.abs(rule6Idx - spillIdx) <= 100,
+    `rule6Idx=${rule6Idx}, spillIdx=${spillIdx}`
+  );
+
+  check(
+    'D2: TOOL-ROUTING.md references "tool_output_policy"',
+    content.includes('tool_output_policy')
+  );
+}
+
+// ──────────────────────────────────────────────
 // Summary
 // ──────────────────────────────────────────────
 const total = passed + failed;
