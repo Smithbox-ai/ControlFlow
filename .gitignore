@@ -20,6 +20,9 @@ plans/templates/*
 !plans/templates/session-outcome-template.md
 !plans/templates/verified-items-template.md
 
+# ── Tutorial docs ────────────────────────────────────────
+docs/tutorial-ru/
+
 # ── Agent internal state (session scratchpad) ─────────────
 # NOTES.md is a required project artifact tracked in the repository
 # AGENTS.md is a local-only working-notes helper for AI agents
@@ -72,3 +75,4 @@ ehthumbs.db
 .vscode/launch.json
 .vscode/tasks.json
 .vscode/*.code-workspace
+package-release.bat

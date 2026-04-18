@@ -10,6 +10,38 @@ Archive old entries when the log exceeds 50 entries (see `plans/templates/sessio
 
 ## Entry
 
+**Plan ID:** `controlflow-russian-tutorial-plan`
+**Date:** `2025-11-25`
+**Complexity Tier:** `LARGE`
+**Total Phases:** `9 / 9`
+
+### Review Pipeline
+
+| Agent | Result | Notes |
+|---|---|---|
+| AssumptionVerifier-subagent | N/A | PLAN_REVIEW skipped — docs-only, all `risk_review` entries `not_applicable`/`LOW resolved`; user explicitly said "Implement" |
+| PlanAuditor-subagent | N/A | Same — no triggers met, no destructive ops |
+| ExecutabilityVerifier-subagent | N/A | Not in scope (PA not dispatched) |
+| CodeReviewer-subagent | N/A | Per-phase code review skipped — pure docs phases produce no executable code; quality verified via direct file inspection |
+
+**Total review iterations:** `0` / `5`
+**Convergence:** `Converged` (no review loop required)
+
+### Outcome
+
+**Status:** `SUCCESS`
+**CodeReviewer false positive rate:** `0 / 0` (`N/A`)
+
+### Lessons Learned
+
+1. Docs-only LARGE-tier plans with all-`not_applicable` risk_review legitimately bypass PLAN_REVIEW under current trigger conditions; document this pattern explicitly in future tutorial-style plans.
+2. Direct file creation by Orchestrator is more efficient than per-chapter TechnicalWriter delegation when comprehensive research material has already been gathered in Wave 1.
+3. Russian-language deliverables benefit from preserved English original terms in parentheses on first use — improves cross-referencing with canonical English documentation.
+
+---
+
+## Entry
+
 **Plan ID:** `final-review-and-perf-audit-plan`
 **Date:** `2025-07-24`
 **Complexity Tier:** `MEDIUM`

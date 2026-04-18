@@ -102,6 +102,8 @@ Maintain awareness of current orchestration state at all times:
    - At phase completion, mark the corresponding todo item as completed immediately after the phase review gate passes.
    - At wave completion, verify all todo items for that wave are marked completed before advancing.
    - At plan completion, verify all phase todo items are marked completed during the Completion Gate.
+   - **No batching of completions.** Each phase's todo item must be marked in its own `#todos` call as soon as that phase's verification checklist passes. Holding completions for a later bulk update is non-compliant — even if intermediate phases are obvious successes.
+   - **Context-compaction reconciliation.** Immediately after any context summarization, conversation resumption, or session restart, the first action before any other phase work MUST be a `#todos` reconciliation pass: compare the current todo list against the actual state of plan artifacts (created files, completed phases per `plans/<task>-plan.md`) and update statuses to match reality. Resuming work without reconciliation is non-compliant.
 
 ### Observability Sink
 When emitting gate events, optionally also append one NDJSON line per event to `plans/artifacts/observability/<task-id>.ndjson`. See [docs/agent-engineering/OBSERVABILITY.md](docs/agent-engineering/OBSERVABILITY.md).
@@ -339,4 +341,6 @@ Templates are externalized to reduce context overhead. Load on demand:
 - No silent destructive action.
 - No phase may be marked complete without verified build evidence. Accepting a subagent completion claim without checking build and test evidence is non-compliant.
 - No phase transition may occur while the completed phase's todo item remains unmarked. Todo marking via the `#todos` tool is a blocking prerequisite before advancing to the next phase or wave.
+- No batching of todo completions across phases. Each completion is a separate `#todos` call, made at the moment of phase verification — not aggregated for later flushing.
+- No phase work may resume after a context compaction or session restart without first reconciling the `#todos` state against actual plan-artifact reality.
 - If uncertain and cannot verify safely: `ABSTAIN`.
