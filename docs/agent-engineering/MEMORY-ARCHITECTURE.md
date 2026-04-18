@@ -90,8 +90,40 @@ Rules:
 - If an agent has no agent-specific fields, write `- none`.
 - The heading level (`###`) must match the surrounding Archive subsections.
 
+## Cleanup & Enforcement
+
+Automation and machine-enforced invariants that prevent the three canonical pollution failure modes.
+
+### NOTES.md Invariants
+
+- **Size cap:** `NOTES.md` must not exceed 20 lines (enforced by `evals/validate.mjs` Pass 7, sourced from `evals/scenarios/memory-architecture-references.json → expected.notes_md_line_budget`; the governance mirror is `governance/runtime-policy.json → memory_hygiene.notes_md_max_lines`).
+- **Style anti-patterns (CI-enforced):** Pass 7 also runs `validateNotesMdStyle` (exported from `evals/drift-checks.mjs`). Lines that match any of the following patterns fail the check:
+  - Contains `iteration` or `verdict` (task-history leakage).
+  - Contains an artifact path fragment matching `phase-\d+-` (phase-level task reference).
+  - More than 3 consecutive bullet items under a single heading.
+  - Fenced code block (triple backtick).
+- **Prune rule:** Orchestrator updates `NOTES.md` at every phase boundary. Load `skills/patterns/repo-memory-hygiene.md` for the step-by-step prune checklist.
+
+### Repo-Memory Write-Side Deduplication
+
+`/memories/repo/` supports only `create`. There is no delete or update API. Natural decay via tool-level retention is the only automatic cleanup path. The write-side control is:
+
+- **Before any `/memories/repo/` write**, the writing agent MUST load and follow `skills/patterns/repo-memory-hygiene.md` (the repo-memory hygiene skill). The checklist covers subject normalization, near-duplicate detection by fact-text similarity, and citation-overlap detection.
+- **Governance flag:** `governance/runtime-policy.json → memory_hygiene.repo_memory_dedup_required: true`. Agents must treat this flag as a write-gate.
+
+### Task-Episodic Auto-Archive
+
+`plans/artifacts/<task-slug>/` accumulates indefinitely unless explicitly archived. The automation tooling:
+
+- **Script:** `evals/archive-completed-plans.mjs` — scans `plans/*.md`, detects closed plans (status in `governance/runtime-policy.json → memory_hygiene.archive_eligible_statuses`: `DONE`, `SUPERSEDED`, `DEFERRED`), checks age ≥ `archive_completed_plans_threshold_days` (14 days), then moves the plan and its matched artifact directory to `plans/archive/<YYYY-MM>/`. Dry-run by default (`npm run archive:dry`); `--apply` mode to execute (`npm run archive:apply`).
+- **Artifact mapping:** uses a conservative prefix/substring heuristic; logs `[MANUAL REVIEW NEEDED]` and skips artifact archival when no confident match is found — the plan file is still moved.
+- **Safety:** idempotent, no deletes, `READY_FOR_EXECUTION` plans are never eligible.
+
 ## Related Documents
 
 - `docs/agent-engineering/PART-SPEC.md` — overall P.A.R.T. structure.
 - `docs/agent-engineering/MIGRATION-CORE-FIRST.md` — shared implementation backbone including compaction rules.
 - `.github/copilot-instructions.md` — short pointer to this doc.
+- `skills/patterns/repo-memory-hygiene.md` — write-side dedup checklist for `/memories/repo/` and NOTES.md prune routine.
+- `evals/archive-completed-plans.mjs` — task-episodic auto-archive script.
+- `evals/drift-checks.mjs` — exports `validateNotesMdStyle` consumed by Pass 7.

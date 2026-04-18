@@ -109,7 +109,7 @@ flowchart TD
     W2 --> W3[Phase 1, Task 3]
     W3 --> W4[Phase 2, Task 1]
     W4 --> Gap{Gaps detected?}
-    Gap -->|path missing| Fail[status: FAIL\ngaps: ["no concrete file path"]]
+    Gap -->|path missing| Fail[status: FAIL\ngap: no concrete file path]
     Gap -->|all clear| Pass[status: PASS]
     Fail --> Planner[Route to Planner:\nrefine phase 2 task 1]
 ```

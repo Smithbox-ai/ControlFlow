@@ -25,7 +25,7 @@ flowchart TD
 
     subgraph Repo["Repo-Persistent Memory"]
         N[NOTES.md<br/>active objective + phase]
-        R[/memories/repo/<br/>conventions, commands, invariants]
+        R["/memories/repo/<br/>conventions, commands, invariants"]
     end
 
     Question[Вопрос или задача] -->|read order 1| Task

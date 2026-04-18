@@ -102,5 +102,13 @@
     "auto_trigger_tiers": ["LARGE"],
     "allow_user_trigger": true,
     "max_fix_cycles": 1
+  },
+
+  "memory_hygiene": {
+    "_comment": "Memory cleanup enforcement thresholds. notes_md_max_lines aligns with Pass 7 notes_md_line_budget in evals/scenarios/memory-architecture-references.json.",
+    "notes_md_max_lines": 20,
+    "archive_completed_plans_threshold_days": 14,
+    "archive_eligible_statuses": ["DONE", "SUPERSEDED", "DEFERRED"],
+    "repo_memory_dedup_required": true
   }
 }

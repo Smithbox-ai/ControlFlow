@@ -49,7 +49,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant P as Planner
-    participant Plan as plans/&lt;task&gt;-plan.md
+    participant Plan as "plans/TASK-plan.md"
     participant O as Orchestrator
     participant U as User
 

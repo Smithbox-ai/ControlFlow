@@ -25,6 +25,7 @@ Reusable domain-specific patterns for agent consumption. Planner selects relevan
 | PreFlect | `skills/patterns/preflect-core.md` | All agents | preflect, pre-action, gate, risk class, scope drift, schema drift, missing evidence, safety |
 | Reflection Loop | `skills/patterns/reflection-loop.md` | Orchestrator, CoreImplementer, UIImplementer, PlatformEngineer | reflection, pre-retry, fix hint, root cause, failure analysis |
 | Budget Tracking | `skills/patterns/budget-tracking.md` | Orchestrator, Planner, CoreImplementer, UIImplementer, PlatformEngineer | budget, token cap, wall-clock, cost, early stop, resource cap |
+| Memory Hygiene | `skills/patterns/repo-memory-hygiene.md` | Orchestrator, Planner | memory, pollution, dedup, NOTES.md, archive, repo-memory |
 
 ## Loading Protocol
 - **Planning phase:** Planner includes `skill_references: ["skills/patterns/<domain>.md"]` in phase definition.

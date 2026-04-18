@@ -302,3 +302,36 @@ Full 6-phase LARGE-tier remediation of 14 orchestration weak spots identified in
 2. Pre-creating a shared anchor-map artifact is a valid Orchestrator-level coordination action when two plans contend for the same edit surface and only one is active; the anchor-map acts as a forward-contract for the future plan.
 3. `validate.mjs` cache at `evals/.cache/` must be cleared (`Remove-Item .cache -Recurse`) to see fresh `Total:` output; the cached-run path prints only `All checks passed (cached)`.
 4. When migrating large doc-surface checks, update the `CHECK_COUNT_SOURCES` equality-literals LAST so the equality drift-check does not flap mid-refactor.
+
+---
+
+## Entry
+
+**Plan ID:** `memory-cleanup-enforcement-plan`
+**Date:** 2025-07-04
+**Complexity Tier:** MEDIUM
+**Total Phases:** 5 / 5
+
+### Review Pipeline
+
+| Agent | Result | Notes |
+|---|---|---|
+| AssumptionVerifier-subagent | COMPLETE | Mirages found: 0 (iter 3; 100% confidence) |
+| PlanAuditor-subagent | APPROVED | Final score: 0.96 (iter 3; 5 MAJOR issues fixed across 3 iterations) |
+| ExecutabilityVerifier-subagent | N/A | Not in scope (MEDIUM tier) |
+| CodeReviewer-subagent | APPROVED | Validated blocking issues: 0 |
+
+**Total review iterations:** 3 / 4
+**Convergence:** Converged
+
+### Outcome
+
+**Status:** SUCCESS
+**CodeReviewer false positive rate:** 0 / 0 (N/A)
+
+### Lessons Learned
+
+1. Unicode literal characters (e.g., `≤`) in oldString must be read verbatim from the file — using `\u2264` escape in a replacement search string causes a silent mismatch on Windows.
+2. Wave sequencing conflicts (two phases editing the same file in parallel) must be resolved at plan-time by assigning conflicting phases to different waves; do not rely on phase ordering within a wave for file exclusivity.
+3. When adding CLI scripts tested via subprocess fixtures, setting `archive_completed_plans_threshold_days: 0` in the governance config allows all test plans to be immediately eligible, removing the need for time-manipulation in tests.
+

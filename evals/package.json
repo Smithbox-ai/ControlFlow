@@ -4,7 +4,9 @@
   "description": "Structural validation harness for Copilot ControlFlow agent system",
   "type": "module",
   "scripts": {
-    "test": "node validate.mjs && node tests/prompt-behavior-contract.test.mjs && node tests/orchestration-handoff-contract.test.mjs && node tests/drift-detection.test.mjs",
+    "test": "node validate.mjs && node tests/prompt-behavior-contract.test.mjs && node tests/orchestration-handoff-contract.test.mjs && node tests/drift-detection.test.mjs && node tests/notes-md-drift.test.mjs && node tests/archive-script.test.mjs",
+    "archive:dry": "node archive-completed-plans.mjs",
+    "archive:apply": "node archive-completed-plans.mjs --apply",
     "test:structural": "node validate.mjs",
     "test:behavior": "node tests/prompt-behavior-contract.test.mjs && node tests/orchestration-handoff-contract.test.mjs && node tests/drift-detection.test.mjs"
   },

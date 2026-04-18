@@ -51,6 +51,7 @@ import {
   findSharedAnchorMaps,
   findUnresolvedOverlaps,
   validateReviewScopeFinalCoupling,
+  validateNotesMdStyle,
 } from './drift-checks.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -883,6 +884,17 @@ header('Pass 7: Memory Architecture References');
           pass(`NOTES.md within budget: ${effective} ≤ ${notesBudget} lines`);
         } else {
           fail(`NOTES.md exceeds budget: ${effective} > ${notesBudget} lines`);
+        }
+
+        // NOTES.md style anti-pattern check (Check #11 from drift-checks.mjs)
+        const notesContent = readFileSync(notesPath, 'utf8');
+        const styleResult = validateNotesMdStyle(notesContent);
+        if (styleResult.ok) {
+          pass('NOTES.md style: no task-history anti-patterns detected');
+        } else {
+          for (const v of styleResult.violations) {
+            fail(`NOTES.md style violation: ${v}`);
+          }
         }
       } else {
         fail('NOTES.md missing');

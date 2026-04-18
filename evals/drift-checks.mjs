@@ -329,3 +329,71 @@ export function validateReviewScopeFinalCoupling(agentContent, schemaJson) {
   }
   return { ok: errors.length === 0, agentReferencesFinal, schemaHasFinal, errors };
 }
+
+// ── Check #11: NOTES.md style anti-pattern detection ─────────────────────────
+/**
+ * Validates that NOTES.md does not contain task-history anti-patterns that
+ * indicate memory pollution (content that belongs in task-episodic memory, not
+ * repo-persistent active-objective state).
+ *
+ * Anti-patterns detected:
+ *   - Lines containing the word "iteration" (task-history leakage)
+ *   - Lines containing the word "verdict" (audit-result leakage)
+ *   - Lines containing an artifact path fragment matching /phase-\d+-/ (phase reference)
+ *   - More than 3 consecutive bullet items under a single heading
+ *   - A fenced code block (triple backtick)
+ *
+ * @param {string} content - Full text content of NOTES.md
+ * @returns {{ ok: boolean, violations: string[] }}
+ */
+export function validateNotesMdStyle(content) {
+  const violations = [];
+  const lines = content.split('\n');
+
+  let consecutiveBullets = 0;
+  let currentHeading = '(top)';
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const lineNum = i + 1;
+
+    // Track heading boundaries to reset bullet counter
+    if (/^#{1,6}\s/.test(line)) {
+      consecutiveBullets = 0;
+      currentHeading = line.trim();
+      continue;
+    }
+
+    // Fenced code block
+    if (/^```/.test(line.trim())) {
+      violations.push(`Line ${lineNum}: fenced code block not allowed in NOTES.md (task-episodic content)`);
+    }
+
+    // "iteration" keyword (case-insensitive)
+    if (/\biteration\b/i.test(line)) {
+      violations.push(`Line ${lineNum}: contains "iteration" — task-history content belongs in plans/artifacts/, not NOTES.md`);
+    }
+
+    // "verdict" keyword (case-insensitive)
+    if (/\bverdict\b/i.test(line)) {
+      violations.push(`Line ${lineNum}: contains "verdict" — audit result belongs in plans/artifacts/, not NOTES.md`);
+    }
+
+    // phase-N- artifact path fragment
+    if (/phase-\d+-/.test(line)) {
+      violations.push(`Line ${lineNum}: contains phase artifact path fragment (phase-N-) — task-episodic content`);
+    }
+
+    // Consecutive bullet counting
+    if (/^\s*[-*+]\s/.test(line) || /^\s*\d+\.\s/.test(line)) {
+      consecutiveBullets++;
+      if (consecutiveBullets > 3) {
+        violations.push(`Line ${lineNum}: more than 3 consecutive bullet items under heading "${currentHeading}" — NOTES.md must stay concise`);
+      }
+    } else if (line.trim() !== '') {
+      consecutiveBullets = 0;
+    }
+  }
+
+  return { ok: violations.length === 0, violations };
+}

@@ -23,8 +23,13 @@ Maintain/update `NOTES.md` for persistent state across context resets:
 - Active objective and current phase.
 - Blockers and unresolved risks.
 - Remove stale entries when superseded.
+- Keep within the 20-line budget (enforced by `evals/validate.mjs` Pass 7, style drift checked via `validateNotesMdStyle` in `evals/drift-checks.mjs`).
 
 See `docs/agent-engineering/MEMORY-ARCHITECTURE.md` for the canonical three-layer memory model (session / task-episodic / repo-persistent). `NOTES.md` holds repo-persistent active-objective state only; task-specific history lives in `plans/artifacts/<task-slug>/`.
+
+Before writing to `/memories/repo/` or updating `NOTES.md` at a phase boundary, load and follow `skills/patterns/repo-memory-hygiene.md` (dedup checklist + prune routine).
+
+To identify plans ready for archival: `cd evals && npm run archive:dry`. To execute: `npm run archive:apply`.
 
 ## Governance Docs
 Agent engineering policies are in `docs/agent-engineering/`:
