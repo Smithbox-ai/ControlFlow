@@ -98,10 +98,10 @@
       }
     },
     "capable-reviewer": {
-      "primary": "GPT-5.4 (copilot)",
-      "fallbacks": ["Claude Opus 4.7 (copilot)", "Claude Sonnet 4.6 (copilot)"],
+      "primary": "Claude Opus 4.7 (copilot)",
+      "fallbacks": ["GPT-5.4 (copilot)", "Claude Sonnet 4.6 (copilot)"],
       "cost_tier": "high",
-      "latency_tier": "medium",
+      "latency_tier": "slow",
       "consumers": [
         "CodeReviewer-subagent.agent.md",
         "PlanAuditor-subagent.agent.md"
