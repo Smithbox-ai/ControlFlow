@@ -52,6 +52,11 @@ import {
   findUnresolvedOverlaps,
   validateReviewScopeFinalCoupling,
   validateNotesMdStyle,
+  validateMemoryContentTaxonomy,
+  validateMemoryUseDiscipline,
+  validateSessionNotesTemplate,
+  validateRepoMemoryHygieneChecklistC,
+  validateRepoMemoryHygieneChecklistD,
 } from './drift-checks.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -898,6 +903,92 @@ header('Pass 7: Memory Architecture References');
         }
       } else {
         fail('NOTES.md missing');
+      }
+    }
+
+    // ── Memory Content Taxonomy checks (free-code-memory-features Phase 4) ──
+    const memTaxScenarioPath = join(SCENARIOS_DIR, 'memory-content-taxonomy.json');
+    if (!existsSync(memTaxScenarioPath)) {
+      fail('memory-content-taxonomy.json: scenario missing');
+    } else {
+      let memTaxScenario;
+      try {
+        memTaxScenario = JSON.parse(readFileSync(memTaxScenarioPath, 'utf8'));
+      } catch (e) {
+        fail(`memory-content-taxonomy.json: JSON parse error — ${e.message}`);
+        memTaxScenario = null;
+      }
+
+      let runtimePolicyForTax = null;
+      const runtimePolicyPath = join(ROOT, 'governance', 'runtime-policy.json');
+      try {
+        runtimePolicyForTax = JSON.parse(readFileSync(runtimePolicyPath, 'utf8'));
+      } catch (e) {
+        fail(`Pass 7 memory-taxonomy: cannot read governance/runtime-policy.json — ${e.message}`);
+      }
+
+      if (memTaxScenario && runtimePolicyForTax) {
+        // Check 1: Memory Content Taxonomy heading + content_types in MEMORY-ARCHITECTURE.md
+        const memArchPath = join(ROOT, 'docs', 'agent-engineering', 'MEMORY-ARCHITECTURE.md');
+        if (!existsSync(memArchPath)) {
+          fail('Pass 7: docs/agent-engineering/MEMORY-ARCHITECTURE.md missing (memory-taxonomy check)');
+        } else {
+          const memArchContent = readFileSync(memArchPath, 'utf8');
+          const r1 = validateMemoryContentTaxonomy(memArchContent, runtimePolicyForTax);
+          if (r1.pass) {
+            pass('Memory Content Taxonomy: heading and all content types present in MEMORY-ARCHITECTURE.md');
+          } else {
+            fail(`Memory Content Taxonomy: ${r1.reason}`);
+          }
+        }
+
+        // Check 2: Memory Use Discipline in PROMPT-BEHAVIOR-CONTRACT.md
+        const pbcPath = join(ROOT, 'docs', 'agent-engineering', 'PROMPT-BEHAVIOR-CONTRACT.md');
+        if (!existsSync(pbcPath)) {
+          fail('Pass 7: docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md missing (memory-taxonomy check)');
+        } else {
+          const pbcContent = readFileSync(pbcPath, 'utf8');
+          const r2 = validateMemoryUseDiscipline(pbcContent, memTaxScenario);
+          if (r2.pass) {
+            pass('Memory Use Discipline: heading and both invariants present in PROMPT-BEHAVIOR-CONTRACT.md');
+          } else {
+            fail(`Memory Use Discipline: ${r2.reason}`);
+          }
+        }
+
+        // Check 3: Session notes template sections
+        const templatePath = join(ROOT, runtimePolicyForTax.memory_hygiene.session_notes_template_path);
+        if (!existsSync(templatePath)) {
+          fail(`Pass 7: session-notes template missing at ${runtimePolicyForTax.memory_hygiene.session_notes_template_path}`);
+        } else {
+          const templateContent = readFileSync(templatePath, 'utf8');
+          const r3 = validateSessionNotesTemplate(templateContent, memTaxScenario);
+          if (r3.pass) {
+            pass('Session notes template: all required sections present');
+          } else {
+            fail(`Session notes template: ${r3.reason}`);
+          }
+        }
+
+        // Check 4 & 5: repo-memory-hygiene.md Checklist C and D
+        const hygienePath = join(ROOT, 'skills', 'patterns', 'repo-memory-hygiene.md');
+        if (!existsSync(hygienePath)) {
+          fail('Pass 7: skills/patterns/repo-memory-hygiene.md missing (memory-taxonomy check)');
+        } else {
+          const hygieneContent = readFileSync(hygienePath, 'utf8');
+          const r4 = validateRepoMemoryHygieneChecklistC(hygieneContent, memTaxScenario);
+          if (r4.pass) {
+            pass('repo-memory-hygiene.md: Checklist C heading present');
+          } else {
+            fail(`repo-memory-hygiene.md: ${r4.reason}`);
+          }
+          const r5 = validateRepoMemoryHygieneChecklistD(hygieneContent, memTaxScenario);
+          if (r5.pass) {
+            pass('repo-memory-hygiene.md: Checklist D heading present');
+          } else {
+            fail(`repo-memory-hygiene.md: ${r5.reason}`);
+          }
+        }
       }
     }
   }

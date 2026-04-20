@@ -74,11 +74,16 @@ Before handing off to the next agent or phase, the producing agent must generate
 | No inline plan bodies in chat messages | Chat is for concise handoff messages; plan content lives in the artifact file |
 | Structured text only | All agent outputs use structured text format |
 
+### 7. Memory Use Discipline
+
+1. **Verify before use** — any named file or named function claim that originates from memory (session notes, `/memories/repo/`, or `NOTES.md`) must be re-verified against the current codebase before being acted on or reported to the user. Stale memory is not a reliable source for specific code locations.
+2. **Ignore memory on request** — when the user explicitly says "ignore memory" (or equivalent: "don't use memory", "fresh context"), the agent must not consult `/memories/repo/`, NOTES.md, or session notes for that turn. This override applies per-turn and does not persist.
+
 ## Regression Coverage
 
 These behavioral invariants are verified by:
 
-- `evals/tests/prompt-behavior-contract.test.mjs` — 74 checks across Planner, Researcher, CodeMapper, CoreImplementer (failure_classification), CodeReviewer (validated_blocking_issues), TechnicalWriter (doc-only scope), AssumptionVerifier (COMPLETE/ABSTAIN), PlanAuditor (executability_checklist), and shared policy
+- `evals/tests/prompt-behavior-contract.test.mjs` — 74 checks across Planner, Researcher, CodeMapper, CoreImplementer (failure_classification), CodeReviewer (validated_blocking_issues), TechnicalWriter (doc-only scope), AssumptionVerifier (COMPLETE/ABSTAIN), PlanAuditor (executability_checklist), Memory Use Discipline invariants, and shared policy
 - `evals/tests/orchestration-handoff-contract.test.mjs` — 49 checks on Orchestrator PLAN_REVIEW gating, rerun invalidation, delegation routing, failure handling, phase verification, todo lifecycle, and observability
 
 ## Relationship to Other Specs

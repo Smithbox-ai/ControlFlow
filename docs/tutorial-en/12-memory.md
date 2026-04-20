@@ -29,6 +29,24 @@ flowchart TD
     L2 -->|promote when the task is complete| L3
 ```
 
+## Memory Content Taxonomy
+
+Every entry written to `/memories/repo/` should be classified into one of four content types:
+
+| Type | What to store |
+|------|--------------|
+| `user` | Personal preferences and workflows spanning the entire environment |
+| `feedback` | Historical corrections: past mistakes, constraints the agent must respect |
+| `project` | Core architecture decisions, structure, and established project conventions |
+| `reference` | Verified CLI commands, configuration values, and build instructions |
+
+**Save exclusions — never write these to repo-persistent memory:**
+- Derivable code state (anything that can be re-read from the repo directly).
+- Git history (commit messages, branch names, merge records).
+- Ephemeral task state (single-turn notes, tool scratch, "iteration 3 passed at 14:32").
+
+**Verify before recommending:** any claim about a named file or function that comes from memory must be re-verified against the current codebase before being acted on or reported. Memory is a hint, not a source of truth for specific code locations.
+
 ## Layer 1: Session Memory
 
 **Location:** `/memories/session/`
@@ -42,6 +60,7 @@ flowchart TD
 - Do not create new session files unnecessarily.
 - List existing files before reading — they are not auto-loaded into context.
 - Cleared when the conversation ends.
+- For long orchestration runs, use the session notes template at `plans/templates/session-notes-template.md`. It provides five sections: `Current State`, `Files and Functions`, `Errors & Corrections`, `Key Results`, `Worklog`.
 
 **Who uses it:** Any agent that needs within-conversation scratch state.
 
@@ -98,7 +117,7 @@ flowchart TD
 | Event | Read | Write |
 |-------|------|-------|
 | Context start | Session (if exists), NOTES.md | — |
-| Phase start | Task-episodic (relevant files) | Session notes |
+| Phase start | Task-episodic (relevant files) | Session note; promote durable cross-plan facts to `/memories/repo/` using Checklist C in `skills/patterns/repo-memory-hygiene.md` |
 | Phase end | — | Task-episodic (completion report, NOTES.md) |
 | Task complete | — | /memories/repo/ (durable facts) |
 | Conversation end | — | Session files cleared |
@@ -135,7 +154,17 @@ Excessive or noisy memory records are **memory pollution**. Symptoms:
 - Prune stale NOTES.md entries at each phase boundary.
 - Only store facts meeting the "durable" criteria in `/memories/repo/`.
 - Don't create new session files unless necessary.
+Memory Use Discipline
 
+Two behavioral invariants (enforced by `evals/tests/prompt-behavior-contract.test.mjs`):
+
+1. **Verify before use** — any named file or named function claim that originates from memory (session notes, `/memories/repo/`, or `NOTES.md`) must be re-verified against the current codebase before being acted on or reported to the user. Stale memory is a hint, not a source of truth for specific code locations.
+
+2. **Ignore memory on request** — when the user explicitly says "ignore memory" (or equivalent: "don't use memory", "fresh context"), the agent must not consult `/memories/repo/`, NOTES.md, or session notes for that turn. This override is per-turn and does not persist.
+
+See `docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md → §7 Memory Use Discipline`.
+
+## 
 ## Observability and Memory
 
 Gate events (see [Chapter 05](05-orchestration.md) and [docs/agent-engineering/OBSERVABILITY.md](../agent-engineering/OBSERVABILITY.md)) are appended to `plans/artifacts/<task-id>/observability/<task-id>.ndjson`. This is part of task-episodic memory — not session scratch.
@@ -146,14 +175,18 @@ Gate events (see [Chapter 05](05-orchestration.md) and [docs/agent-engineering/O
 |---------------|-----------------|
 | Session memory | `/memories/session/` (VS Code / Copilot Chat) |
 | Task-episodic | `plans/artifacts/<task-slug>/` (file system) |
-| Repo-persistent (active objective) | `NOTES.md` (root file) |
-| Repo-persistent (durable facts) | `/memories/repo/` (VS Code / Copilot Chat) |
+- **Writing unclassified or derivable facts to `/memories/repo/`.** Use the content taxonomy to classify first; discard derivable code state, git history, and ephemeral task state before promoting.
+- **Acting on stale memory without verification.** Named file and function claims from memory become incorrect after refactoring. Always re-verify against the current codebase before acting.
 
-## Common Mistakes
+## Exercises
 
-- **Storing task-specific history in NOTES.md.** NOTES.md is for active-objective state only — not revision history.
-- **Never updating NOTES.md.** If it doesn't change at phase boundaries, recovery after a reset is impossible.
-- **Storing volatile facts in `/memories/repo/`.** Examples: "current phase = 3", "user approved yesterday". These are session state.
+1. **(beginner)** Open `NOTES.md` — what is the current active objective?
+2. **(beginner)** Which memory layer stores per-task revision history?
+3. **(intermediate)** A phase completes successfully. What should the Orchestrator write to memory and where?
+4. **(intermediate)** A context reset occurs at phase 3 of 6. What data does the Orchestrator have available to reconstruct state?
+5. **(advanced)** Design a memory usage strategy for a LARGE-tier 10-phase task that requires resumability after a context reset.
+6. **(intermediate)** A phase just completed. You noticed that `CoreImplementer-subagent` discovered a new API convention. Walk through Checklist C (in `skills/patterns/repo-memory-hygiene.md`) to decide whether to promote this fact to `/memories/repo/`.
+7. **(advanced)** Your `/memories/repo/` context block shows six entries with slightly different descriptions of the same `cd evals && npm test` command. Run Checklist D (periodic audit) to produce an Audit Report for this situation.
 - **Creating session files for everything.** They should be minimal scratch — not a full task journal.
 - **Forgetting to read task-episodic memory after a reset.** Regression tracking and verified items are there.
 

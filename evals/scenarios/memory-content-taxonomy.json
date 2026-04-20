@@ -1,0 +1,14 @@
+{
+  "id": "memory-content-taxonomy",
+  "target_agent": "Orchestrator",
+  "category": "structural",
+  "description": "Expected values for memory content taxonomy drift checks (free-code-memory-features plan)",
+  "expected": {
+    "memory_content_taxonomy_heading": "## Memory Content Taxonomy",
+    "memory_use_discipline_heading": "### 7. Memory Use Discipline",
+    "memory_use_discipline_invariants": ["Verify before use", "Ignore memory on request"],
+    "session_notes_sections": ["## Current State", "## Files and Functions", "## Errors & Corrections", "## Key Results", "## Worklog"],
+    "repo_memory_hygiene_checklist_c_heading": "## Checklist C",
+    "repo_memory_hygiene_checklist_d_heading": "## Checklist D"
+  }
+}

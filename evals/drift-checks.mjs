@@ -397,3 +397,90 @@ export function validateNotesMdStyle(content) {
 
   return { ok: violations.length === 0, violations };
 }
+
+// ── Memory Content Taxonomy drift checks (free-code-memory-features Phase 4) ─
+
+/**
+ * Validate that MEMORY-ARCHITECTURE.md contains the ## Memory Content Taxonomy
+ * heading and all expected memory_content_types from runtime-policy.json.
+ * @param {string} memoryArchitectureContent - Full text of MEMORY-ARCHITECTURE.md
+ * @param {object} runtimePolicy - Parsed governance/runtime-policy.json
+ * @returns {{ pass: boolean, reason?: string }}
+ */
+export function validateMemoryContentTaxonomy(memoryArchitectureContent, runtimePolicy) {
+  if (!memoryArchitectureContent.includes('## Memory Content Taxonomy')) {
+    return { pass: false, reason: 'MEMORY-ARCHITECTURE.md is missing heading "## Memory Content Taxonomy"' };
+  }
+  const types = runtimePolicy?.memory_hygiene?.memory_content_types ?? [];
+  for (const type of types) {
+    if (!memoryArchitectureContent.includes(type)) {
+      return { pass: false, reason: `MEMORY-ARCHITECTURE.md does not mention memory_content_type "${type}"` };
+    }
+  }
+  return { pass: true };
+}
+
+/**
+ * Validate that PROMPT-BEHAVIOR-CONTRACT.md contains the § 7 Memory Use
+ * Discipline heading and both required invariant strings.
+ * @param {string} promptBehaviorContent - Full text of PROMPT-BEHAVIOR-CONTRACT.md
+ * @param {object} scenario - Parsed memory-content-taxonomy.json scenario fixture
+ * @returns {{ pass: boolean, reason?: string }}
+ */
+export function validateMemoryUseDiscipline(promptBehaviorContent, scenario) {
+  const heading = scenario?.expected?.memory_use_discipline_heading ?? '### 7. Memory Use Discipline';
+  if (!promptBehaviorContent.includes(heading)) {
+    return { pass: false, reason: `PROMPT-BEHAVIOR-CONTRACT.md is missing heading "${heading}"` };
+  }
+  if (!promptBehaviorContent.includes('Verify before use')) {
+    return { pass: false, reason: 'PROMPT-BEHAVIOR-CONTRACT.md is missing invariant "Verify before use"' };
+  }
+  if (!promptBehaviorContent.includes('Ignore memory on request')) {
+    return { pass: false, reason: 'PROMPT-BEHAVIOR-CONTRACT.md is missing invariant "Ignore memory on request"' };
+  }
+  return { pass: true };
+}
+
+/**
+ * Validate that the session-notes template contains all required sections.
+ * @param {string} templateContent - Full text of the session-notes template
+ * @param {object} scenario - Parsed memory-content-taxonomy.json scenario fixture
+ * @returns {{ pass: boolean, reason?: string }}
+ */
+export function validateSessionNotesTemplate(templateContent, scenario) {
+  const sections = scenario?.expected?.session_notes_sections ?? [];
+  for (const section of sections) {
+    if (!templateContent.includes(section)) {
+      return { pass: false, reason: `Session-notes template is missing section "${section}"` };
+    }
+  }
+  return { pass: true };
+}
+
+/**
+ * Validate that repo-memory-hygiene.md contains the Checklist C heading.
+ * @param {string} hygieneContent - Full text of skills/patterns/repo-memory-hygiene.md
+ * @param {object} scenario - Parsed memory-content-taxonomy.json scenario fixture
+ * @returns {{ pass: boolean, reason?: string }}
+ */
+export function validateRepoMemoryHygieneChecklistC(hygieneContent, scenario) {
+  const heading = scenario?.expected?.repo_memory_hygiene_checklist_c_heading ?? '## Checklist C';
+  if (!hygieneContent.includes(heading)) {
+    return { pass: false, reason: `skills/patterns/repo-memory-hygiene.md is missing "${heading}"` };
+  }
+  return { pass: true };
+}
+
+/**
+ * Validate that repo-memory-hygiene.md contains the Checklist D heading.
+ * @param {string} hygieneContent - Full text of skills/patterns/repo-memory-hygiene.md
+ * @param {object} scenario - Parsed memory-content-taxonomy.json scenario fixture
+ * @returns {{ pass: boolean, reason?: string }}
+ */
+export function validateRepoMemoryHygieneChecklistD(hygieneContent, scenario) {
+  const heading = scenario?.expected?.repo_memory_hygiene_checklist_d_heading ?? '## Checklist D';
+  if (!hygieneContent.includes(heading)) {
+    return { pass: false, reason: `skills/patterns/repo-memory-hygiene.md is missing "${heading}"` };
+  }
+  return { pass: true };
+}

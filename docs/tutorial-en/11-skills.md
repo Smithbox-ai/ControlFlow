@@ -43,6 +43,7 @@ A skill is a `skills/patterns/*.md` file with:
 | context-map | *(see skills/README.md)* | CodeMapper-subagent |
 | refactor-plan | *(see skills/README.md)* | CoreImplementer |
 | what-context-needed | *(see skills/README.md)* | Any subagent needing context clarification |
+| repo-memory-hygiene | `repo-memory-hygiene.md` | Orchestrator, Planner |
 
 > Check `skills/index.md` for the current complete list.
 
@@ -127,6 +128,16 @@ For Planner in the **idea interview** phase:
 - Ask clarifying questions one by one.
 - Map to `risk_review` categories.
 - Don't skip the semantic risk taxonomy.
+
+### repo-memory-hygiene
+
+For Orchestrator and Planner — mandatory before any `/memories/repo/` write or `NOTES.md` update:
+- **Checklist A** — dedup checklist before writing a new entry.
+- **Checklist B** — prune routine to age out stale entries.
+- **Checklist C — Phase-Boundary Promotion** — 4-step routine run at each phase completion: classify fact by taxonomy type → scope check (cross-plan or task-specific?) → near-duplicate check → verify all 5 required fields before writing.
+- **Checklist D — Periodic Memory Audit** — read-only diagnostic routine: identify near-duplicate groups → spot-check citation staleness → produce Audit Report. No deletes (only supersede writes and natural decay).
+
+See `docs/agent-engineering/MEMORY-ARCHITECTURE.md → Memory Content Taxonomy` for the taxonomy types used in Checklist C.
 
 ### budget-tracking
 

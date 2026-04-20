@@ -90,6 +90,20 @@ auto_trigger_tiers: ["LARGE"]
 max_fix_cycles: 1
 ```
 
+### memory_hygiene
+
+Controls memory quality enforcement thresholds and content standards:
+
+| Key | Value | Purpose |
+|-----|-------|---------|
+| `notes_md_max_lines` | 20 | NOTES.md size cap (CI-enforced by Pass 7) |
+| `archive_completed_plans_threshold_days` | 14 | Days before a closed plan is eligible for archival |
+| `archive_eligible_statuses` | `["DONE","SUPERSEDED","DEFERRED"]` | Plan statuses eligible for auto-archive |
+| `repo_memory_dedup_required` | `true` | Gate: require running repo-memory-hygiene.md before any `/memories/repo/` write |
+| `memory_content_types` | `["user","feedback","project","reference"]` | Canonical taxonomy types for repo-memory entries |
+| `session_notes_template_path` | `"plans/templates/session-notes-template.md"` | Path to the session notes template referenced by MEMORY-ARCHITECTURE.md |
+| `stale_memory_freshness_days` | 1 | Age threshold after which repo-memory entries about specific code locations should be re-verified |
+
 ## model-routing.json
 
 Defines which LLM model handles which type of task. Does **not** contain API keys — only model names / capabilities.
@@ -132,6 +146,7 @@ flowchart TD
     Schema --> Eval[cd evals && npm test]
     Eval -->|passed| Done[Change accepted]
     Eval -->|failed| Fix[Fix the issue]
+| What taxonomy types does repo memory use? | `runtime-policy.json → memory_hygiene.memory_content_types` |
     Fix --> Eval
 ```
 

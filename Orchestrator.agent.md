@@ -86,6 +86,7 @@ When context budget approaches limit:
 See [docs/agent-engineering/MEMORY-ARCHITECTURE.md](docs/agent-engineering/MEMORY-ARCHITECTURE.md) for the three-layer memory model.
 
 Agent-specific fields:
+- At each phase completion, run Checklist C of `skills/patterns/repo-memory-hygiene.md` to evaluate whether any facts captured during the phase should be promoted to repo-persistent memory.
 - Update `NOTES.md` at each phase boundary to reflect the active objective and current phase; promote phase-specific state to task-episodic deliverables.
 - Remove stale repo-persistent notes when superseded.
 - Before any `/memories/repo/` write or `NOTES.md` update at a phase boundary, load and follow `skills/patterns/repo-memory-hygiene.md` (dedup checklist + prune routine).

@@ -335,3 +335,37 @@ Full 6-phase LARGE-tier remediation of 14 orchestration weak spots identified in
 2. Wave sequencing conflicts (two phases editing the same file in parallel) must be resolved at plan-time by assigning conflicting phases to different waves; do not rely on phase ordering within a wave for file exclusivity.
 3. When adding CLI scripts tested via subprocess fixtures, setting `archive_completed_plans_threshold_days: 0` in the governance config allows all test plans to be immediately eligible, removing the need for time-manipulation in tests.
 
+---
+
+## Entry
+
+**Plan ID:** `free-code-memory-features-plan`
+**Date:** `2026-04-20`
+**Complexity Tier:** `MEDIUM`
+**Total Phases:** `4 / 4`
+
+### Review Pipeline
+
+| Agent | Result | Notes |
+|---|---|---|
+| AssumptionVerifier-subagent | COMPLETE | Mirages found: 1 BLOCKING (Phase 1 TechnicalWriter `tests_pass` gate — executor cannot run tests). Fixed immediately as `fixable`. |
+| PlanAuditor-subagent | APPROVED (after fixable correction) | Score 61% → APPROVED after 2 plan fixes: removed `tests_pass` from Phase 1; expanded Phase 4 to 5 drift checks. |
+| ExecutabilityVerifier-subagent | N/A | MEDIUM tier — not in scope |
+| CodeReviewer-subagent | N/A | Docs/skills/template changes only — no code. Quality verified via direct file inspection and `npm test`. |
+
+**Total review iterations:** `1` / `5`
+**Convergence:** `Converged` (single iteration with fixable corrections applied before dispatch)
+
+### Outcome
+
+**Status:** `SUCCESS`
+**CodeReviewer false positive rate:** `0 / 0` (`N/A`)
+
+228 validate checks passed (all green). 5 new Pass 7 drift checks enforcing memory taxonomy, behavior contract, session notes template, Checklist C/D. 79 behavior contract checks passed including new Orchestrator Checklist C assertion.
+
+### Lessons Learned
+
+1. TechnicalWriter's `tests_pass` quality gate is invalid — the agent has no terminal tool. For doc-only phases, Orchestrator owns the post-phase regression check; the executor's quality gate should be `schema_valid` only.
+2. Phase 4 drift-check coverage must match every new invariant claimed by the plan — enumerating them explicitly in the phase scope (5 functions, not 3) prevents a MAJOR gap from reaching the eval gate.
+3. Cross-plan anchor-map registration is required whenever a new plan references a file already listed in an existing anchor-map consumer. The `notes:` field in `cross-plan-overlap-anchor-map.yaml` makes this rule explicit; future plans must follow it at authoring time rather than at test-failure time.
+

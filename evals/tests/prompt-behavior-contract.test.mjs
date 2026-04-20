@@ -544,6 +544,20 @@ console.log('\n=== Mermaid Scenario — medium-tier-requires-sequence-diagram ==
 }
 
 // ──────────────────────────────────────────────
+// Orchestrator behavioral invariants
+// ──────────────────────────────────────────────
+console.log('\n=== Orchestrator — Behavioral Invariants ===');
+{
+  const src = readAgent('Orchestrator');
+
+  // Archive section must reference repo-memory-hygiene.md Checklist C
+  check(
+    'Orchestrator Archive: Checklist C reference wired to repo-memory-hygiene.md',
+    src.includes('Checklist C') && src.includes('repo-memory-hygiene.md')
+  );
+}
+
+// ──────────────────────────────────────────────
 // Shared policy behavioral invariants
 // ──────────────────────────────────────────────
 console.log('\n=== Shared Policy — Behavioral Invariants ===');

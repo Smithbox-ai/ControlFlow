@@ -128,6 +128,20 @@ Governance — это **5 JSON-файлов** в `governance/`, фиксирую
 }
 ```
 
+### memory_hygiene
+
+Пороговые значения и стандарты качества памяти:
+
+| Ключ | Значение | Назначение |
+|------|---------|-----------|
+| `notes_md_max_lines` | 20 | Максимум строк в NOTES.md (проверяется CI, Pass 7) |
+| `archive_completed_plans_threshold_days` | 14 | Дней до архивации закрытого плана |
+| `archive_eligible_statuses` | `["DONE","SUPERSEDED","DEFERRED"]` | Статусы планов, подлежащих авто-архивации |
+| `repo_memory_dedup_required` | `true` | Гейт: обязательный запуск `repo-memory-hygiene.md` перед любой записью в `/memories/repo/` |
+| `memory_content_types` | `["user","feedback","project","reference"]` | Канонические типы таксономии для repo-memory записей |
+| `session_notes_template_path` | `"plans/templates/session-notes-template.md"` | Путь к шаблону session notes |
+| `stale_memory_freshness_days` | 1 | Порог возраста (в днях), после которого записи о конкретных местах в коде нужно перепроверять |
+
 ## model-routing.json — логические роли моделей
 
 Каждый агент в frontmatter имеет:

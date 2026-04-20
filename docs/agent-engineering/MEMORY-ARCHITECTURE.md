@@ -11,6 +11,7 @@ Canonical three-layer memory model for the ControlFlow 13-agent system. Every ag
 - **Readers/writers:** any agent during its run.
 - **Contents:** in-progress reasoning, transient plans, tool output summaries, short-lived working state.
 - **Do not use for:** facts that must survive the task or inform future tasks.
+- Use the session notes template at [plans/templates/session-notes-template.md](../plans/templates/session-notes-template.md) for structured state during long orchestration runs.
 
 ### 2. Task-episodic memory — per-plan, artifact-scoped
 
@@ -51,6 +52,15 @@ When an agent needs prior context, consult memory layers in this order:
 3. **Repo-persistent last.** `NOTES.md` anchors active objective; `/memories/repo/` supplies stable facts.
 
 Rationale: task-episodic memory is the most specific and most trustworthy for the current work. Repo-persistent memory is the most general and lowest-resolution; consult it last so it does not override plan-specific decisions.
+
+## Memory Content Taxonomy
+
+- `user` — Personal preferences and workflows spanning the entire environment.
+- `feedback` — Historical corrections detailing past mistakes and constraints.
+- `project` — Core architectural designs, structure, and established conventions.
+- `reference` — Tested CLI commands, verified configuration, and build instructions.
+- **Save exclusions:** derivable code state (code that can be re-read from the repo), git history, ephemeral task state (single-turn notes or tool scratch)
+- **Verify before recommending:** any claim about a named file or function sourced from memory must be re-verified against current code before being acted on (links to the `Memory Use Discipline` invariant in [PROMPT-BEHAVIOR-CONTRACT.md](PROMPT-BEHAVIOR-CONTRACT.md)).
 
 ## Compaction Triggers
 

@@ -93,6 +93,71 @@ Return `ABSTAIN` or skip the write entirely when:
 
 ---
 
+## Checklist C — Phase-Boundary Promotion
+
+Decision routine run after each completed plan phase, before any `/memories/repo/` write. Work through every step before promoting any fact.
+
+**When to run:** Run this checklist after every completed phase, at task completion, and whenever the Orchestrator's Agentic Memory Policy step requires it.
+
+### Step 1: Classify each candidate fact by content taxonomy
+
+For each candidate fact captured during the phase (in session notes or phase deliverable), assign one of the four taxonomy types from `docs/agent-engineering/MEMORY-ARCHITECTURE.md → Memory Content Taxonomy`: `user`, `feedback`, `project`, or `reference`.
+
+Facts that are derivable code state, git history, or ephemeral task state (e.g., "file X was modified", "iteration 3 passed", "test run at 14:32") must be **dropped** — do not promote them.
+
+### Step 2: Apply the scope question
+
+Ask: does this fact apply across multiple plans (not just the current one)? If the fact is task-specific — meaning it is only relevant to the current plan or task slug — record it in `plans/artifacts/<task-slug>/` (task-episodic memory), not in `/memories/repo/`. **DO NOT PROMOTE** task-specific facts to repo-persistent memory.
+
+### Step 3: Check for near-duplicates
+
+Scan the `<repository_memories>` context block for entries with semantically overlapping `subject` fields:
+- Same subject + same or less specific fact → **skip the write**; the existing entry is sufficient.
+- Same subject + existing entry is outdated or wrong → write **one** corrected entry with an explicit note (e.g., "supersedes prior entry about X"). Do not write both the old and corrected form.
+
+### Step 4: Verify all required fields before writing
+
+Confirm all five required fields are present and complete before calling `create` on `/memories/repo/`:
+- `subject` — normalized, repo-wide (not task-specific).
+- `fact` — concrete, falsifiable statement.
+- `citations` — at least one concrete file path + line reference.
+- `reason` — explains why this is worth storing cross-plan.
+- `category` — one of the taxonomy types from Step 1.
+
+Incomplete entries must not be created. If any field cannot be completed with direct evidence, **DO NOT WRITE**.
+
+---
+
+## Checklist D — Periodic Memory Audit (Diagnostic)
+
+Read-only manual routine for an operator to run periodically. Does not modify memory; produces an Audit Report only.
+
+**When to run:** Run this routine when the `<repository_memories>` block shows 5+ entries for the same system or command, or after any major codebase restructuring.
+
+### Step 1: Identify near-duplicate groups
+
+Scan the `<repository_memories>` context block for entries with semantically overlapping `subject` fields. For each group of overlapping entries:
+- Note the most specific or most recently written entry as the **"keeper"**.
+- List the remaining entries as **"candidates for natural decay"** (they will age out via the retention mechanism; no manual deletion is needed or possible).
+
+### Step 2: Spot-check citations for staleness
+
+For each entry with file/line citations, verify that the cited file still exists at the expected path using a search tool (e.g., `file_search` or `grep_search`). Flag any entry whose cited file has moved or been deleted as:
+
+> **stale citation — candidate for supersede write**
+
+Do not flag entries whose cited file path is a well-known stable path (e.g., `evals/package.json`) unless you have positive evidence it has changed.
+
+### Step 3: Produce the Audit Report
+
+Output a plain-text **"Audit Report"** in the session with two sections:
+1. **Near-duplicate groups** — list each group with its keeper and candidates for natural decay.
+2. **Stale-citation entries** — list each flagged entry with the citation path and why it is suspect.
+
+Do NOT write new `/memories/repo/` entries during this routine unless a stale entry clearly requires a corrected supersede write (identified in Step 2). Note explicitly: **no automatic delete is possible via the `/memories/repo/` API**; stale entries can only be superseded by a corrected write or allowed to decay naturally.
+
+---
+
 ## Related
 
 - `docs/agent-engineering/MEMORY-ARCHITECTURE.md` — Cleanup & Enforcement section (authoritative spec).

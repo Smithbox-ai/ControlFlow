@@ -39,6 +39,25 @@ flowchart TD
 
 Источник: [docs/agent-engineering/MEMORY-ARCHITECTURE.md](../agent-engineering/MEMORY-ARCHITECTURE.md).
 
+## Типология содержимого памяти (Memory Content Taxonomy)
+
+Каждая запись в `/memories/repo/` должна быть классифицирована по одному из четырёх типов:
+
+| Тип | Что хранит |
+|-----|-----------|
+| `user` | Персональные предпочтения и workflow, применимые ко всему окружению |
+| `feedback` | Исторические корректировки: прошлые ошибки, ограничения, которые агент должен учитывать |
+| `project` | Ключевые архитектурные решения, структура и соглашения проекта |
+| `reference` | Проверенные CLI-команды, значения конфигурации, инструкции по сборке |
+
+**Что никогда не записывать в repo-persistent память:**
+- Производимое состояние кода (то, что можно перечитать прямо из репо).
+- Git-история (commit messages, ветки, merge records).
+- Эфемерное состояние задачи (однотёрновые заметки, scratch-инструментов, «итерация 3 прошла в 14:32»).
+
+- Для длинных orchestration-сессий используйте шаблон session notes: `plans/templates/session-notes-template.md`. Он содержит пять разделов: `Current State`, `Files and Functions`, `Errors & Corrections`, `Key Results`, `Worklog`.
+**Проверять перед использованием:** любое утверждение о конкретном файле или функции, извлечённое из памяти, должно быть перепроверено по текущей кодовой базе, прежде чем на него опираться. Память — подсказка, а не источник истины для конкретных местоположений в коде.
+
 ## Слой 1: Session
 
 **Где живёт:** `/memories/session/` (виртуальный путь, реализуется через memory tool).
@@ -150,7 +169,17 @@ flowchart TD
 - Регулярно пересматривать NOTES.md (на границах фаз).
 - Перед записью в repo — спросить: «применимо ли это к будущим задачам?»
 - Удалять/обновлять устаревшие memory entries.
+Дисциплина использования памяти (Memory Use Discipline)
 
+Два поведенческих инварианта (покрываются `evals/tests/prompt-behavior-contract.test.mjs`):
+
+1. **Verify before use** — любое утверждение о конкретном файле или функции, извлечённое из памяти (session notes, `/memories/repo/` или `NOTES.md`), должно быть перепроверено по текущей кодовой базе, прежде чем действовать на его основе. Устаревшая память — подсказка, а не источник истины о конкретных местах в коде.
+
+2. **Ignore memory on request** — если пользователь явно говорит «ignore memory» (или эквивалентно: «don't use memory», «fresh context»), агент не должен обращаться к `/memories/repo/`, NOTES.md или session notes в этом turn-е. Действие per-turn, не сохраняется.
+
+Источник: `docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md → §7 Memory Use Discipline`.
+
+## 
 ## Observability и память
 
 `plans/artifacts/observability/<task-id>.ndjson` — это **task-episodic**, но с особым форматом (NDJSON для трассировки). Содержит gate-events с `trace_id` для корреляции.
@@ -166,14 +195,18 @@ flowchart TD
 | Session | Memory tool (`/memories/session/`) |
 | Task-episodic | Файлы в `plans/artifacts/<task>/` |
 | Repo-persistent — active state | `NOTES.md` (commit-tracked) |
-| Repo-persistent — durable facts | Memory tool (`/memories/repo/`) |
+- **Записывать неклассифицированные или производимые факты в `/memories/repo/`.** Сначала классифицируйте по типологии; отбрасывайте derivable code state, git-историю и эфемерное состояние задачи.
+- **Действовать на основе устаревшей памяти без верификации.** После рефакторинга claims о конкретных файлах/функциях становятся ложными. Всегда перепроверяйте.
 
-Часть памяти живёт в гите (NOTES.md, plan artifacts), часть — в инструментальной memory (репо memory store).
+## Упражнения
 
-## Типичные ошибки
-
-- **Записать task-fact в `/memories/repo/`**. Со временем загрязнит общую память.
-- **Раздуть NOTES.md** task-history. NOTES.md = active objective only, не история.
+1. **(новичок)** Откройте `NOTES.md` в репо. Какая там сейчас active objective?
+2. **(новичок)** Сколько слоёв в модели памяти ControlFlow?
+3. **(средний)** Куда вы запишете факт: «Для проекта X используется PostgreSQL 16 с расширением pgvector»?
+4. **(средний)** Что произойдёт, если NOTES.md не обновлён две недели?
+5. **(продвинутый)** Объясните, почему repo memory поддерживает только `create`, а не `update`/`delete`.
+6. **(средний)** Фаза только что завершилась. CoreImplementer-subagent обнаружил новое API-соглашение. Пройдите через Checklist C (в `skills/patterns/repo-memory-hygiene.md`) и решите, стоит ли продвигать этот факт в `/memories/repo/`.
+7. **(продвинутый)** В `<repository_memories>` вы видите шесть записей с незначительно различающимися описаниями одной и той же команды `cd evals && npm test`. Запустите Checklist D (периодический аудит) и составьте Audit Report для этой ситуации
 - **Не обновлять NOTES.md на границах фаз**. Stale state ведёт к рассинхрону.
 - **Хранить session-state в repo-persistent**. Память не должна расти от коротких заметок.
 - **Помещать секреты в repo memory**. Никогда.

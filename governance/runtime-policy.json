@@ -109,6 +109,9 @@
     "notes_md_max_lines": 20,
     "archive_completed_plans_threshold_days": 14,
     "archive_eligible_statuses": ["DONE", "SUPERSEDED", "DEFERRED"],
-    "repo_memory_dedup_required": true
+    "repo_memory_dedup_required": true,
+    "memory_content_types": ["user", "feedback", "project", "reference"],
+    "session_notes_template_path": "plans/templates/session-notes-template.md",
+    "stale_memory_freshness_days": 1
   }
 }

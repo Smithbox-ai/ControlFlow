@@ -39,6 +39,7 @@ Skill — это Markdown-файл с **паттерном** в `skills/patterns
 | 9 | `preflect-core.md` | PreFlect | All agents |
 | 10 | `reflection-loop.md` | Reflection Loop | Orchestrator, CoreImplementer, UIImplementer, PlatformEngineer |
 | 11 | `budget-tracking.md` | Budget Tracking | Orchestrator, Planner, CoreImplementer, UIImplementer, PlatformEngineer |
+| 12 | `repo-memory-hygiene.md` | Memory Hygiene | Orchestrator, Planner |
 
 ## Discovery protocol
 
@@ -138,6 +139,16 @@ Token/wall-clock budget:
 - Структурное интервью.
 - Disambiguation questions.
 - Goal extraction.
+
+### repo-memory-hygiene.md
+
+Для Orchestrator и Planner — обязателен перед любой записью в `/memories/repo/` или обновлением `NOTES.md`:
+- **Checklist A** — дедуп перед записью новой записи.
+- **Checklist B** — прунинг для вытеснения устаревших записей.
+- **Checklist C — Phase-Boundary Promotion** — 4-шаговая процедура на каждой границе фазы: классификация факта по таксономии → scope-проверка (cross-plan или task-specific?) → проверка near-duplicate → верификация всех 5 обязательных полей перед записью.
+- **Checklist D — Periodic Memory Audit** — read-only диагностика: поиск near-duplicate групп → spot-check staleness цитат → Audit Report. Удаление невозможно (только supersede-запись и natural decay).
+
+Типы таксономии для Checklist C описаны в `docs/agent-engineering/MEMORY-ARCHITECTURE.md → Memory Content Taxonomy`.
 
 ## Где skills цитируются в плане
 
