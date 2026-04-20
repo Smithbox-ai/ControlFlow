@@ -137,6 +137,11 @@
             "review_depth": { "type": "string", "enum": ["full", "standard", "lightweight"] },
             "security_sensitive": { "type": "boolean" },
             "review_scope": { "type": "string", "enum": ["phase", "wave", "final"] },
+            "review_mode": {
+              "type": "string",
+              "enum": ["standard", "security"],
+              "description": "Optional dispatch hint. 'security' MUST cause CodeReviewer to load skills/patterns/security-review-discipline.md."
+            },
             "plan_phases_snapshot": {
               "type": "array",
               "description": "Injected by Orchestrator for review_scope=final. Maps phase_id to its planned files for out-of-scope detection.",

@@ -13,13 +13,7 @@ Understand **how the ControlFlow repository is tested**: what `npm test` checks,
 
 ## What the Eval Harness Is
 
-A **Node.js test runner** in `evals/` with three modes:
-
-| Command | What it runs | Speed |
-|---------|-------------|-------|
-| `cd evals && npm test` | Full suite (~410 checks) | Slower |
-| `npm run test:structural` | Schemas and P.A.R.T. structure | Fast |
-| `npm run test:behavior` | Prompt-behavior + orchestration-handoff | Fast |
+A **Node.js test runner** in `evals/`. It is completely offline.
 
 **Key properties:**
 - **No network** — no live agents, no LLM calls.
@@ -31,53 +25,103 @@ A **Node.js test runner** in `evals/` with three modes:
 ```
 evals/
   package.json         — scripts: test, test:structural, test:behavior
-  validate.mjs         — main structural validator (Passes 1–4)
-  drift-checks.mjs     — drift detection (Pass 4b)
+  validate.mjs         — main structural validator (Passes 1–13)
+  drift-checks.mjs     — drift detection helpers
   tests/               — behavior test files (.test.mjs)
   scenarios/           — JSON scenario fixtures
     <agent-name>/      — folder per agent
       <scenario>.json  — individual scenario
 ```
 
+## Three Modes
+
+| Command | What it runs | Speed |
+|---------|-------------|-------|
+| `cd evals && npm test` | Full suite (all 18 passes & behaviors) | Slower |
+| `npm run test:structural` | `validate.mjs` structural passes | Fast |
+| `npm run test:behavior` | Prompt-behavior + orchestration-handoff | Fast |
+
 ## What Each Pass Checks
+
+The current authoritative pass list enforced by `validate.mjs`:
 
 ### Pass 1: Schema Validity
 
 - Each `schemas/*.json` is a valid JSON Schema (draft 2020-12).
+- Validates `governance/runtime-policy.json` against `schemas/runtime-policy.schema.json` and the three fixtures under `evals/scenarios/runtime-policy/`.
 - No syntax errors.
 
-### Pass 2: Scenario Validity
+### Pass 2: Scenario Integrity
 
 - Each `evals/scenarios/**/*.json` file is valid against its corresponding schema.
-- Schema filename is inferred from the folder name: `scenarios/planner/` → `schemas/planner.plan.schema.json`.
 
-### Pass 3: Agent File References
+### Pass 3: Reference Integrity
 
 - Each agent file that mentions a schema has the correct path.
 - `skill_references[]` values point to files that exist in `skills/patterns/`.
 
-### Pass 4: Structural Drift — P.A.R.T. Order
+### Pass 3b: Required Project Artifacts
+
+- Verifies that critical files like `plans/project-context.md` exist.
+
+### Pass 3c: Tool Grant Consistency
+
+- Validates tool arrays against governance configs.
+
+### Pass 3d: Agent Grant Consistency
+
+- Validates agent arrays against governance configs.
+
+### Pass 4: P.A.R.T Section Order
 
 - Each `*.agent.md` has sections in this exact order: **Prompt → Archive → Resources → Tools**.
 - Any missing or reordered section fails.
 
-### Pass 4b: Companion Rules
+### Pass 4b: Clarification Triggers (§5) & Tool Routing Rules (§6)
 
-- Each `*.agent.md` has `_must_contain` rules: mandatory text snippets.
-- Example: "Orchestrator.agent.md must contain the string `trace_id`".
-- Ensures critical contracts are not silently removed.
+- Agent companion rules validating strict routing policy mentions.
 
-### Pass 5–7: Prompt-Behavior Contract
+### Pass 5: Skill Library Consistency
 
-- Tests against `docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md`.
-- Checks behavioral invariants: output format, required fields, blocked actions.
+- Validates the structural integrity of the `skills/` index mapping.
 
-### Pass 8: Orchestration Handoff
+### Pass 6: Synthetic Rename Negative-Path Checks
 
-- Tests that Orchestrator correctly dispatches subagents.
-- Checks PLAN_REVIEW trigger conditions, tier routing, delegation payload format.
+- Tests renaming files to ensure governance around drift isn't bypassed.
 
-## Scenarios — Purpose and Examples
+### Pass 7: Memory Architecture References
+
+- Ensures agents reference the unified memory architecture.
+
+### Pass 7b: Memory Discipline Contracts
+
+- Verifies that agents correctly include instructions for memory cleanups, hygiene rules, and persistent storage boundaries.
+
+### Pass 7c: Tutorial Parity
+
+In placeholder mode (current default — `_status: "placeholder"` in `evals/scenarios/tutorial-parity/allowlist.json`), Pass 7c only logs that the parity check is installed and skips validation. Activation flips `_status` to `"active"` in a follow-up phase, after which `validateTutorialParity` runs and emits per-chapter-pair pass/fail by comparing level-2 heading sets between `docs/tutorial-en/` and `docs/tutorial-ru/`.
+
+### Pass 8: Drift Detection — Roster ↔ Enum Bidirectional Alignment
+
+- Verifies that the agent roster in `plans/project-context.md` and the `executor_agent` enum in `schemas/planner.plan.schema.json` stay in sync in both directions.
+
+### Pass 9: Drift Detection — Agent Resources Schema Existence
+
+- For every schema referenced from an agent's `Resources` section, verifies the schema file actually exists.
+
+### Pass 10: Drift Detection — Cross-Plan File-Overlap
+
+- Detects accidental file-list overlap across active plans in `plans/`.
+
+### Pass 12: Governance Policy Assertions
+
+- Asserts invariants on `governance/runtime-policy.json` and related governance files (review pipeline by tier, retry budgets, approval gate thresholds).
+
+### Pass 13: Drift Detection — review_scope=final Bidirectional Coupling
+
+- Verifies that `review_scope: "final"` references in Orchestrator and CodeReviewer agent prompts are coupled in both directions and reference the same fields.
+
+## Scenarios
 
 A scenario is a JSON fixture describing an input/output pair. It is used for two purposes:
 1. **Schema validation** — verifies the structure.
@@ -94,17 +138,16 @@ A scenario is a JSON fixture describing an input/output pair. It is used for two
 
 ## Reading the Output
 
-A typical `npm test` result:
+A typical `npm test` result now includes all 18 passes:
 
 ```
-Pass 1 (schema validity): 15 schemas — OK
-Pass 2 (scenario validity): 47 scenarios — OK
-Pass 3 (agent references): 13 agents — OK
-Pass 4 (P.A.R.T. order): 13 agents — OK
-Pass 4b (companion rules): 23 rules — OK
-Pass 5-7 (prompt-behavior): 180 checks — OK
-Pass 8 (orchestration-handoff): 32 checks — OK
-Total: 410 checks passed
+Pass 1: Schema Validity — OK
+Pass 2: Scenario Integrity — OK
+Pass 3: Reference Integrity — OK
+...
+Pass 7c: Tutorial Parity — OK
+Pass 13: Drift Detection — review_scope=final Bidirectional Coupling — OK
+Total: All checks passed
 ```
 
 If a check fails:
@@ -117,7 +160,7 @@ FAIL Pass 4 — P.A.R.T. order
 
 The error tells you exactly what file, what check, and what the diff is.
 
-## Adding a New Scenario (Flowchart)
+## Adding a New Scenario
 
 ```mermaid
 flowchart TD
@@ -130,7 +173,7 @@ flowchart TD
     Fix --> Run
 ```
 
-## Adding a New Agent or Schema (4 Steps)
+## Adding a New Agent or Schema
 
 1. **Create the agent file** — `<Name>.agent.md` (P.A.R.T. order).
 2. **Create the schema** — `schemas/<name>.schema.json`.
@@ -155,7 +198,7 @@ After each step, run `npm test` to verify nothing is broken.
     NODE_ENV: test
 ```
 
-The CI gate requires all 410+ checks to pass. No partial passes.
+The CI gate requires all checks to pass. No partial passes.
 
 ## Common Mistakes
 

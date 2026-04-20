@@ -369,3 +369,38 @@ Full 6-phase LARGE-tier remediation of 14 orchestration weak spots identified in
 2. Phase 4 drift-check coverage must match every new invariant claimed by the plan â€” enumerating them explicitly in the phase scope (5 functions, not 3) prevents a MAJOR gap from reaching the eval gate.
 3. Cross-plan anchor-map registration is required whenever a new plan references a file already listed in an existing anchor-map consumer. The `notes:` field in `cross-plan-overlap-anchor-map.yaml` makes this rule explicit; future plans must follow it at authoring time rather than at test-failure time.
 
+
+---
+
+## Entry
+
+**Plan ID:** `controlflow-runtime-hardening-plan`
+**Date:** 2026-04-20
+**Complexity Tier:** MEDIUM
+**Total Phases:** 5 / 5
+
+### Review Pipeline
+
+| Agent | Result | Notes |
+|---|---|---|
+| AssumptionVerifier-subagent | APPROVED | Mirages found: 2 BLOCKING + 2 MINOR (iter 1) > 0 (iter 2-3) |
+| PlanAuditor-subagent | APPROVED | Final score: 88% (iter 3) |
+| ExecutabilityVerifier-subagent | N/A | MEDIUM tier excludes ExecVerifier |
+| CodeReviewer-subagent | APPROVED (after fix cycles) | Validated blocking issues: 1 MAJOR/Phase1 (compaction in required), 1 MAJOR/Phase2-3 (non-recursive fingerprint), 4 MAJOR/Phase4 (Pass 7c text + grouped headings + RU duplicate + lint), 1 MAJOR/Phase5 (missing 6 negative tests + 3 prompt-behavior assertions) |
+
+**Total review iterations:** 3 / 5
+**Convergence:** Converged
+
+### Outcome
+
+**Status:** SUCCESS
+**CodeReviewer false positive rate:** 0 / 7 (0%)
+**Final eval suite count:** 453 checks (239 structural + 81 behavior + 63 orchestration + 51 drift + 14 notes-md + 10 archive + 3 fingerprint), all green cold-cache
+
+### Lessons Learned
+
+1. Cross-platform line-ending bug (CRLF) caught by Pass 12 only after activation — drift validators that parse markdown should normalize line endings via `content.split(/\r?\n/)` instead of `content.split('\n')`.
+2. Subagent silent failures (empty response) on long instruction prompts; recovery pattern: inspect file system state directly before retrying — significant work was already applied in 2/2 silent-failure incidents.
+3. Plan-contract drift: implementation that lands tests "in the wrong file" (validate.mjs Pass 12 vs prompt-behavior-contract.test.mjs) still requires retroactive completion to honor the approved plan's exact placement contract; the closed-world rule prevents silent reinterpretation.
+
+---

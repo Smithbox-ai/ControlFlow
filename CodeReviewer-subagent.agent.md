@@ -30,6 +30,7 @@ Keep the CodeReviewer gate sequence, issue-validation protocol, `validation_stat
 - Output must conform to `schemas/code-reviewer.verdict.schema.json`.
 - Status must be one of: `APPROVED`, `NEEDS_REVISION`, `FAILED`, `ABSTAIN`.
 - If verification evidence is missing, do not approve.
+- When delegation payload contains `review_mode: "security"`, the agent MUST load `skills/patterns/security-review-discipline.md` before producing a verdict.
 
 ### Mandatory Verification Gates
 Before setting `APPROVED`, complete these local pre-approval gates:
@@ -132,6 +133,7 @@ Agent-specific additions: _none_
 
 ## Resources
 
+- `skills/patterns/security-review-discipline.md`
 - `docs/agent-engineering/PART-SPEC.md`
 - `docs/agent-engineering/RELIABILITY-GATES.md`
 - `docs/agent-engineering/SCORING-SPEC.md`

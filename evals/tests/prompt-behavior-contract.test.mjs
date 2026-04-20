@@ -551,9 +551,57 @@ console.log('\n=== Orchestrator — Behavioral Invariants ===');
   const src = readAgent('Orchestrator');
 
   // Archive section must reference repo-memory-hygiene.md Checklist C
+  // R5/Phase 5: strengthen to single-line regex on a bullet line
   check(
-    'Orchestrator Archive: Checklist C reference wired to repo-memory-hygiene.md',
-    src.includes('Checklist C') && src.includes('repo-memory-hygiene.md')
+    'Orchestrator Archive: Checklist C reference is on a single bullet line with repo-memory-hygiene.md',
+    /^\s*[-*].*Checklist C.*repo-memory-hygiene\.md.*$/m.test(src)
+  );
+
+  // Phase 5 R7: Orchestrator Context Compaction Policy must contain
+  // both `compaction.max_consecutive_failures` and `WAITING_APPROVAL`
+  // within the bounded subsection slice.
+  {
+    const lines = src.split(/\r?\n/);
+    let startIdx = -1, depth = 0;
+    for (let i = 0; i < lines.length; i++) {
+      const m = lines[i].match(/^(#{1,6})\s+(.+?)\s*$/);
+      if (m && m[2].trim() === 'Context Compaction Policy') {
+        startIdx = i; depth = m[1].length; break;
+      }
+    }
+    let slice = '';
+    if (startIdx !== -1) {
+      const out = [lines[startIdx]];
+      for (let i = startIdx + 1; i < lines.length; i++) {
+        const m = lines[i].match(/^(#{1,6})\s/);
+        if (m && m[1].length <= depth) break;
+        out.push(lines[i]);
+      }
+      slice = out.join('\n');
+    }
+    check(
+      'Orchestrator Context Compaction Policy: subsection contains compaction.max_consecutive_failures AND WAITING_APPROVAL',
+      slice.includes('compaction.max_consecutive_failures') && slice.includes('WAITING_APPROVAL')
+    );
+  }
+}
+
+// ──────────────────────────────────────────────
+// CodeReviewer behavioral invariants
+// ──────────────────────────────────────────────
+console.log('\n=== CodeReviewer — Behavioral Invariants ===');
+{
+  const src = readAgent('CodeReviewer-subagent');
+
+  // Phase 5: review_mode: "security" and security-review-discipline.md
+  // must co-occur on the SAME line (regex match across split lines).
+  const sameLine = src.split(/\r?\n/).some(
+    line => line.includes('review_mode: "security"') &&
+            line.includes('skills/patterns/security-review-discipline.md')
+  );
+  check(
+    'CodeReviewer Prompt: review_mode: "security" and security-review-discipline.md co-located on the same line',
+    sameLine
   );
 }
 

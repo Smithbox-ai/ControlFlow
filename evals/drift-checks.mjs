@@ -12,7 +12,16 @@
  */
 
 import { readFileSync, readdirSync, existsSync } from 'fs';
-import { join } from 'path';
+import { join, dirname, resolve } from 'path';
+import { fileURLToPath } from 'url';
+import { createHash } from 'crypto';
+
+// Module-level path constants used by computeStructuralFingerprint
+const __cfFilename = fileURLToPath(import.meta.url);
+const __cfDir = dirname(__cfFilename);
+const CF_REPO_ROOT = resolve(__cfDir, '..');
+const CF_SCHEMAS_DIR = join(CF_REPO_ROOT, 'schemas');
+const CF_SCENARIOS_DIR = join(__cfDir, 'scenarios');
 
 // ── Check #1: model_role validation ───────────────────────────────────────────
 // Enabled after Phase 2 spike confirmed VS Code tolerates model_role: frontmatter.
@@ -483,4 +492,287 @@ export function validateRepoMemoryHygieneChecklistD(hygieneContent, scenario) {
     return { pass: false, reason: `skills/patterns/repo-memory-hygiene.md is missing "${heading}"` };
   }
   return { pass: true };
+}
+
+// ── Subsection Extractor ──────────────────────────────────────────────────────
+
+/**
+ * Given a Markdown string and a heading text, return the substring from that
+ * heading line up to (but not including) the next heading at the same or
+ * shallower depth. Returns an empty string if the heading is not found.
+ * @param {string} content - Full markdown document text
+ * @param {string} headingText - The heading text to find (e.g. "Context Compaction Policy")
+ * @returns {string}
+ */
+export function extractSubsection(content, headingText) {
+  const lines = content.split(/\r?\n/);
+  let startIdx = -1;
+  let headingDepth = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^(#{1,6})\s+(.+)$/);
+    if (m && m[2].trim() === headingText.trim()) {
+      startIdx = i;
+      headingDepth = m[1].length;
+      break;
+    }
+  }
+  if (startIdx === -1) return '';
+  const resultLines = [lines[startIdx]];
+  for (let i = startIdx + 1; i < lines.length; i++) {
+    const m = lines[i].match(/^(#{1,6})\s/);
+    if (m && m[1].length <= headingDepth) break;
+    resultLines.push(lines[i]);
+  }
+  return resultLines.join('\n');
+}
+
+// ── Tutorial Parity Validator ─────────────────────────────────────────────────
+
+/**
+ * Validate heading parity between EN and RU tutorial directories.
+ * Pairs .md files by basename, extracts level-2 heading sets, and applies
+ * an allowlist for known asymmetric headings.
+ *
+ * If `allowlist._chapters_in_scope` is set (array of basenames), only those
+ * files are checked. All other chapter pairs are skipped. This lets Phase 5
+ * activate parity checking incrementally without requiring all chapters to
+ * be fully translated or aliased up-front.
+ *
+ * @param {string} enDir - Absolute path to the EN tutorial directory
+ * @param {string} ruDir - Absolute path to the RU tutorial directory
+ * @param {object} allowlist - Allowlist object with en_only, ru_only, heading_aliases, _chapters_in_scope
+ * @returns {{ pass: boolean, reason?: string, missingPairs: string[], headingMismatches: Array<{file: string, en_only: string[], ru_only: string[]}> }}
+ */
+export function validateTutorialParity(enDir, ruDir, allowlist) {
+  const enOnlyAllowed = new Set(allowlist.en_only || []);
+  const ruOnlyAllowed = new Set(allowlist.ru_only || []);
+  const headingAliases = allowlist.heading_aliases || {};
+  const chaptersInScope = allowlist._chapters_in_scope || null;
+
+  let enFiles = [];
+  let ruFiles = [];
+  try { enFiles = readdirSync(enDir).filter(f => f.endsWith('.md')).sort(); } catch { /* dir missing */ }
+  try { ruFiles = readdirSync(ruDir).filter(f => f.endsWith('.md')).sort(); } catch { /* dir missing */ }
+
+  const enSet = new Set(enFiles);
+  const ruSet = new Set(ruFiles);
+  const allFiles = new Set([...enFiles, ...ruFiles]);
+
+  // When _chapters_in_scope is set, restrict validation to those files only.
+  const effectiveFiles = chaptersInScope
+    ? new Set([...allFiles].filter(f => chaptersInScope.includes(f)))
+    : allFiles;
+
+  const missingPairs = [];
+  for (const f of effectiveFiles) {
+    if (!enSet.has(f) || !ruSet.has(f)) missingPairs.push(f);
+  }
+
+  function extractLevel2Headings(filePath) {
+    try {
+      const text = readFileSync(filePath, 'utf8');
+      const headings = new Set();
+      for (const line of text.split('\n')) {
+        const m = line.match(/^##\s+(.+)$/);
+        if (m) headings.add(m[1].trim());
+      }
+      return headings;
+    } catch {
+      return new Set();
+    }
+  }
+
+  function applyAliases(heading) {
+    return headingAliases[heading] ?? heading;
+  }
+
+  const headingMismatches = [];
+  for (const f of effectiveFiles) {
+    if (!enSet.has(f) || !ruSet.has(f)) continue;
+    const enHeadings = extractLevel2Headings(join(enDir, f));
+    const ruHeadings = extractLevel2Headings(join(ruDir, f));
+    const enNorm = new Set([...enHeadings].map(applyAliases));
+    const ruNorm = new Set([...ruHeadings].map(applyAliases));
+    const enOnlyMismatches = [...enNorm].filter(h => !ruNorm.has(h) && !enOnlyAllowed.has(h));
+    const ruOnlyMismatches = [...ruNorm].filter(h => !enNorm.has(h) && !ruOnlyAllowed.has(h));
+    if (enOnlyMismatches.length > 0 || ruOnlyMismatches.length > 0) {
+      headingMismatches.push({ file: f, en_only: enOnlyMismatches, ru_only: ruOnlyMismatches });
+    }
+  }
+
+  const ok = missingPairs.length === 0 && headingMismatches.length === 0;
+  if (!ok) {
+    const reasons = [];
+    if (missingPairs.length > 0) reasons.push(`missing pairs: ${missingPairs.join(', ')}`);
+    if (headingMismatches.length > 0) reasons.push(`${headingMismatches.length} file(s) with heading mismatches`);
+    return { pass: false, reason: reasons.join('; '), missingPairs, headingMismatches };
+  }
+  return { pass: true, missingPairs: [], headingMismatches: [] };
+}
+
+// ── Structural Fingerprint (cache invalidation) ───────────────────────────────
+
+/**
+ * Compute a SHA-256 fingerprint over all structural inputs consumed by the
+ * eval harness. When this value changes, the warm-cache pass is invalidated.
+ *
+ * Exported here (rather than kept private in validate.mjs) so fingerprint
+ * regression tests can import it without triggering validate.mjs side effects
+ * (process.exit calls, pass output, cache writes).
+ *
+ * Hashes: both harness files, evals package manifests, all schemas, all top-level
+ * scenario JSON, all nested scenario JSON under runtime-policy/ and tutorial-parity/
+ * (recursive walk — proves the Wave 2 fix), all agent prompt files, key governance
+ * and artifact files, and the skills library.
+ *
+ * @returns {string} hex SHA-256 digest
+ */
+export function computeStructuralFingerprint() {
+  const h = createHash('sha256');
+  function hashFile(filePath) {
+    try {
+      h.update(filePath + '\x00');
+      h.update(readFileSync(filePath));
+    } catch {
+      h.update(filePath + '\x00<missing>');
+    }
+  }
+  // Both harness files (cache invalidates when either changes)
+  hashFile(__cfFilename); // drift-checks.mjs
+  hashFile(join(__cfDir, 'validate.mjs'));
+  // evals package manifests
+  hashFile(join(__cfDir, 'package.json'));
+  hashFile(join(__cfDir, 'package-lock.json'));
+  // schemas
+  try {
+    for (const f of readdirSync(CF_SCHEMAS_DIR).sort()) {
+      if (f.endsWith('.schema.json')) hashFile(join(CF_SCHEMAS_DIR, f));
+    }
+  } catch { /* cold */ }
+  // scenarios — top-level
+  try {
+    for (const f of readdirSync(CF_SCENARIOS_DIR).sort()) {
+      if (f.endsWith('.json')) hashFile(join(CF_SCENARIOS_DIR, f));
+    }
+  } catch { /* cold */ }
+  // nested scenario subdirectories (runtime-policy, tutorial-parity) — full recursive walk
+  function walkJson(dir) {
+    let entries;
+    try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const ent of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+      const full = join(dir, ent.name);
+      if (ent.isDirectory()) walkJson(full);
+      else if (ent.isFile() && ent.name.endsWith('.json')) hashFile(full);
+    }
+  }
+  for (const subdir of ['runtime-policy', 'tutorial-parity']) {
+    walkJson(join(CF_SCENARIOS_DIR, subdir));
+  }
+  // root agent prompt files
+  try {
+    for (const f of readdirSync(CF_REPO_ROOT).sort()) {
+      if (f.endsWith('.agent.md')) hashFile(join(CF_REPO_ROOT, f));
+    }
+  } catch { /* cold */ }
+  // required governance and artifact files consumed by the harness
+  for (const rel of [
+    '.github/copilot-instructions.md',
+    'plans/project-context.md',
+    'docs/agent-engineering/PART-SPEC.md',
+    'docs/agent-engineering/RELIABILITY-GATES.md',
+    'docs/agent-engineering/CLARIFICATION-POLICY.md',
+    'docs/agent-engineering/TOOL-ROUTING.md',
+    'governance/tool-grants.json',
+    'governance/runtime-policy.json',
+    'governance/rename-allowlist.json',
+    'governance/agent-grants.json',
+  ]) hashFile(join(CF_REPO_ROOT, rel));
+  // skills index and patterns
+  hashFile(join(CF_REPO_ROOT, 'skills', 'index.md'));
+  try {
+    for (const f of readdirSync(join(CF_REPO_ROOT, 'skills', 'patterns')).sort()) {
+      if (f.endsWith('.md')) hashFile(join(CF_REPO_ROOT, 'skills', 'patterns', f));
+    }
+  } catch { /* cold */ }
+  return h.digest('hex');
+}
+
+// ── Phase 5: Behavioral Assertions ──────────────────────────────────────────
+
+/**
+ * Assert that the Orchestrator's Context Compaction Policy subsection contains
+ * both required invariant substrings: `compaction.max_consecutive_failures` and
+ * `WAITING_APPROVAL`.
+ * @param {string} orchestratorContent - Full content of Orchestrator.agent.md
+ * @returns {{ ok: boolean, errors: string[] }}
+ */
+export function validateOrchestratorCompactionInvariant(orchestratorContent) {
+  const slice = extractSubsection(orchestratorContent, 'Context Compaction Policy');
+  if (!slice) {
+    return { ok: false, errors: ['Context Compaction Policy subsection not found in Orchestrator content'] };
+  }
+  const errors = [];
+  if (!slice.includes('compaction.max_consecutive_failures')) {
+    errors.push('Context Compaction Policy: missing substring "compaction.max_consecutive_failures"');
+  }
+  if (!slice.includes('WAITING_APPROVAL')) {
+    errors.push('Context Compaction Policy: missing substring "WAITING_APPROVAL"');
+  }
+  return { ok: errors.length === 0, errors };
+}
+
+/**
+ * Assert that within the Orchestrator's Agentic Memory Policy subsection,
+ * the memory-promotion-candidates.md bullet appears STRICTLY BEFORE the
+ * Checklist C bullet (by line index within the extracted slice).
+ * @param {string} orchestratorContent - Full content of Orchestrator.agent.md
+ * @returns {{ ok: boolean, errors: string[] }}
+ */
+export function validateOrchestratorMemoryPromotionOrder(orchestratorContent) {
+  const slice = extractSubsection(orchestratorContent, 'Agentic Memory Policy');
+  if (!slice) {
+    return { ok: false, errors: ['Agentic Memory Policy subsection not found in Orchestrator content'] };
+  }
+  const lines = slice.split('\n');
+  const promotionIdx = lines.findIndex(l => l.includes('memory-promotion-candidates.md'));
+  const checklistCIdx = lines.findIndex((l, i) => i !== promotionIdx && l.includes('Checklist C'));
+  const errors = [];
+  if (promotionIdx === -1) {
+    errors.push('Agentic Memory Policy: memory-promotion-candidates.md bullet not found');
+  }
+  if (checklistCIdx === -1) {
+    errors.push('Agentic Memory Policy: Checklist C bullet not found');
+  }
+  if (promotionIdx !== -1 && checklistCIdx !== -1 && promotionIdx >= checklistCIdx) {
+    errors.push(
+      `Agentic Memory Policy: memory-promotion-candidates.md (line ${promotionIdx}) must appear BEFORE Checklist C (line ${checklistCIdx})`
+    );
+  }
+  return { ok: errors.length === 0, errors };
+}
+
+/**
+ * Assert that at least one line in the CodeReviewer Prompt section contains
+ * BOTH `review_mode: "security"` AND `skills/patterns/security-review-discipline.md`
+ * on the SAME line.
+ * @param {string} codeReviewerContent - Full content of CodeReviewer-subagent.agent.md
+ * @returns {{ ok: boolean, errors: string[] }}
+ */
+export function validateCodeReviewerSecurityModeSameLine(codeReviewerContent) {
+  const promptSlice = extractSubsection(codeReviewerContent, 'Prompt');
+  const searchContent = promptSlice || codeReviewerContent;
+  const hasMatchingLine = searchContent.split('\n').some(
+    line =>
+      line.includes('review_mode: "security"') &&
+      line.includes('skills/patterns/security-review-discipline.md')
+  );
+  if (!hasMatchingLine) {
+    return {
+      ok: false,
+      errors: [
+        'No single line in the Prompt section contains both review_mode: "security" and skills/patterns/security-review-discipline.md',
+      ],
+    };
+  }
+  return { ok: true, errors: [] };
 }

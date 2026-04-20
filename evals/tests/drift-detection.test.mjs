@@ -15,6 +15,8 @@ import { writeFileSync, mkdirSync, rmSync, readFileSync, existsSync, readdirSync
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { tmpdir } from 'os';
+import Ajv2020 from 'ajv/dist/2020.js';
+import addFormats from 'ajv-formats';
 import {
   MODEL_ROLE_CHECK_ENABLED,
   validateModelRole,
@@ -29,6 +31,15 @@ import {
   hasSharedAnchorMapFlag,
   validateByTierShape,
   validateReviewScopeFinalCoupling,
+  validateOrchestratorCompactionInvariant,
+  validateOrchestratorMemoryPromotionOrder,
+  validateCodeReviewerSecurityModeSameLine,
+  validateMemoryContentTaxonomy,
+  validateMemoryUseDiscipline,
+  validateSessionNotesTemplate,
+  validateRepoMemoryHygieneChecklistC,
+  validateRepoMemoryHygieneChecklistD,
+  validateTutorialParity,
 } from '../drift-checks.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -560,6 +571,232 @@ console.log('\n=== Check #10 — review_scope=final bidirectional coupling ===')
     'F4: actual CodeReviewer-subagent.agent.md and code-reviewer.verdict.schema.json are coupled',
     realResult.ok === true,
     realResult.ok ? '' : `errors=${JSON.stringify(realResult.errors)}`
+  );
+}
+
+// ──────────────────────────────────────────────
+// Check #11 — Phase 5 negative-case drift tests (6 tests)
+// ──────────────────────────────────────────────
+console.log('\n=== Check #11 — Phase 5 negative-case drift tests ===');
+
+// Set up AJV with runtime-policy schema for tests N11-1, N11-2, N11-3
+const _rpSchemaPath = join(__dirname, '..', '..', 'schemas', 'runtime-policy.schema.json');
+const _rpBaselinePath = join(__dirname, '..', 'scenarios', 'runtime-policy', 'valid-baseline.json');
+const _ajv11 = new Ajv2020({ strict: false, allErrors: true });
+addFormats(_ajv11);
+let _rpValidate = null;
+try {
+  const rpSchema = JSON.parse(readFileSync(_rpSchemaPath, 'utf8'));
+  _ajv11.addSchema(rpSchema);
+  _rpValidate = _ajv11.compile(rpSchema);
+} catch (e) {
+  console.error(`  Check #11 setup: could not load runtime-policy schema — ${e.message}`);
+}
+
+// Helper: load valid baseline and strip metadata fields
+function loadBaselineClone() {
+  const raw = JSON.parse(readFileSync(_rpBaselinePath, 'utf8'));
+  const { _expected_validation: _ev, _comment: _c, ...data } = raw;
+  return JSON.parse(JSON.stringify(data));
+}
+
+// N11-1: runtime-policy.json missing compaction.max_consecutive_failures → validation fails
+{
+  if (_rpValidate) {
+    const data = loadBaselineClone();
+    delete data.compaction.max_consecutive_failures;
+    const valid = _rpValidate(data);
+    check(
+      'N11-1: runtime-policy missing compaction.max_consecutive_failures → schema validation fails',
+      valid === false,
+      `valid=${valid}`
+    );
+  } else {
+    check('N11-1: runtime-policy missing compaction.max_consecutive_failures → schema validation fails', false, 'schema not loaded');
+  }
+}
+
+// N11-2: runtime-policy.json notes_md_max_lines is a string instead of integer → validation fails
+{
+  if (_rpValidate) {
+    const data = loadBaselineClone();
+    data.memory_hygiene.notes_md_max_lines = '20'; // string instead of integer
+    const valid = _rpValidate(data);
+    check(
+      'N11-2: runtime-policy notes_md_max_lines as string instead of integer → schema validation fails',
+      valid === false,
+      `valid=${valid}`
+    );
+  } else {
+    check('N11-2: runtime-policy notes_md_max_lines as string instead of integer → schema validation fails', false, 'schema not loaded');
+  }
+}
+
+// N11-3: evals/scenarios/runtime-policy/invalid-misspelled-key.json (memry_hygiene typo) → validation fails
+{
+  if (_rpValidate) {
+    const misspelledPath = join(__dirname, '..', 'scenarios', 'runtime-policy', 'invalid-misspelled-key.json');
+    const raw = JSON.parse(readFileSync(misspelledPath, 'utf8'));
+    const { _expected_validation: _ev, _comment: _c, ...data } = raw;
+    const valid = _rpValidate(data);
+    check(
+      'N11-3: invalid-misspelled-key.json (memry_hygiene typo) → schema additionalProperties rejects it',
+      valid === false,
+      `valid=${valid}`
+    );
+  } else {
+    check('N11-3: invalid-misspelled-key.json (memry_hygiene typo) → schema additionalProperties rejects it', false, 'schema not loaded');
+  }
+}
+
+// N11-4: Orchestrator with Context Compaction Policy missing compaction.max_consecutive_failures
+{
+  const syntheticOrchestrator = [
+    '## Prompt',
+    '',
+    '### Context Compaction Policy',
+    '',
+    '- If context failures exceed the limit, transition to WAITING_APPROVAL.',
+    '  (max_consecutive_failures key deliberately omitted here)',
+    '',
+    '## Archive',
+  ].join('\n');
+  const result = validateOrchestratorCompactionInvariant(syntheticOrchestrator);
+  check(
+    'N11-4: Orchestrator Context Compaction Policy missing compaction.max_consecutive_failures → invariant fails',
+    result.ok === false && result.errors.some(e => e.includes('compaction.max_consecutive_failures')),
+    `ok=${result.ok}, errors=${JSON.stringify(result.errors)}`
+  );
+}
+
+// N11-5: Orchestrator Agentic Memory Policy with memory-promotion-candidates.md AFTER Checklist C
+{
+  const syntheticOrchestrator = [
+    '## Archive',
+    '',
+    '### Agentic Memory Policy',
+    '',
+    '- At each phase completion, run Checklist C of skills/patterns/repo-memory-hygiene.md.',
+    '- Before running Checklist C, load skills/patterns/memory-promotion-candidates.md.',
+    '',
+    '## Resources',
+  ].join('\n');
+  const result = validateOrchestratorMemoryPromotionOrder(syntheticOrchestrator);
+  check(
+    'N11-5: Orchestrator Agentic Memory Policy with memory-promotion-candidates.md AFTER Checklist C → order assertion fails',
+    result.ok === false && result.errors.some(e => e.includes('BEFORE')),
+    `ok=${result.ok}, errors=${JSON.stringify(result.errors)}`
+  );
+}
+
+// N11-6: CodeReviewer where review_mode: "security" and security-review-discipline.md are on different lines
+{
+  const syntheticCodeReviewer = [
+    '## Prompt',
+    '',
+    '- When delegation payload contains review_mode: "security",',
+    '  the agent MUST load skills/patterns/security-review-discipline.md.',
+    '',
+    '## Archive',
+  ].join('\n');
+  const result = validateCodeReviewerSecurityModeSameLine(syntheticCodeReviewer);
+  check(
+    'N11-6: CodeReviewer review_mode: "security" and security-review-discipline.md on different lines → same-line assertion fails',
+    result.ok === false,
+    `ok=${result.ok}, errors=${JSON.stringify(result.errors)}`
+  );
+}
+
+// ──────────────────────────────────────────────
+// Check #12 — Phase 5 negative tests for memory drift validators
+// (5 memory drift functions + 1 tutorial-parity)
+// ──────────────────────────────────────────────
+console.log('\n=== Check #12 — Phase 5 memory drift + parity negative tests ===');
+
+// N12-1: validateMemoryContentTaxonomy — missing canonical heading → pass: false
+{
+  const corrupted = '# MEMORY-ARCHITECTURE\n\nNo taxonomy section here.\n';
+  const policy = { memory_hygiene: { memory_content_types: ['user', 'feedback'] } };
+  const r = validateMemoryContentTaxonomy(corrupted, policy);
+  check(
+    'N12-1: validateMemoryContentTaxonomy with missing taxonomy heading → pass=false',
+    r.pass === false && typeof r.reason === 'string' && r.reason.length > 0,
+    `pass=${r.pass}, reason=${r.reason}`
+  );
+}
+
+// N12-2: validateMemoryUseDiscipline — missing required heading → pass: false
+{
+  const corrupted = '# PROMPT BEHAVIOR CONTRACT\n\nNo memory section.\n';
+  const r = validateMemoryUseDiscipline(corrupted, { expected: {} });
+  check(
+    'N12-2: validateMemoryUseDiscipline with missing § 7 heading → pass=false',
+    r.pass === false && typeof r.reason === 'string' && r.reason.length > 0,
+    `pass=${r.pass}, reason=${r.reason}`
+  );
+}
+
+// N12-3: validateSessionNotesTemplate — missing required section → pass: false
+{
+  const corrupted = '# Session Notes\n\nNo required sections present.\n';
+  const scenario = { expected: { session_notes_sections: ['## Active Objective', '## Blockers'] } };
+  const r = validateSessionNotesTemplate(corrupted, scenario);
+  check(
+    'N12-3: validateSessionNotesTemplate with missing required section → pass=false',
+    r.pass === false && typeof r.reason === 'string' && r.reason.length > 0,
+    `pass=${r.pass}, reason=${r.reason}`
+  );
+}
+
+// N12-4: validateRepoMemoryHygieneChecklistC — missing Checklist C heading → pass: false
+{
+  const corrupted = '# repo-memory-hygiene\n\nNo Checklist C anywhere.\n';
+  const r = validateRepoMemoryHygieneChecklistC(corrupted, { expected: {} });
+  check(
+    'N12-4: validateRepoMemoryHygieneChecklistC with missing heading → pass=false',
+    r.pass === false && typeof r.reason === 'string' && r.reason.length > 0,
+    `pass=${r.pass}, reason=${r.reason}`
+  );
+}
+
+// N12-5: validateRepoMemoryHygieneChecklistD — missing Checklist D heading → pass: false
+{
+  const corrupted = '# repo-memory-hygiene\n\n## Checklist C\n\n- only C, no D.\n';
+  const r = validateRepoMemoryHygieneChecklistD(corrupted, { expected: {} });
+  check(
+    'N12-5: validateRepoMemoryHygieneChecklistD with missing heading → pass=false',
+    r.pass === false && typeof r.reason === 'string' && r.reason.length > 0,
+    `pass=${r.pass}, reason=${r.reason}`
+  );
+}
+
+// N12-6: validateTutorialParity — synthesized divergent EN/RU dirs → pass: false
+{
+  const tmpRoot = join(tmpdir(), `parity-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  mkdirSync(tmpRoot, { recursive: true });
+  const enDir = join(tmpRoot, 'en');
+  const ruDir = join(tmpRoot, 'ru');
+  mkdirSync(enDir, { recursive: true });
+  mkdirSync(ruDir, { recursive: true });
+  writeFileSync(join(enDir, '14-evals.md'), '## Heading One\n\ntext\n\n## Heading Two\n\ntext\n');
+  writeFileSync(join(ruDir, '14-evals.md'), '## Заголовок Один\n\ntext\n\n## Совершенно Другой\n\ntext\n');
+  const allowlist = {
+    _status: 'active',
+    _chapters_in_scope: ['14-evals.md'],
+    en_only: [],
+    ru_only: [],
+    heading_aliases: { 'Heading One': 'Заголовок Один' /* Heading Two intentionally unmapped */ }
+  };
+  let r;
+  try {
+    r = validateTutorialParity(enDir, ruDir, allowlist);
+  } finally {
+    rmSync(tmpRoot, { recursive: true, force: true });
+  }
+  check(
+    'N12-6: validateTutorialParity with EN/RU heading divergence outside allowlist → pass=false',
+    r.pass === false && (typeof r.reason === 'string' || (r.headingMismatches && r.headingMismatches.length > 0)),
+    `pass=${r.pass}, reason=${r.reason}, mismatches=${JSON.stringify(r.headingMismatches)}`
   );
 }
 

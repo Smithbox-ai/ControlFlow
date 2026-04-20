@@ -80,12 +80,14 @@ When context budget approaches limit:
 - Keep: active phase, unresolved blockers, approved decisions, safety constraints.
 - Drop: verbose intermediate tool output already summarized.
 - Emit compact summary in deterministic bullets before proceeding.
+- If context failures exceed `governance/runtime-policy.json#compaction.max_consecutive_failures`, transition to `WAITING_APPROVAL` instead of retrying.
 
 ### Agentic Memory Policy
 
 See [docs/agent-engineering/MEMORY-ARCHITECTURE.md](docs/agent-engineering/MEMORY-ARCHITECTURE.md) for the three-layer memory model.
 
 Agent-specific fields:
+- Before running Checklist C at phase completion, load `skills/patterns/memory-promotion-candidates.md` to scan the phase transcript and produce a structured list of candidate facts; feed those candidates into the Checklist C classification step.
 - At each phase completion, run Checklist C of `skills/patterns/repo-memory-hygiene.md` to evaluate whether any facts captured during the phase should be promoted to repo-persistent memory.
 - Update `NOTES.md` at each phase boundary to reflect the active objective and current phase; promote phase-specific state to task-episodic deliverables.
 - Remove stale repo-persistent notes when superseded.

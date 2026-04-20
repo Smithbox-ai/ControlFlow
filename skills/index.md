@@ -26,6 +26,8 @@ Reusable domain-specific patterns for agent consumption. Planner selects relevan
 | Reflection Loop | `skills/patterns/reflection-loop.md` | Orchestrator, CoreImplementer, UIImplementer, PlatformEngineer | reflection, pre-retry, fix hint, root cause, failure analysis |
 | Budget Tracking | `skills/patterns/budget-tracking.md` | Orchestrator, Planner, CoreImplementer, UIImplementer, PlatformEngineer | budget, token cap, wall-clock, cost, early stop, resource cap |
 | Memory Hygiene | `skills/patterns/repo-memory-hygiene.md` | Orchestrator, Planner | memory, pollution, dedup, NOTES.md, archive, repo-memory |
+| Memory Promotion | `skills/patterns/memory-promotion-candidates.md` | Orchestrator, Planner | memory, candidate, promotion, transcript, classification |
+| Security Review Discipline | `skills/patterns/security-review-discipline.md` | CodeReviewer-subagent | security, vulnerability, confidence, exclusion, false-positive |
 
 ## Loading Protocol
 - **Planning phase:** Planner includes `skill_references: ["skills/patterns/<domain>.md"]` in phase definition.

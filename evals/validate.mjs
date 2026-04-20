@@ -36,7 +36,6 @@
 
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
-import { createHash } from 'crypto';
 import { readFileSync, readdirSync, existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join, resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -57,6 +56,11 @@ import {
   validateSessionNotesTemplate,
   validateRepoMemoryHygieneChecklistC,
   validateRepoMemoryHygieneChecklistD,
+  validateTutorialParity,
+  computeStructuralFingerprint,
+  validateOrchestratorCompactionInvariant,
+  validateOrchestratorMemoryPromotionOrder,
+  validateCodeReviewerSecurityModeSameLine,
 } from './drift-checks.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -163,62 +167,8 @@ function collectSchemaRefs(scenarioObj) {
 }
 
 // ─── Warm Cache (Structural Passes) ──────────────────────────────────────────
-
-function computeStructuralFingerprint() {
-  const h = createHash('sha256');
-  function hashFile(filePath) {
-    try {
-      h.update(filePath + '\x00');
-      h.update(readFileSync(filePath));
-    } catch {
-      h.update(filePath + '\x00<missing>');
-    }
-  }
-  // validate.mjs itself
-  hashFile(fileURLToPath(import.meta.url));
-  // evals package manifests
-  hashFile(join(__dirname, 'package.json'));
-  hashFile(join(__dirname, 'package-lock.json'));
-  // schemas
-  try {
-    for (const f of readdirSync(SCHEMAS_DIR).sort()) {
-      if (f.endsWith('.schema.json')) hashFile(join(SCHEMAS_DIR, f));
-    }
-  } catch { /* cold */ }
-  // scenarios
-  try {
-    for (const f of readdirSync(SCENARIOS_DIR).sort()) {
-      if (f.endsWith('.json')) hashFile(join(SCENARIOS_DIR, f));
-    }
-  } catch { /* cold */ }
-  // root agent prompt files
-  try {
-    for (const f of readdirSync(ROOT).sort()) {
-      if (f.endsWith('.agent.md')) hashFile(join(ROOT, f));
-    }
-  } catch { /* cold */ }
-  // required governance and artifact files consumed by the harness
-  for (const rel of [
-    '.github/copilot-instructions.md',
-    'plans/project-context.md',
-    'docs/agent-engineering/PART-SPEC.md',
-    'docs/agent-engineering/RELIABILITY-GATES.md',
-    'docs/agent-engineering/CLARIFICATION-POLICY.md',
-    'docs/agent-engineering/TOOL-ROUTING.md',
-    'governance/tool-grants.json',
-    'governance/runtime-policy.json',
-    'governance/rename-allowlist.json',
-    'governance/agent-grants.json',
-  ]) hashFile(join(ROOT, rel));
-  // skills index and patterns
-  hashFile(join(ROOT, 'skills', 'index.md'));
-  try {
-    for (const f of readdirSync(join(ROOT, 'skills', 'patterns')).sort()) {
-      if (f.endsWith('.md')) hashFile(join(ROOT, 'skills', 'patterns', f));
-    }
-  } catch { /* cold */ }
-  return h.digest('hex');
-}
+// computeStructuralFingerprint is exported from drift-checks.mjs so fingerprint
+// regression tests can import it without triggering validate.mjs side effects.
 
 const currentFingerprint = computeStructuralFingerprint();
 
@@ -262,6 +212,65 @@ for (const file of schemaFiles) {
     pass(`Schema compiles: ${file}`);
   } catch (e) {
     fail(`Schema invalid: ${file} — ${e.message}`);
+  }
+}
+
+// ── Runtime-policy schema: validate live governance file + negative scenarios ─
+{
+  const rpSchemaFile = 'runtime-policy.schema.json';
+  const rpSchema = parsedSchemas[rpSchemaFile];
+  if (!rpSchema) {
+    fail('Pass 1: runtime-policy.schema.json not loaded — cannot validate governance/runtime-policy.json');
+  } else {
+    const validateRp = ajv.getSchema(rpSchema.$id);
+    if (!validateRp) {
+      fail('Pass 1: runtime-policy schema validator not found in ajv cache');
+    } else {
+      // Live governance file must pass
+      const rpLivePath = join(ROOT, 'governance', 'runtime-policy.json');
+      try {
+        const rpLiveRaw = JSON.parse(readFileSync(rpLivePath, 'utf8'));
+        const { _expected_validation: _ev, _comment: _c, ...rpData } = rpLiveRaw;
+        if (validateRp(rpData)) {
+          pass('Runtime-policy schema: governance/runtime-policy.json is valid');
+        } else {
+          fail(`Runtime-policy schema: governance/runtime-policy.json failed — ${ajv.errorsText(validateRp.errors)}`);
+        }
+      } catch (e) {
+        fail(`Runtime-policy schema: cannot load governance/runtime-policy.json — ${e.message}`);
+      }
+      // Negative-case scenarios under evals/scenarios/runtime-policy/
+      const rpScenariosDir = join(SCENARIOS_DIR, 'runtime-policy');
+      const rpFixtures = [
+        { file: 'valid-baseline.json', shouldPass: true },
+        { file: 'invalid-misspelled-key.json', shouldPass: false },
+        { file: 'invalid-wrong-type.json', shouldPass: false },
+      ];
+      for (const { file, shouldPass } of rpFixtures) {
+        const fp = join(rpScenariosDir, file);
+        if (!existsSync(fp)) {
+          fail(`Runtime-policy scenario missing: evals/scenarios/runtime-policy/${file}`);
+          continue;
+        }
+        try {
+          const raw = JSON.parse(readFileSync(fp, 'utf8'));
+          const expectedReason = raw._expected_validation;
+          const { _expected_validation: _ev2, _comment: _c2, ...data } = raw;
+          const valid = validateRp(data);
+          if (shouldPass && valid) {
+            pass(`Runtime-policy scenario (expected pass): ${file}`);
+          } else if (!shouldPass && !valid) {
+            pass(`Runtime-policy scenario (expected fail): ${file} — ${expectedReason}`);
+          } else if (shouldPass && !valid) {
+            fail(`Runtime-policy scenario: ${file} expected to PASS but failed — ${ajv.errorsText(validateRp.errors)}`);
+          } else {
+            fail(`Runtime-policy scenario: ${file} expected to FAIL but passed unexpectedly`);
+          }
+        } catch (e) {
+          fail(`Runtime-policy scenario: cannot load ${file} — ${e.message}`);
+        }
+      }
+    }
   }
 }
 
@@ -905,90 +914,131 @@ header('Pass 7: Memory Architecture References');
         fail('NOTES.md missing');
       }
     }
+  }
+}
 
-    // ── Memory Content Taxonomy checks (free-code-memory-features Phase 4) ──
-    const memTaxScenarioPath = join(SCENARIOS_DIR, 'memory-content-taxonomy.json');
-    if (!existsSync(memTaxScenarioPath)) {
-      fail('memory-content-taxonomy.json: scenario missing');
-    } else {
-      let memTaxScenario;
-      try {
-        memTaxScenario = JSON.parse(readFileSync(memTaxScenarioPath, 'utf8'));
-      } catch (e) {
-        fail(`memory-content-taxonomy.json: JSON parse error — ${e.message}`);
-        memTaxScenario = null;
+// ─── Pass 7b: Memory Discipline Contracts ───────────────────────────────────
+header('Pass 7b: Memory Discipline Contracts');
+
+{
+  const memTaxScenarioPath = join(SCENARIOS_DIR, 'memory-content-taxonomy.json');
+  if (!existsSync(memTaxScenarioPath)) {
+    fail('memory-content-taxonomy.json: scenario missing');
+  } else {
+    let memTaxScenario;
+    try {
+      memTaxScenario = JSON.parse(readFileSync(memTaxScenarioPath, 'utf8'));
+    } catch (e) {
+      fail(`memory-content-taxonomy.json: JSON parse error — ${e.message}`);
+      memTaxScenario = null;
+    }
+
+    let runtimePolicyForTax = null;
+    const runtimePolicyPath = join(ROOT, 'governance', 'runtime-policy.json');
+    try {
+      runtimePolicyForTax = JSON.parse(readFileSync(runtimePolicyPath, 'utf8'));
+    } catch (e) {
+      fail(`Pass 7b memory-taxonomy: cannot read governance/runtime-policy.json — ${e.message}`);
+    }
+
+    if (memTaxScenario && runtimePolicyForTax) {
+      // Check 1: Memory Content Taxonomy heading + content_types in MEMORY-ARCHITECTURE.md
+      const memArchPath = join(ROOT, 'docs', 'agent-engineering', 'MEMORY-ARCHITECTURE.md');
+      if (!existsSync(memArchPath)) {
+        fail('Pass 7b: docs/agent-engineering/MEMORY-ARCHITECTURE.md missing (memory-taxonomy check)');
+      } else {
+        const memArchContent = readFileSync(memArchPath, 'utf8');
+        const r1 = validateMemoryContentTaxonomy(memArchContent, runtimePolicyForTax);
+        if (r1.pass) {
+          pass('Memory Content Taxonomy: heading and all content types present in MEMORY-ARCHITECTURE.md');
+        } else {
+          fail(`Memory Content Taxonomy: ${r1.reason}`);
+        }
       }
 
-      let runtimePolicyForTax = null;
-      const runtimePolicyPath = join(ROOT, 'governance', 'runtime-policy.json');
-      try {
-        runtimePolicyForTax = JSON.parse(readFileSync(runtimePolicyPath, 'utf8'));
-      } catch (e) {
-        fail(`Pass 7 memory-taxonomy: cannot read governance/runtime-policy.json — ${e.message}`);
+      // Check 2: Memory Use Discipline in PROMPT-BEHAVIOR-CONTRACT.md
+      const pbcPath = join(ROOT, 'docs', 'agent-engineering', 'PROMPT-BEHAVIOR-CONTRACT.md');
+      if (!existsSync(pbcPath)) {
+        fail('Pass 7b: docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md missing (memory-taxonomy check)');
+      } else {
+        const pbcContent = readFileSync(pbcPath, 'utf8');
+        const r2 = validateMemoryUseDiscipline(pbcContent, memTaxScenario);
+        if (r2.pass) {
+          pass('Memory Use Discipline: heading and both invariants present in PROMPT-BEHAVIOR-CONTRACT.md');
+        } else {
+          fail(`Memory Use Discipline: ${r2.reason}`);
+        }
       }
 
-      if (memTaxScenario && runtimePolicyForTax) {
-        // Check 1: Memory Content Taxonomy heading + content_types in MEMORY-ARCHITECTURE.md
-        const memArchPath = join(ROOT, 'docs', 'agent-engineering', 'MEMORY-ARCHITECTURE.md');
-        if (!existsSync(memArchPath)) {
-          fail('Pass 7: docs/agent-engineering/MEMORY-ARCHITECTURE.md missing (memory-taxonomy check)');
+      // Check 3: Session notes template sections
+      const templatePath = join(ROOT, runtimePolicyForTax.memory_hygiene.session_notes_template_path);
+      if (!existsSync(templatePath)) {
+        fail(`Pass 7b: session-notes template missing at ${runtimePolicyForTax.memory_hygiene.session_notes_template_path}`);
+      } else {
+        const templateContent = readFileSync(templatePath, 'utf8');
+        const r3 = validateSessionNotesTemplate(templateContent, memTaxScenario);
+        if (r3.pass) {
+          pass('Session notes template: all required sections present');
         } else {
-          const memArchContent = readFileSync(memArchPath, 'utf8');
-          const r1 = validateMemoryContentTaxonomy(memArchContent, runtimePolicyForTax);
-          if (r1.pass) {
-            pass('Memory Content Taxonomy: heading and all content types present in MEMORY-ARCHITECTURE.md');
-          } else {
-            fail(`Memory Content Taxonomy: ${r1.reason}`);
-          }
+          fail(`Session notes template: ${r3.reason}`);
         }
+      }
 
-        // Check 2: Memory Use Discipline in PROMPT-BEHAVIOR-CONTRACT.md
-        const pbcPath = join(ROOT, 'docs', 'agent-engineering', 'PROMPT-BEHAVIOR-CONTRACT.md');
-        if (!existsSync(pbcPath)) {
-          fail('Pass 7: docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md missing (memory-taxonomy check)');
+      // Check 4 & 5: repo-memory-hygiene.md Checklist C and D
+      const hygienePath = join(ROOT, 'skills', 'patterns', 'repo-memory-hygiene.md');
+      if (!existsSync(hygienePath)) {
+        fail('Pass 7b: skills/patterns/repo-memory-hygiene.md missing (memory-taxonomy check)');
+      } else {
+        const hygieneContent = readFileSync(hygienePath, 'utf8');
+        const r4 = validateRepoMemoryHygieneChecklistC(hygieneContent, memTaxScenario);
+        if (r4.pass) {
+          pass('repo-memory-hygiene.md: Checklist C heading present');
         } else {
-          const pbcContent = readFileSync(pbcPath, 'utf8');
-          const r2 = validateMemoryUseDiscipline(pbcContent, memTaxScenario);
-          if (r2.pass) {
-            pass('Memory Use Discipline: heading and both invariants present in PROMPT-BEHAVIOR-CONTRACT.md');
-          } else {
-            fail(`Memory Use Discipline: ${r2.reason}`);
-          }
+          fail(`repo-memory-hygiene.md: ${r4.reason}`);
         }
+        const r5 = validateRepoMemoryHygieneChecklistD(hygieneContent, memTaxScenario);
+        if (r5.pass) {
+          pass('repo-memory-hygiene.md: Checklist D heading present');
+        } else {
+          fail(`repo-memory-hygiene.md: ${r5.reason}`);
+        }
+      }
+    }
+  }
+}
 
-        // Check 3: Session notes template sections
-        const templatePath = join(ROOT, runtimePolicyForTax.memory_hygiene.session_notes_template_path);
-        if (!existsSync(templatePath)) {
-          fail(`Pass 7: session-notes template missing at ${runtimePolicyForTax.memory_hygiene.session_notes_template_path}`);
-        } else {
-          const templateContent = readFileSync(templatePath, 'utf8');
-          const r3 = validateSessionNotesTemplate(templateContent, memTaxScenario);
-          if (r3.pass) {
-            pass('Session notes template: all required sections present');
-          } else {
-            fail(`Session notes template: ${r3.reason}`);
-          }
-        }
+// ─── Pass 7c: Tutorial Parity ────────────────────────────────────────────────
+header('Pass 7c: Tutorial Parity');
 
-        // Check 4 & 5: repo-memory-hygiene.md Checklist C and D
-        const hygienePath = join(ROOT, 'skills', 'patterns', 'repo-memory-hygiene.md');
-        if (!existsSync(hygienePath)) {
-          fail('Pass 7: skills/patterns/repo-memory-hygiene.md missing (memory-taxonomy check)');
+{
+  const parityAllowlistPath = join(SCENARIOS_DIR, 'tutorial-parity', 'allowlist.json');
+  if (!existsSync(parityAllowlistPath)) {
+    fail('Pass 7c: evals/scenarios/tutorial-parity/allowlist.json missing');
+  } else {
+    let parityAllowlist;
+    try {
+      parityAllowlist = JSON.parse(readFileSync(parityAllowlistPath, 'utf8'));
+    } catch (e) {
+      fail(`Pass 7c: allowlist.json parse error — ${e.message}`);
+      parityAllowlist = null;
+    }
+    if (parityAllowlist) {
+      if (parityAllowlist._status === 'placeholder') {
+        console.log('  Pass 7c: tutorial-parity check INSTALLED (placeholder mode — activated in Phase 5)');
+      } else if (parityAllowlist._status === 'active') {
+        const enDir = join(ROOT, 'docs', 'tutorial-en');
+        const ruDir = join(ROOT, 'docs', 'tutorial-ru');
+        const result = validateTutorialParity(enDir, ruDir, parityAllowlist);
+        if (result.pass) {
+          pass('Tutorial parity: all chapter pairs have matching heading sets');
         } else {
-          const hygieneContent = readFileSync(hygienePath, 'utf8');
-          const r4 = validateRepoMemoryHygieneChecklistC(hygieneContent, memTaxScenario);
-          if (r4.pass) {
-            pass('repo-memory-hygiene.md: Checklist C heading present');
-          } else {
-            fail(`repo-memory-hygiene.md: ${r4.reason}`);
-          }
-          const r5 = validateRepoMemoryHygieneChecklistD(hygieneContent, memTaxScenario);
-          if (r5.pass) {
-            pass('repo-memory-hygiene.md: Checklist D heading present');
-          } else {
-            fail(`repo-memory-hygiene.md: ${r5.reason}`);
+          fail(`Tutorial parity: ${result.reason}`);
+          for (const m of result.headingMismatches) {
+            fail(`Tutorial parity: ${m.file} — EN-only: [${m.en_only.join(', ')}], RU-only: [${m.ru_only.join(', ')}]`);
           }
         }
+      } else {
+        fail(`Pass 7c: allowlist.json has unknown _status "${parityAllowlist._status}" (expected "placeholder" or "active")`);
       }
     }
   }
@@ -1205,6 +1255,54 @@ header('Pass 12: Governance Policy Assertions');
       }
     }
     if (effortOk) pass(`Pass 12 E: reasoning_effort_hint present and valid for all ${roles.length} roles`);
+  }
+
+  // F: Orchestrator Context Compaction Policy invariant
+  {
+    const orchPath = join(ROOT, 'Orchestrator.agent.md');
+    try {
+      const orchContent = readFileSync(orchPath, 'utf8');
+      const rf = validateOrchestratorCompactionInvariant(orchContent);
+      if (rf.ok) {
+        pass('Pass 12 F: Orchestrator Context Compaction Policy contains compaction.max_consecutive_failures and WAITING_APPROVAL');
+      } else {
+        for (const err of rf.errors) fail(`Pass 12 F: ${err}`);
+      }
+    } catch (e) {
+      fail(`Pass 12 F: cannot read Orchestrator.agent.md — ${e.message}`);
+    }
+  }
+
+  // G: Orchestrator Agentic Memory Policy — promotion order
+  {
+    const orchPath = join(ROOT, 'Orchestrator.agent.md');
+    try {
+      const orchContent = readFileSync(orchPath, 'utf8');
+      const rg = validateOrchestratorMemoryPromotionOrder(orchContent);
+      if (rg.ok) {
+        pass('Pass 12 G: Orchestrator memory-promotion-candidates.md precedes Checklist C in Agentic Memory Policy');
+      } else {
+        for (const err of rg.errors) fail(`Pass 12 G: ${err}`);
+      }
+    } catch (e) {
+      fail(`Pass 12 G: cannot read Orchestrator.agent.md — ${e.message}`);
+    }
+  }
+
+  // H: CodeReviewer security mode same-line assertion
+  {
+    const crPath = join(ROOT, 'CodeReviewer-subagent.agent.md');
+    try {
+      const crContent = readFileSync(crPath, 'utf8');
+      const rh = validateCodeReviewerSecurityModeSameLine(crContent);
+      if (rh.ok) {
+        pass('Pass 12 H: CodeReviewer review_mode: "security" and security-review-discipline.md co-located on same line');
+      } else {
+        for (const err of rh.errors) fail(`Pass 12 H: ${err}`);
+      }
+    } catch (e) {
+      fail(`Pass 12 H: cannot read CodeReviewer-subagent.agent.md — ${e.message}`);
+    }
   }
 }
 

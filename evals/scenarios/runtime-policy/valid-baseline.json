@@ -1,4 +1,5 @@
 {
+  "_expected_validation": "pass",
   "_comment": "Orchestrator operational knobs only. Scoring thresholds live in docs/agent-engineering/SCORING-SPEC.md. File-count complexity boundaries live in plans/project-context.md.",
 
   "approval_required_actions": [

@@ -4,25 +4,29 @@
 
 Понять, **как ControlFlow проверяет качество собственных артефактов**. После этой главы вы сможете запускать eval-харнесс, читать его вывод и добавлять новые сценарии.
 
+## Ключевые концепции
+
+- **Eval-харнесс** — набор оффлайн проверок в `evals/`, которые не вызывают реальных агентов.
+- **Сценарий** — JSON-файл в `evals/scenarios/`, описывающий входящие данные и ожидаемый выход.
+- **Drift check** — проверка, гарантирующая, что файлы агентов синхронизированы с правилами (governance) и схемами.
+- **Companion rule** — правило `_must_contain`, требующее наличия определенных строк в файле агента.
+
 ## Что такое eval-харнесс
 
-`evals/` — это **оффлайн** validation suite, проверяющий schema-соответствие, поведенческие инварианты, orchestration handoff и drift. **Никаких реальных LLM-вызовов**, никакой сети — это статическая проверка артефактов.
+`evals/` — это **оффлайн** test runner. Он полностью автономен.
 
-**Канонический gate:**
-
-```sh
-cd evals && npm test
-```
-
-Запускает полный оффлайн набор проверок. CI выполняет ровно эту команду ([.github/workflows/ci.yml](../../.github/workflows/ci.yml)).
+**Ключевые свойства:**
+- **Никакой сети** — нет вызовов реальных агентов или LLM.
+- **Только оффлайн** — работает в CI без учетных данных.
+- **Детерминированность** — одинаковый ввод всегда дает одинаковый результат (pass/fail).
 
 ## Структура `evals/`
 
 ```
 evals/
 ├── package.json              # npm scripts
-├── validate.mjs              # структурный проход
-├── drift-checks.mjs          # drift-helper
+├── validate.mjs              # корневой валидатор (Passes 1–13)
+├── drift-checks.mjs          # хелперы для drift detection
 ├── README.md                 # документация
 ├── scenarios/                # сценарии для регрессии
 │   ├── planner-orchestrator-handoff.json
@@ -39,173 +43,201 @@ evals/
 
 | Команда | Что запускает | Скорость |
 |---------|--------------|---------|
-| `npm test` | Полный suite (validate + behavior + handoff + drift) | Медленно |
-| `npm run test:structural` | Только `validate.mjs` (схемы и P.A.R.T.) | Быстро |
-| `npm run test:behavior` | Behavior + handoff + drift, без structural | Средне |
+| `cd evals && npm test` | Полный suite (все 18 проходов и поведения) | Медленно |
+| `npm run test:structural` | Только структурные проходы `validate.mjs` | Быстро |
+| `npm run test:behavior` | Поведение (behavior) + handoff | Быстро |
 
 ## Что проверяет каждый pass
 
-### Pass 1–3: validate.mjs (структурный)
+Актуальный список проходов (passes), выполняемых `validate.mjs`:
 
-- Каждая JSON-схема — валидный JSON Schema (draft 2020-12).
-- Каждый сценарий в `scenarios/` валиден против связанной схемы.
-- Все ссылки на схемы из агентских файлов корректны.
+### Pass 1: Schema Validity
 
-### Pass 4: drift-detection.test.mjs
+- Каждая схема валидна согласно JSON Schema (draft 2020-12).
+- Включает валидацию `governance/runtime-policy.json` против `schemas/runtime-policy.schema.json` и фикстур из `evals/scenarios/runtime-policy/`.
+- Нет синтаксических ошибок.
 
-- P.A.R.T. section order на всех `*.agent.md`.
-- Все 4 секции присутствуют.
-- Frontmatter поля (`description`, `tools`, `model`, `model_role`) заполнены.
-- `tools:` frontmatter ↔ `governance/tool-grants.json`.
-- Каждая упомянутая схема существует.
-- PreFlect-ссылка присутствует в каждом агенте.
-- Rename allowlist (для удалённых/добавленных файлов).
+### Pass 2: Scenario Integrity
 
-### Pass 4b: companion rules
+- Каждый JSON-файл в `evals/scenarios/` валиден по отношению к своей схеме.
 
-- Clarification policy цитируется правильно.
-- Tool routing правила соблюдены.
+### Pass 3: Reference Integrity
 
-### Pass 5–7: prompt-behavior-contract.test.mjs
+- Ссылки на схемы в файлах агентов корректны.
+- Ссылки `skill_references[]` указывают на существующие файлы в `skills/patterns/`.
 
-Проверяет поведенческие инварианты из [PROMPT-BEHAVIOR-CONTRACT.md](../agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md):
+### Pass 3b: Required Project Artifacts
 
-- Evidence discipline (нет силового success без evidence).
-- Handoff discipline (правильные target_agent в planner.handoff).
-- Abstention rule.
+- Проверка наличия обязательных базовых артефактов, таких как `plans/project-context.md`.
 
-### Pass 8: orchestration-handoff-contract.test.mjs
+### Pass 3c: Tool Grant Consistency
 
-Проверяет:
-- Каждый сценарий handoff Planner→Orchestrator корректен.
-- Dispatch payload содержит обязательные поля.
-- Trace_id и iteration_index пробрасываются.
+- Верифицирует массивы инструментов (tools) согласно governance-конфигам.
+
+### Pass 3d: Agent Grant Consistency
+
+- Верифицирует массивы агентов согласно governance-конфигам.
+
+### Pass 4: P.A.R.T Section Order
+
+- Формат каждого `*.agent.md` строго соответствует порядку секций: **Prompt → Archive → Resources → Tools**.
+- Отсутствие или неверный порядок приводят к ошибке.
+
+### Pass 4b: Clarification Triggers (§5) & Tool Routing Rules (§6)
+
+- Companion rules, обязывающие агентов использовать политики уточнения и строгие правила роутинга инструментов.
+
+### Pass 5: Skill Library Consistency
+
+- Проверка структурной целостности индекса `skills/`.
+
+### Pass 6: Synthetic Rename Negative-Path Checks
+
+- Тесты негативных путей для защиты от обхода правил при переименовании файлов.
+
+### Pass 7: Memory Architecture References
+
+- Гарантирует, что агенты корректно ссылаются на унифицированную архитектуру памяти.
+
+### Pass 7b: Memory Discipline Contracts
+
+- Проверяет наличие обязательных инструкций по гигиене памяти, очистке сессий и управлению персистентным хранилищем.
+
+### Pass 7c: Tutorial Parity
+
+В режиме placeholder (текущий дефолт — `_status: "placeholder"` в `evals/scenarios/tutorial-parity/allowlist.json`), Pass 7c только логирует, что проверка установлена, и пропускает валидацию. Активация переключает `_status` в `"active"` в следующей фазе, после чего `validateTutorialParity` выполняется и выдаёт результат по каждой паре глав, сравнивая множества заголовков H2 между `docs/tutorial-en/` и `docs/tutorial-ru/`.
+
+### Pass 8: Drift Detection — Roster ↔ Enum Bidirectional Alignment
+
+- Проверяет двунаправленную синхронизацию реестра агентов в `plans/project-context.md` и enum'а `executor_agent` в `schemas/planner.plan.schema.json`.
+
+### Pass 9: Drift Detection — Agent Resources Schema Existence
+
+- Для каждой схемы, на которую ссылается секция `Resources` агента, проверяет что соответствующий файл схемы существует.
+
+### Pass 10: Drift Detection — Cross-Plan File-Overlap
+
+- Обнаруживает случайные пересечения списков файлов между активными планами в `plans/`.
+
+### Pass 12: Governance Policy Assertions
+
+- Проверяет инварианты `governance/runtime-policy.json` и связанных governance-файлов (review pipeline по уровням, retry-бюджеты, пороги approval gate).
+
+### Pass 13: Drift Detection — review_scope=final Bidirectional Coupling
+
+- Проверяет двунаправленную связность ссылок на `review_scope: "final"` в промптах Orchestrator и CodeReviewer.
 
 ## Сценарии
 
-`evals/scenarios/*.json` — это **фикстуры** реальных interaction-сценариев. Они валидируются **против схем** при каждом npm test.
+`evals/scenarios/*.json` — это **фикстуры** реальных interaction-сценариев. Они валидируются **против схем** при каждом запуске тестов.
 
 **Зачем сценарии:**
-- Регрессионная защита: если кто-то сломает контракт, упадёт сценарий.
-- Документация: сценарий показывает, как **должен выглядеть** правильный обмен.
-- Тестовый материал: behavior-tests перебирают сценарии и проверяют инварианты.
+- Валидация схемы: проверяет структуру данных.
+- Регрессионная защита: если кто-то сломает контракт, упадёт сценарий (тест на поведение).
 
 **Примеры важных сценариев:**
 
-| Файл | Что демонстрирует |
-|------|-------------------|
-| `planner-idea-interview-trigger.json` | Idea interview gate Planner-а |
-| `planner-orchestrator-handoff.json` | Handoff с tier-aware routing |
-| `orchestrator-plan-auditor-integration.json` | PLAN_REVIEW триггеры и dispatch |
-| `plan-auditor-adversarial-detection.json` | Архитектурные/security findings |
-| `executability-verifier-contract.json` | Cold-start симуляция первых 3 задач |
-| `code-reviewer-final-scope-drift.json` | Final review со scope drift |
-| `failure-retry.json` | Retry routing по failure_classification |
-| `needs-input-routing.json` | Clarification flow |
+| Файл | Папка | Соответствующая схема |
+|------|-------|-----------------------|
+| Planner plan with 5 phases | `scenarios/planner/` | `planner.plan.schema.json` |
+| PlanAuditor APPROVED verdict | `scenarios/plan-auditor/` | `plan-auditor.plan-audit.schema.json` |
+| CoreImplementer NEEDS_INPUT | `scenarios/core-implementer/` | `core-implementer.execution-report.schema.json` |
+| Orchestrator gate event | `scenarios/orchestrator/` | `orchestrator.gate-event.schema.json` |
 
 ## Чтение вывода
 
-Успешный прогон выглядит примерно так:
+Типичный успешный прогон `npm test` теперь выглядит так:
 
 ```
-✔ Pass 1: schema validation        [12/12 OK]
-✔ Pass 2: scenario validation      [78/78 OK]
-✔ Pass 3: agent reference check    [13/13 OK]
-✔ Pass 4: drift detection          [240/240 OK]
-✔ Pass 4b: companion rules         [22/22 OK]
-✔ Pass 5: evidence discipline      [13/13 OK]
-✔ Pass 6: handoff discipline       [9/9 OK]
-✔ Pass 7: abstention rule          [13/13 OK]
-✔ Pass 8: orchestration handoff    [10/10 OK]
-
-Total: OK (all passed)
+Pass 1: Schema Validity — OK
+Pass 2: Scenario Integrity — OK
+Pass 3: Reference Integrity — OK
+...
+Pass 7c: Tutorial Parity — OK
+Pass 13: Drift Detection — review_scope=final Bidirectional Coupling — OK
+Total: All checks passed
 ```
 
-Failure показывает конкретный pass, конкретный артефакт и конкретное правило, которое нарушено.
+Ошибка показывает конкретный pass, артефакт и точную причину. Например:
+
+```
+FAIL Pass 4 — P.A.R.T. order
+  CoreImplementer-subagent.agent.md: 
+  Section order is [Prompt, Resources, Archive, Tools] 
+  Expected [Prompt, Archive, Resources, Tools]
+```
 
 ## Добавление нового сценария
 
 ```mermaid
 flowchart TD
     Need[Хочу зафиксировать поведение] --> SchemaExists{Схема существует?}
-    SchemaExists -->|нет| CreateSchema[Создать или дополнить schema]
-    SchemaExists -->|да| WriteScenario[Создать scenario JSON]
+    SchemaExists -->|нет| CreateSchema[Создать/дополнить схему]
+    SchemaExists -->|да| WriteScenario[Создать scenario JSON\nв evals/scenarios/<agent>/]
     CreateSchema --> WriteScenario
     WriteScenario --> Run[cd evals && npm test]
     Run --> Pass{All passed?}
-    Pass -->|нет| Fix[Поправить scenario до валидности]
+    Pass -->|нет| Fix[Поправить JSON или схему]
     Fix --> Run
     Pass -->|да| Done[✅ Готово]
 ```
 
-Из CONTRIBUTING:
-
-1. Создать сценарий в `evals/scenarios/`.
-2. Имя файла = `<emitter-agent>-<scenario-purpose>.json`.
-3. Содержимое валидно против соответствующей schema.
-4. Если поведение нетривиально — добавить тест-кейс в подходящий `*.test.mjs`.
-5. `cd evals && npm test`.
-
 ## Добавление нового агента/схемы
 
-1. Создать `<NewAgent>.agent.md` с P.A.R.T. структурой.
-2. Создать `schemas/<new-agent>.<output>.schema.json`.
-3. Зарегистрировать в `plans/project-context.md` (если не review-only).
-4. Добавить в `governance/agent-grants.json` и `tool-grants.json`.
-5. Создать ≥1 сценарий в `evals/scenarios/`.
-6. `cd evals && npm test` должен пройти.
+1. **Создать агент-файл** — `<Name>.agent.md` в формате P.A.R.T.
+2. **Создать схему** — `schemas/<name>.schema.json`.
+3. **Добавить сценарии (evals)** — как минимум 1 в папку `evals/scenarios/<name>/`.
+4. **Зарегистрировать** — в файле `plans/project-context.md`.
 
-## Что **не** делает eval-харнесс
+После каждого шага необходимо запустить `npm test` для проверки.
 
-- ❌ Не вызывает реальных LLM.
-- ❌ Не делает сетевых запросов.
-- ❌ Не проверяет качество текста промптов (только структуру).
-- ❌ Не запускает приложения (нет приложений).
+## Что не делает eval-харнесс
 
-## CI
+- ❌ **Не проверяет правильность решения задачи** — это задача code review.
+- ❌ **Не вызывает реальных агентов/LLM** — проверки идут только оффлайн.
+- ❌ **Не делает межсетевых запросов** — никаких API вызовов.
+- ❌ **Не запускает приложение** — здесь нет UI-тестов.
+
+## CI Configuration
 
 `.github/workflows/ci.yml`:
 
 ```yaml
-- name: Install
-  working-directory: evals
-  run: npm install
-
-- name: Test
-  working-directory: evals
-  run: npm test
+- run: cd evals && npm test
+  env:
+    NODE_ENV: test
 ```
 
-То есть CI **зеркалирует** ровно то, что вы запускаете локально.
+В CI требуются успешные проходы **всех** проверок. Одиночные падения считаются провалами сборки (failure).
 
 ## Типичные ошибки
 
-- **Запустить из корня репо**. Должно быть `cd evals && npm test`.
-- **Считать, что eval запускает агентов**. Нет, это **только** структурные/behavior-проверки.
-- **Изменить агента без сверки `tool-grants.json`**. Drift fail.
-- **Удалить файл без `rename-allowlist.json`**. Drift fail.
-- **Игнорировать локальный fail**. Если `npm test` падает у вас — упадёт и в CI.
+- **Запуск из корня репо**, а не папки `evals/`.
+- **Создание JSON вне папки правильного агента** (схема не подтянется).
+- **Добавление агента без его регистрации в `plans/project-context.md`** — упадёт drift companion rule.
+- **Изменение порядка секций P.A.R.T.** — Pass 4 упадёт немедленно.
+- **Игнорирование локальных фейлов** — CI запускает ту же самую команду.
 
 ## Упражнения
 
-1. **(новичок)** Запустите `cd evals && npm install && npm test`. Сколько тестов прошло? Сколько секунд?
-2. **(новичок)** Запустите `npm run test:structural`. Чем отличается результат?
-3. **(средний)** Откройте `evals/scenarios/planner-orchestrator-handoff.json`. Какие основные поля?
-4. **(средний)** Намеренно сломайте `tools:` frontmatter в одном из агентов (например, удалите тулзу). Запустите eval. Что произойдёт?
-5. **(продвинутый)** Прочитайте `evals/tests/orchestration-handoff-contract.test.mjs`. Какие 3 инварианта он проверяет?
+1. **(новичок)** Запустите `cd evals && npm install && npm test`. Сколько тестов прошло? Посмотрите файл `evals/out.txt`.
+2. **(новичок)** Откройте `evals/scenarios/` — сколько папок (агентов) там находится?
+3. **(средний)** Попробуйте добавить новый сценарий `ABSTAIN` для PlanAuditor. Какие поля требуют заполнения?
+4. **(средний)** Найдите companion rule для `Orchestrator.agent.md` в файле `drift-checks.mjs`. О чём оно?
+5. **(продвинутый)** Напишите тестовый сценарий с возвращением статуса `needs_replan` для BrowserTester.
 
 ## Контрольные вопросы
 
-1. Какая каноническая команда eval-проверки?
-2. Сколько примерно тестов в полном suite?
-3. Какие 3 режима (full/structural/behavior) и в чём разница?
-4. Какой pass проверяет P.A.R.T. order?
-5. Что делает CI?
+1. Сколько проверок и проходов инициируется полным eval-харнессом?
+2. Вызывает ли eval-харнесс LLM в процессе работы?
+3. За что отвечает Pass 4?
+4. Сколько шагов нужно, чтобы добавить в проект нового агента?
+5. Какую команду вы должны запустить, прежде чем объявить свою работу «выполненной»?
 
-## См. также
+## Смотрите также
 
-- [Глава 04 — P.A.R.T.](04-part-spec.md)
-- [Глава 09 — Схемы](09-schemas.md)
+- [Глава 04 — P.A.R.T. Specification](04-part-spec.md)
+- [Глава 09 — Schemas](09-schemas.md)
 - [Глава 10 — Governance](10-governance.md)
 - [evals/README.md](../../evals/README.md)
-- [CONTRIBUTING.md](../../CONTRIBUTING.md)
+- [.github/workflows/ci.yml](../../.github/workflows/ci.yml)

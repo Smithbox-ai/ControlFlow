@@ -1,0 +1,25 @@
+{
+  "_comment": "Allowlist for tutorial-parity check. Activated in Phase 5 after chapter 14 resync. Scoped to 14-evals.md initially via _chapters_in_scope; extend the array to add more chapters.",
+  "_status": "active",
+  "_chapters_in_scope": ["14-evals.md"],
+  "en_only": [],
+  "ru_only": [],
+  "heading_aliases": {
+    "Why this chapter": "Зачем эта глава",
+    "Key Concepts": "Ключевые концепции",
+    "What the Eval Harness Is": "Что такое eval-харнесс",
+    "`evals/` Structure": "Структура `evals/`",
+    "Three Modes": "Три режима",
+    "What Each Pass Checks": "Что проверяет каждый pass",
+    "Scenarios": "Сценарии",
+    "Reading the Output": "Чтение вывода",
+    "Adding a New Scenario": "Добавление нового сценария",
+    "Adding a New Agent or Schema": "Добавление нового агента/схемы",
+    "What Evals Do NOT Check": "Что не делает eval-харнесс",
+    "CI Configuration": "CI Configuration",
+    "Common Mistakes": "Типичные ошибки",
+    "Exercises": "Упражнения",
+    "Review Questions": "Контрольные вопросы",
+    "See Also": "Смотрите также"
+  }
+}

@@ -1,0 +1,206 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://copilot-atlas.local/schemas/runtime-policy.schema.json",
+  "title": "RuntimePolicy",
+  "description": "Orchestrator operational knobs for the ControlFlow agent system. Scoring thresholds live in docs/agent-engineering/SCORING-SPEC.md. File-count complexity boundaries live in plans/project-context.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "approval_required_actions",
+    "review_pipeline_by_tier",
+    "max_iterations_by_tier",
+    "retry_budgets",
+    "stagnation_detection",
+    "session_telemetry",
+    "tool_output_policy",
+    "plan_review_gate_trigger_conditions",
+    "batch_approval",
+    "budget_defaults",
+    "final_review_gate",
+    "memory_hygiene",
+    "compaction"
+  ],
+  "properties": {
+    "_comment": {
+      "type": "string"
+    },
+    "_expected_validation": {
+      "type": "string",
+      "description": "Test-fixture metadata used by Phase 5 scenario assertions. Not present in the live governance file."
+    },
+    "approval_required_actions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "review_pipeline_by_tier": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["TRIVIAL", "SMALL", "MEDIUM", "LARGE"],
+      "properties": {
+        "TRIVIAL": { "$ref": "#/$defs/reviewPipeline" },
+        "SMALL":   { "$ref": "#/$defs/reviewPipeline" },
+        "MEDIUM":  { "$ref": "#/$defs/reviewPipeline" },
+        "LARGE":   { "$ref": "#/$defs/reviewPipeline" }
+      }
+    },
+    "max_iterations_by_tier": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["TRIVIAL", "SMALL", "MEDIUM", "LARGE"],
+      "properties": {
+        "TRIVIAL": { "type": "integer", "minimum": 1 },
+        "SMALL":   { "type": "integer", "minimum": 1 },
+        "MEDIUM":  { "type": "integer", "minimum": 1 },
+        "LARGE":   { "type": "integer", "minimum": 1 }
+      }
+    },
+    "retry_budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_retries_per_phase",
+        "transient_max",
+        "fixable_max",
+        "needs_replan_max",
+        "escalate_max",
+        "per_wave_transient_reduction_threshold",
+        "per_wave_parallelism_reduction_factor"
+      ],
+      "properties": {
+        "max_retries_per_phase":                   { "type": "integer", "minimum": 0 },
+        "transient_max":                           { "type": "integer", "minimum": 0 },
+        "fixable_max":                             { "type": "integer", "minimum": 0 },
+        "needs_replan_max":                        { "type": "integer", "minimum": 0 },
+        "escalate_max":                            { "type": "integer", "minimum": 0 },
+        "per_wave_transient_reduction_threshold":  { "type": "integer", "minimum": 0 },
+        "per_wave_parallelism_reduction_factor":   { "type": "number",  "minimum": 0, "maximum": 1 }
+      }
+    },
+    "stagnation_detection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["same_phase_failure_escalation_threshold", "same_classification_repeat_escalation"],
+      "properties": {
+        "same_phase_failure_escalation_threshold": { "type": "integer", "minimum": 1 },
+        "same_classification_repeat_escalation":   { "type": "boolean" }
+      }
+    },
+    "session_telemetry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["template", "log_file", "write_timing", "archive_threshold_entries"],
+      "properties": {
+        "template":                   { "type": "string" },
+        "log_file":                   { "type": "string" },
+        "write_timing":               { "type": "string" },
+        "archive_threshold_entries":  { "type": "integer", "minimum": 1 }
+      }
+    },
+    "tool_output_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spill_directory_template", "task_slug_pattern", "purge_timing"],
+      "properties": {
+        "spill_directory_template": { "type": "string" },
+        "task_slug_pattern":        { "type": "string" },
+        "purge_timing":             { "type": "string" },
+        "max_total_mb":             { "type": ["integer", "null"] }
+      }
+    },
+    "plan_review_gate_trigger_conditions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "min_phases",
+        "confidence_threshold",
+        "high_risk_scope_triggers_review",
+        "applicable_high_impact_risk_triggers_review"
+      ],
+      "properties": {
+        "min_phases":                                  { "type": "integer",  "minimum": 1 },
+        "confidence_threshold":                        { "type": "number",   "minimum": 0, "maximum": 1 },
+        "high_risk_scope_triggers_review":             { "type": "boolean" },
+        "applicable_high_impact_risk_triggers_review": { "type": "boolean" }
+      }
+    },
+    "batch_approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["approval_per", "exception_destructive_phases"],
+      "properties": {
+        "approval_per":               { "type": "string" },
+        "exception_destructive_phases": { "type": "string" }
+      }
+    },
+    "budget_defaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "enable_reflection"],
+      "properties": {
+        "enabled":            { "type": "boolean" },
+        "token_cap":          { "type": ["integer", "null"] },
+        "wall_clock_s":       { "type": ["number", "null"] },
+        "cost_usd":           { "type": ["number", "null"] },
+        "enable_reflection":  { "type": "boolean" },
+        "notes":              { "type": "string" }
+      }
+    },
+    "final_review_gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled_by_default", "auto_trigger_tiers", "allow_user_trigger", "max_fix_cycles"],
+      "properties": {
+        "enabled_by_default":   { "type": "boolean" },
+        "auto_trigger_tiers":   { "type": "array", "items": { "type": "string" } },
+        "allow_user_trigger":   { "type": "boolean" },
+        "max_fix_cycles":       { "type": "integer", "minimum": 0 }
+      }
+    },
+    "memory_hygiene": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "notes_md_max_lines",
+        "archive_completed_plans_threshold_days",
+        "archive_eligible_statuses",
+        "repo_memory_dedup_required",
+        "memory_content_types",
+        "session_notes_template_path",
+        "stale_memory_freshness_days"
+      ],
+      "properties": {
+        "_comment":                             { "type": "string" },
+        "notes_md_max_lines":                   { "type": "integer", "minimum": 1 },
+        "archive_completed_plans_threshold_days": { "type": "integer", "minimum": 1 },
+        "archive_eligible_statuses":            { "type": "array", "items": { "type": "string" } },
+        "repo_memory_dedup_required":           { "type": "boolean" },
+        "memory_content_types":                 { "type": "array", "items": { "type": "string" } },
+        "session_notes_template_path":          { "type": "string" },
+        "stale_memory_freshness_days":          { "type": "integer", "minimum": 0 }
+      }
+    },
+    "compaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_consecutive_failures", "circuit_breaker_action"],
+      "properties": {
+        "_comment":                  { "type": "string" },
+        "max_consecutive_failures":  { "type": "integer", "minimum": 1 },
+        "circuit_breaker_action":    { "type": "string", "enum": ["escalate"] }
+      }
+    }
+  },
+  "$defs": {
+    "reviewPipeline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["plan_auditor", "assumption_verifier", "executability_verifier", "code_review"],
+      "properties": {
+        "plan_auditor":            { "type": "boolean" },
+        "assumption_verifier":     { "type": "boolean" },
+        "executability_verifier":  { "type": "boolean" },
+        "code_review":             { "type": "boolean" }
+      }
+    }
+  }
+}

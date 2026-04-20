@@ -158,7 +158,20 @@ npm test
 
 `validate.mjs` maintains a success-only warm cache at `evals/.cache/validate-cache.json`. On a cold run that passes all structural checks the harness writes an aggregate fingerprint to the cache file. On a subsequent run it computes the same fingerprint and, if it matches, exits immediately with ✅ without re-executing any pass.
 
-**What the fingerprint covers (conservative invalidation):** `validate.mjs` itself, `evals/package.json`, `evals/package-lock.json`, all `schemas/*.schema.json`, all `evals/scenarios/*.json`, all `*.agent.md` root files, the required governance and artifact files consumed by the harness (`.github/copilot-instructions.md`, `plans/project-context.md`, `docs/agent-engineering/` policy files, `governance/*.json`), and `skills/index.md` plus all `skills/patterns/*.md` files.
+**What the fingerprint covers (conservative invalidation):** Both harness files (`drift-checks.mjs` and `validate.mjs`), `evals/package.json`, `evals/package-lock.json`, all `schemas/*.schema.json`, all `evals/scenarios/*.json`, all `*.agent.md` root files, the required governance and artifact files consumed by the harness (`.github/copilot-instructions.md`, `plans/project-context.md`, `docs/agent-engineering/` policy files, `governance/*.json`), and `skills/index.md` plus all `skills/patterns/*.md` files. The fingerprint also recursively covers `evals/scenarios/runtime-policy/**/*.json` and `evals/scenarios/tutorial-parity/**/*.json` so that changes to nested fixture files (negative-case schemas and parity allowlists) correctly invalidate the warm cache.
+
+**Note:** `computeStructuralFingerprint` is exported from `evals/drift-checks.mjs` (not validate.mjs) so that `tests/fingerprint.test.mjs` can import and exercise it without triggering `validate.mjs` side effects (all-pass execution + `process.exit` calls).
+
+### Tutorial-parity check scope
+
+The tutorial-parity check (`Pass 7c`) is driven by `evals/scenarios/tutorial-parity/allowlist.json`. The allowlist supports an optional `_chapters_in_scope` field (array of `.md` basenames). When set, only those chapter pairs are validated; all other chapter pairs are skipped. This enables incremental activation — start with one chapter, then extend the array as additional chapters are translated and aliased.
+
+Example:
+```json
+{ "_chapters_in_scope": ["14-evals.md"] }
+```
+
+The `heading_aliases` dict maps EN heading text → RU heading text. A RU-only heading is acceptable if it equals the alias of a corresponding EN heading. Heading entries are positionally aligned (16 H2 headings → 16 alias entries for chapter 14).
 
 **Cache safety rules:**
 

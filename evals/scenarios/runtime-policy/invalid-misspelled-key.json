@@ -1,5 +1,5 @@
 {
-  "_comment": "Orchestrator operational knobs only. Scoring thresholds live in docs/agent-engineering/SCORING-SPEC.md. File-count complexity boundaries live in plans/project-context.md.",
+  "_expected_validation": "fail: memry_hygiene is not allowed (misspelled key — additionalProperties: false rejects it; memory_hygiene is also missing)",
 
   "approval_required_actions": [
     "destructive_file_delete",
@@ -104,8 +104,8 @@
     "max_fix_cycles": 1
   },
 
-  "memory_hygiene": {
-    "_comment": "Memory cleanup enforcement thresholds. notes_md_max_lines aligns with Pass 7 notes_md_line_budget in evals/scenarios/memory-architecture-references.json.",
+  "memry_hygiene": {
+    "_comment": "TYPO: this key is misspelled — should be memory_hygiene. Used as a negative validation scenario.",
     "notes_md_max_lines": 20,
     "archive_completed_plans_threshold_days": 14,
     "archive_eligible_statuses": ["DONE", "SUPERSEDED", "DEFERRED"],
@@ -118,6 +118,6 @@
   "compaction": {
     "max_consecutive_failures": 3,
     "circuit_breaker_action": "escalate",
-    "_comment": "autoCompact circuit breaker — adapted from free-code-main/src/services/compact/autoCompact.ts MAX_CONSECUTIVE_AUTOCOMPACT_FAILURES = 3"
+    "_comment": "autoCompact circuit breaker"
   }
 }
