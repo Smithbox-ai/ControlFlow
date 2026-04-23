@@ -255,14 +255,14 @@
     "complexity_tier": {
       "type": "string",
       "enum": ["TRIVIAL", "SMALL", "MEDIUM", "LARGE"],
-      "description": "Task complexity classification. Determines pipeline depth: TRIVIAL skips plan review, SMALL uses lite review, MEDIUM/LARGE use full review pipeline."
+      "description": "Task complexity classification. Planner emits this field; Orchestrator applies tier-specific review routing and iteration budgets per governance/runtime-policy.json. Tier definitions and override rules are owned by plans/project-context.md."
     },
     "iteration_budget": {
       "type": "integer",
       "minimum": 1,
       "maximum": 5,
       "default": 5,
-      "description": "Maximum plan-review iterations before escalation to user."
+      "description": "Maximum plan-review iterations before escalation to user. Governed by governance/runtime-policy.json; Planner sets this value to match the runtime policy iteration cap."
     },
     "revision_of": {
       "type": "string",

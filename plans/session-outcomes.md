@@ -10,6 +10,36 @@ Archive old entries when the log exceeds 50 entries (see `plans/templates/sessio
 
 ## Entry
 
+**Plan ID:** `planner-orchestrator-first-wave-optimization-plan`
+**Date:** 2026-04-23
+**Complexity Tier:** MEDIUM
+**Total Phases:** 4 / 4
+
+### Review Pipeline
+
+| Agent | Result | Notes |
+|---|---|---|
+| AssumptionVerifier-subagent | COMPLETE (2 iters) | iter1: 1 BLOCKING + 2 MINOR; iter2: 0 BLOCKING + 1 MINOR (all resolved inline) |
+| PlanAuditor-subagent | APPROVED | Final score 92% (0 CRITICAL/MAJOR, 2 MINOR folded in) |
+| ExecutabilityVerifier-subagent | N/A | Not in MEDIUM-tier review pipeline per `governance/runtime-policy.json` |
+| CodeReviewer-subagent | APPROVED (4/4 phases) | `validated_blocking_issues = []` for every phase |
+
+**Total review iterations:** 2 / 5
+**Convergence:** Converged
+
+### Outcome
+
+**Status:** SUCCESS
+**CodeReviewer false positive rate:** 0 / 0 (no CRITICAL/MAJOR raised across phases)
+
+### Lessons Learned
+
+1. When folding a PlanAuditor finding back into a plan mid-review, re-check executor-tool fit. AssumptionVerifier caught a doc-only agent being assigned a code-edit + test-execution gate after a same-iteration audit fix.
+2. The `cd evals && npm test` baseline already had 11 pre-existing Pass 10 Cross-Plan File-Overlap failures before this plan started; they are unrelated to Wave 1 scope and are documented for a future shared-anchor wave.
+3. Test-first ordering inside compression phases (update behavior/handoff assertions to canonical-source references, then compress prose) plus an atomic per-phase commit constraint kept the offline suite stable through Wave 2 parallel execution.
+
+## Entry
+
 **Plan ID:** `controlflow-russian-tutorial-plan`
 **Date:** `2025-11-25`
 **Complexity Tier:** `LARGE`
@@ -399,8 +429,76 @@ Full 6-phase LARGE-tier remediation of 14 orchestration weak spots identified in
 
 ### Lessons Learned
 
-1. Cross-platform line-ending bug (CRLF) caught by Pass 12 only after activation � drift validators that parse markdown should normalize line endings via `content.split(/\r?\n/)` instead of `content.split('\n')`.
-2. Subagent silent failures (empty response) on long instruction prompts; recovery pattern: inspect file system state directly before retrying � significant work was already applied in 2/2 silent-failure incidents.
+1. Cross-platform line-ending bug (CRLF) caught by Pass 12 only after activation � drift validators that parse markdown should normalize line endings via `content.split(/\r?\n/)` instead of `content.split('\n')`.
+2. Subagent silent failures (empty response) on long instruction prompts; recovery pattern: inspect file system state directly before retrying � significant work was already applied in 2/2 silent-failure incidents.
 3. Plan-contract drift: implementation that lands tests "in the wrong file" (validate.mjs Pass 12 vs prompt-behavior-contract.test.mjs) still requires retroactive completion to honor the approved plan's exact placement contract; the closed-world rule prevents silent reinterpretation.
+
+---
+
+---
+
+## Entry
+
+**Plan ID:** `planner-orchestrator-first-wave-optimization-plan`  
+**Date:** 2026-04-23  
+**Complexity Tier:** MEDIUM  
+**Total Phases:** 4 / 4  
+
+### Review Pipeline
+
+| Agent | Result | Notes |
+|---|---|---|
+| AssumptionVerifier-subagent | COMPLETE (2 iters) | Mirages found: iter1=1 BLOCKING + 2 MINOR; iter2=0 BLOCKING + 1 MINOR (all resolved inline) |
+| PlanAuditor-subagent | APPROVED | Final score: 92% (0 CRIT/MAJ, 2 MINOR folded into plan) |
+| ExecutabilityVerifier-subagent | N/A | MEDIUM tier per 
+eview_pipeline_by_tier |
+| CodeReviewer-subagent | APPROVED (4/4 phases) | Validated blocking issues: 0 across all phases |
+
+**Total review iterations:** 2 / 5  
+**Convergence:** Converged  
+
+### Outcome
+
+**Status:** SUCCESS  
+**CodeReviewer false positive rate:** 0 / 0 (n/a — no CRITICAL/MAJOR raised)  
+
+### Lessons Learned
+
+1. When folding a PlanAuditor finding into a plan mid-review, re-check executor-tool fit; AssumptionVerifier caught a doc-only agent being assigned a code+test gate.
+2. `cd evals && npm test` had 11 pre-existing Pass 10 Cross-Plan File-Overlap failures BEFORE this plan started; they are unrelated to Wave 1 scope and remain documented for a future shared-anchor wave.
+3. Test-first ordering inside compression phases (update assertions to canonical-source refs, then compress prose) plus an atomic per-phase commit constraint kept the offline suite stable through Wave 2 parallel execution.
+
+---
+
+## Entry
+
+**Plan ID:** `post-wave1-followups-plan`  
+**Date:** 2026-04-24  
+**Complexity Tier:** MEDIUM  
+**Total Phases:** 5 / 5  
+
+### Review Pipeline
+
+| Agent | Result | Notes |
+|---|---|---|
+| AssumptionVerifier-subagent | COMPLETE (2 iters) | Mirages: iter1 = 1 BLOCKING (Researcher tool grants) + minors; iter2 = 0 BLOCKING |
+| PlanAuditor-subagent | APPROVED | Final score: 9.2/10 (after CRITICAL-1 — duplicate retry-budget key — folded into plan) |
+| ExecutabilityVerifier-subagent | N/A | MEDIUM tier per `review_pipeline_by_tier` |
+| CodeReviewer-subagent | APPROVED (5/5 phases) | Validated blocking issues: 2 MAJOR/Phase4 (executor exceeded L289-only scope), resolved in 1 fix cycle |
+
+**Total review iterations:** 2 / 5  
+**Convergence:** Converged  
+
+### Outcome
+
+**Status:** SUCCESS  
+**CodeReviewer false positive rate:** 0 / 2 (0%) — both Phase-4 MAJORs were valid scope-creep findings  
+**Final eval suite count:** 477 checks (249 structural + 84 behavior + 66 handoff + 51 drift + 14 notes + 10 archive + 3 fingerprint), all green cold-cache.  
+
+### Lessons Learned
+
+1. Pass 10 baseline of "11 failed" was a print-cap artifact (10-line cap + 1 suppression-notice line in `validate.mjs`). True unresolved-pair count was 27, requiring a 9-consumer anchor map (not the 6 initially planned). Researcher derivation was directionally right; final consumer list expanded during execution after empirical test-driven discovery.
+2. Read-only subagents (Researcher tool grants: search/usages/problems/changes/fetch/agent) cannot persist their own deliverable artifacts. Orchestrator-as-scribe is a valid coordination pattern: subagent emits structured findings in chat, Orchestrator persists to disk verbatim. No prompt or grant change needed.
+3. Scope discipline in compression phases — Phase 4 explicitly said "L289 only" but the executor performed broader consolidation (table → bullet list, items #2/#3 rewrite). CodeReviewer caught both as MAJOR, fix cycle restored verbatim HEAD wording for non-targeted regions while preserving the L289 fix. Lesson: in fix-cycle prompts, demand `git diff HEAD` line-count target as part of the verification gate, not just a verbal promise.
 
 ---

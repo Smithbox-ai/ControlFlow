@@ -149,6 +149,14 @@ No measurable criterion. The agent cannot determine when it is done, and CodeRev
 
 > Phase task: "Add JWT expiry validation to `AuthMiddleware` → verify: `npm test auth` passes with a new test case for expired tokens"
 
+## 5. Prompt Compression Anti-Pattern Lexicon
+
+A bounded list of specific anti-patterns that waste context tokens in agent files. When writing or updating prompts, avoid these:
+
+- **Filler opt-in closers:** Ending prompts with conversational filler (e.g., "Let me know if you want me to proceed" or "Are you ready?"). *Instead: End with a clear structural command like "Emits: [schema name]" or stop after output rules.*
+- **Duplicated routing tables:** Re-stating tier-to-pipeline mappings or retry values directly in an agent's markdown. *Instead: Reference `governance/runtime-policy.json` as the source of truth for routing and budgets.*
+- **Long inline restatements of shared policy:** Copying entire sections of shared specs (like the semantic risk taxonomy) into a subagent's rules. *Instead: Reference `plans/project-context.md` or `.github/copilot-instructions.md` by explicit name and section.*
+
 ---
 
 ## Summary Decision Table

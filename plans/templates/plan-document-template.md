@@ -156,6 +156,22 @@ Keep diagrams compact. Each diagram should fit within 30 lines of Mermaid source
 - Each phase must be incremental and self-contained with TDD approach.
 - Phase count: 3–10 (decompose further if >10 phases needed).
 
+## Plan Quality Standards
+
+Every plan must satisfy all 11 standards (apply judgment on TRIVIAL plans):
+
+1. **Incremental** — Each phase produces a working, testable state.
+2. **TDD-driven** — Tests are specified before implementation steps.
+3. **Specific** — File paths, function names, and change descriptions are concrete.
+4. **Testable** — Success criteria are objectively verifiable.
+5. **Practical** — Phase count is 3–10; decompose further if exceeding 10.
+6. **Parallelizable** — Phases that can run independently MUST be assigned the same wave number. Sequential-only when there is a real data dependency.
+7. **Routable** — Every phase MUST specify exactly one `executor_agent` so Orchestrator can dispatch it without inference.
+8. **Visualized** — Plans with 3+ phases MUST include a phase dependency DAG. MEDIUM plans with non-trivial orchestration flow also include a `sequenceDiagram`. LARGE plans always include a `sequenceDiagram`.
+9. **Failure-aware** — Each phase includes failure expectations with classification and mitigation strategies.
+10. **Executable** — Each phase MUST specify concrete file paths, input/output contracts, verification commands, test specifics, and the owning `executor_agent`.
+11. **Risk-reviewed** — Every plan MUST include a populated `risk_review` array for all 7 semantic risk categories. Any `HIGH`-impact `open_question` entry must trigger a research phase before implementation.
+
 ## Terminal Non-Ready Outcome Artifact
 
 Use this structure ONLY when `status` is `ABSTAIN` or `REPLAN_REQUIRED`. Do NOT apply to `READY_FOR_EXECUTION` plans — use the Phase structure above instead.

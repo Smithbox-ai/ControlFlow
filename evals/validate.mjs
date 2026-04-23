@@ -61,6 +61,7 @@ import {
   validateOrchestratorCompactionInvariant,
   validateOrchestratorMemoryPromotionOrder,
   validateCodeReviewerSecurityModeSameLine,
+  validateCanonicalSourceMatrixHeading,
 } from './drift-checks.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -1330,6 +1331,23 @@ header('Pass 13: Drift Detection — review_scope=final Bidirectional Coupling')
       for (const err of result.errors) {
         fail(`Pass 13: review_scope=final coupling drift — ${err}`);
       }
+    }
+  }
+}
+
+// ─── Pass 14: Drift Detection — Canonical Source Matrix Heading (PW-F1) ────────
+header('Pass 14: Drift Detection — Canonical Source Matrix Heading');
+{
+  const ctxPath = join(ROOT, 'plans', 'project-context.md');
+  if (!existsSync(ctxPath)) {
+    fail('Pass 14: plans/project-context.md missing');
+  } else {
+    const ctxContent = readFileSync(ctxPath, 'utf8');
+    const result = validateCanonicalSourceMatrixHeading(ctxContent);
+    if (result.pass) {
+      pass('Canonical Source Matrix: heading present in plans/project-context.md');
+    } else {
+      fail(`Pass 14: ${result.reason}`);
     }
   }
 }

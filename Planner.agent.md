@@ -38,25 +38,10 @@ Produce implementation plans that are deterministic, schema-compliant, and execu
 ### Mandatory Workflow Procedure
 1. Idea Interview Gate: BEFORE the Clarification Gate, evaluate whether the user request is vague or abstract. Trigger condition: the request contains **all three** of — (a) no specific file names or paths, (b) no concrete acceptance criteria, (c) no explicit technology or constraint named. If triggered, load `skills/patterns/idea-to-prompt.md` and execute the 5-step interview protocol using `vscode/askQuestions`. Replace the original vague request with the structured prompt assembled at the end of Step 5. Skip this gate entirely if any single concrete signal is present (a file path, an agent name, a schema reference, or a measurable goal).
 2. Clarification Gate: BEFORE proceeding to Design, evaluate the request against ALL five mandatory clarification classes in `docs/agent-engineering/CLARIFICATION-POLICY.md`. If ANY class matches, STOP and call `vscode/askQuestions` with 2-3 concrete options, affected files/components, and a recommended option with rationale. Do NOT proceed to Design until clarification is resolved or explicitly determined non-applicable. Decision rule: `vscode/askQuestions` is mandatory when competing interpretations change the top-level file set, `executor_agent`, architecture shape, or user-facing behavior. Do NOT call `vscode/askQuestions` for questions answerable by reading the codebase, when all options converge to equivalent outputs, or when the choice is a style or implementation detail already covered by existing configuration.
-3. Semantic Risk Discovery Gate: AFTER clarification and BEFORE research delegation, evaluate all 7 semantic risk categories using `plans/project-context.md` — Semantic Risk Taxonomy as the canonical trigger table. **Skip this gate for TRIVIAL scope** (≤2 files, single concern, no data/infra/security surfaces) — record all seven categories with `applicability: "not_applicable"` in the plan output and proceed directly to Complexity Gate. Each entry must use one of the seven specific category values and set `evidence_source` to a brief rationale. Example for TRIVIAL plans:
-```
-risk_review: [
-  {category: "data_volume", applicability: "not_applicable", impact: "LOW", evidence_source: "TRIVIAL plan — no data-plane changes", disposition: "not_applicable"},
-  {category: "performance", applicability: "not_applicable", impact: "LOW", evidence_source: "TRIVIAL plan — single-file fix", disposition: "not_applicable"},
-  {category: "concurrency", applicability: "not_applicable", impact: "LOW", evidence_source: "TRIVIAL plan — no concurrent operations", disposition: "not_applicable"},
-  {category: "access_control", applicability: "not_applicable", impact: "LOW", evidence_source: "TRIVIAL plan — no auth surface", disposition: "not_applicable"},
-  {category: "migration_rollback", applicability: "not_applicable", impact: "LOW", evidence_source: "TRIVIAL plan — single reversible change", disposition: "not_applicable"},
-  {category: "dependency", applicability: "not_applicable", impact: "LOW", evidence_source: "TRIVIAL plan — no new dependencies", disposition: "not_applicable"},
-  {category: "operability", applicability: "not_applicable", impact: "LOW", evidence_source: "TRIVIAL plan — no operator surface change", disposition: "not_applicable"}
-]
-```
+3. Semantic Risk Discovery Gate: AFTER clarification and BEFORE research delegation, evaluate all 7 semantic risk categories using `plans/project-context.md` — Semantic Risk Taxonomy as the canonical trigger table. **Skip this gate for TRIVIAL scope** (≤2 files, single concern, no data/infra/security surfaces) — record all seven categories with `applicability: "not_applicable"` and proceed directly to Complexity Gate. Use the `risk_review` field format in `schemas/planner.plan.schema.json`; for TRIVIAL plans each category sets `impact: "LOW"` and `disposition: "not_applicable"` with a brief `evidence_source` rationale.
 For all other scopes, record applicability, impact, evidence source, and disposition for each category in the `risk_review` array. Keep cryptographic and vulnerability review ownership with PlanAuditor rather than duplicating it here. Any category with `applicability: applicable` AND `impact: HIGH` that cannot be resolved from available evidence MUST set `disposition: research_phase_added` and trigger a dedicated research phase BEFORE implementation phases.
 4. Complexity Gate: AFTER semantic risk evaluation and BEFORE research delegation, classify the task complexity and emit `complexity_tier` in the plan output. Use `plans/project-context.md` as the canonical source for tier definitions and override rules. Planner owns the classification result and planner-local planning consequences only; Orchestrator applies tier-specific PLAN_REVIEW routing, reviewer activation, and iteration budgets using `governance/runtime-policy.json`.
-  - **TRIVIAL** (≤2 files, single concern)
-  - **SMALL** (3–5 files, single domain)
-  - **MEDIUM** (6–15 files, cross-domain)
-  - **LARGE** (15+ files, cross-cutting concerns): add a mandatory Researcher-subagent pre-research phase before implementation phases.
-  Classification heuristic: count unique files in the change set, assess whether changes cross domain boundaries (multiple agent files, schema + agent, frontend + backend), and check for infrastructure/deployment impact.
+  - **LARGE** tier requires adding a mandatory Researcher-subagent pre-research phase before implementation phases.
 5. Skill Selection: AFTER complexity classification and BEFORE research delegation, select relevant domain skills:
   1. Read `skills/index.md` to load the domain mapping table.
   2. Match task keywords and domain signals against the index.
@@ -180,18 +165,7 @@ The plan file must remain consistent with `schemas/planner.plan.schema.json`.
 
 ### Plan Quality Standards
 
-Every plan must satisfy:
-1. **Incremental** — Each phase produces a working, testable state.
-2. **TDD-driven** — Tests are specified before implementation steps.
-3. **Specific** — File paths, function names, and change descriptions are concrete.
-4. **Testable** — Success criteria are objectively verifiable.
-5. **Practical** — Phase count is 3–10; decompose further if exceeding 10.
-6. **Parallelizable** — Phases that can run independently MUST be assigned the same wave number. Sequential-only when there is a real data dependency.
-7. **Routable** — Every phase MUST specify exactly one `executor_agent` so Orchestrator can dispatch it without inference.
-8. **Visualized** — Plans with 3+ phases MUST include an Architecture Visualization section with at least a phase dependency DAG in Mermaid format. Additionally: MEDIUM-complexity plans with non-trivial orchestration flow (review loops, parallel waves, approval gates) MUST include a Mermaid `sequenceDiagram`. LARGE-complexity plans MUST always include a Mermaid `sequenceDiagram`.
-9. **Failure-aware** — Each phase includes failure expectations with classification and mitigation strategies.
-10. **Executable** — Each phase MUST specify: concrete file paths, input/output contracts, verification commands, test specifics, and the owning `executor_agent` sufficient for a cold-start executor to proceed without additional clarification. Vague steps like "implement the feature" without file-level detail are non-compliant.
-11. **Risk-reviewed** — Every plan MUST include a populated `risk_review` array covering all 7 semantic risk categories (`data_volume`, `performance`, `concurrency`, `access_control`, `migration_rollback`, `dependency`, `operability`). Each entry must state applicability, impact, evidence source, and disposition. Plans with any `HIGH`-impact `open_question` entry must include a research phase to resolve it before implementation begins.
+See `plans/templates/plan-document-template.md` for the complete 11 quality standards. Every plan must satisfy: Incremental, TDD-driven, Specific, Testable, Practical (phase count 3–10), Parallelizable, Routable, Visualized, Failure-aware, Executable, and Risk-reviewed.
 
 ### Research Scaling
 

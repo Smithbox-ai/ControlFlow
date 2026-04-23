@@ -1,6 +1,7 @@
 # Reliability Gates (Core)
 
 This document defines enforceable reliability controls for ControlFlow core agents.
+> **Note:** Any exact numeric routing/retry values shown in this document (such as retry budgets, escalation thresholds, and throttle percentages) are reference summaries. The authoritative source for these values is `governance/runtime-policy.json`.
 
 ## 1) Consistency
 Goal: reduce outcome and trajectory variance on identical inputs.

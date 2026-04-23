@@ -6,6 +6,13 @@ Complements P.A.R.T (structural) with behavioral invariants that all ControlFlow
 
 P.A.R.T governs section order and structural completeness. This contract governs behavioral consistency: what agents must do, not where they write it.
 
+## Ownership of Shared Behavioral Invariants
+
+To avoid drift and context bloat, prompt authors must follow these ownership rules when updating agent instructions:
+1. **Point at shared canon:** Reference authoritative documents (e.g., `plans/project-context.md`, `governance/runtime-policy.json`) instead of restating large matrices in agent system prompts.
+2. **Reference, don't restate:** For exact values like tier routing, retry budgets, and review pipeline sequences, refer to the authoritative file rather than hardcoding numbers.
+3. **Inline only unique rules:** Agent prompts may only inline behavioral rules that they uniquely own or strict overrides explicitly deviating from shared policy.
+
 ## Behavioral Invariants
 
 ### 1. Evidence-Backed Completion

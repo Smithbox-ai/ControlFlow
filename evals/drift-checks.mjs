@@ -776,3 +776,22 @@ export function validateCodeReviewerSecurityModeSameLine(codeReviewerContent) {
   }
   return { ok: true, errors: [] };
 }
+
+// ── Check #PW-F1: Canonical Source Matrix heading ─────────────────────────────
+
+/**
+ * Validate that plans/project-context.md contains the ## Canonical Source Matrix
+ * heading (anchor added in Phase 1 of the planner-orchestrator optimization wave).
+ * This check fails if the heading is removed or renamed, preventing silent regression.
+ * @param {string} projectContextContent - Full text of plans/project-context.md
+ * @returns {{ pass: boolean, reason?: string }}
+ */
+export function validateCanonicalSourceMatrixHeading(projectContextContent) {
+  if (!projectContextContent.includes('## Canonical Source Matrix')) {
+    return {
+      pass: false,
+      reason: 'plans/project-context.md is missing heading "## Canonical Source Matrix"',
+    };
+  }
+  return { pass: true };
+}

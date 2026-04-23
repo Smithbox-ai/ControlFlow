@@ -40,8 +40,6 @@ Before setting `APPROVED`, complete these local pre-approval gates:
 
 If a mandatory gate fails, status cannot be `APPROVED`.
 
-`cd evals && npm test` is the per-phase canonical verification gate before reporting `completed`.
-
 ### Safety and Approval Signals
 Flag and escalate when changed scope includes:
 - destructive operations
@@ -66,13 +64,7 @@ For every CRITICAL or MAJOR issue, execute this 4-step validation protocol:
 **Scope Limit:** Only CRITICAL and MAJOR findings require validation. MINOR findings may remain `unvalidated` without blocking progression.
 
 ### Quantitative Scoring Protocol
-Use `docs/agent-engineering/SCORING-SPEC.md` as the single source of truth for code-level dimensions, weights, percentage math, and verdict thresholds.
-
-After completing verification gates:
-
-1. Score the implementation using the five code-level dimensions from `docs/agent-engineering/SCORING-SPEC.md`.
-2. Emit the `scoring` object required by `schemas/code-reviewer.verdict.schema.json`.
-3. Base blocker overrides on confirmed entries in `validated_blocking_issues`; unvalidated issues do not block progression.
+Score using the five code-level dimensions, weights, and thresholds from `docs/agent-engineering/SCORING-SPEC.md`. Emit the `scoring` object per `schemas/code-reviewer.verdict.schema.json`. Base blocker overrides on confirmed entries in `validated_blocking_issues` only; unvalidated issues do not block progression.
 
 ### Final Scope (`review_scope=final`)
 

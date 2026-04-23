@@ -288,7 +288,7 @@ To prevent silent failures and hung pipelines during parallel execution:
 
 4. **Exponential Backoff Signaling**: When retrying after a `transient` failure, include `retry_attempt` count in the delegation payload so the subagent can adjust its tool call frequency.
 
-5. **Escalation Threshold**: If the same phase fails 3 times with the same `failure_classification`, escalate to user even if the individual classification would allow more retries.
+5. **Escalation Threshold:** When the same phase fails repeatedly with the same `failure_classification`, escalate to the user even if the individual classification would allow more retries. The threshold is governed by `stagnation_detection.same_phase_failure_escalation_threshold` in `governance/runtime-policy.json`; same-classification repeats are gated by `stagnation_detection.same_classification_repeat_escalation`.
 
 ### NEEDS_INPUT Routing (Mandatory)
 When a subagent returns `status: "NEEDS_INPUT"` with a `clarification_request` object:

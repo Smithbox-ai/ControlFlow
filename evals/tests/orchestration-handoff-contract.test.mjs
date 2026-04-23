@@ -460,6 +460,24 @@ check(
 );
 
 // ──────────────────────────────────────────────
+// Canonical Source References (Phase 3)
+// ──────────────────────────────────────────────
+console.log('\n=== Orchestrator — Canonical Source References ===');
+
+check(
+  'Canonical: retry budgets defer to governance/runtime-policy.json retry_budgets (not inline table)',
+  /retry_budgets|runtime-policy\.json.*retry\s+budget|retry.*runtime-policy\.json/i.test(orch)
+);
+check(
+  'Canonical: tier routing explicitly references governance/runtime-policy.json review_pipeline_by_tier',
+  /review_pipeline_by_tier/i.test(orch)
+);
+check(
+  'Canonical: agent role descriptions reference plans/project-context.md Agent Role Matrix',
+  /plans\/project-context\.md.*Agent Role Matrix|Agent Role Matrix.*plans\/project-context\.md/i.test(orch)
+);
+
+// ──────────────────────────────────────────────
 // Summary
 // ──────────────────────────────────────────────
 console.log(`\n${'═'.repeat(50)}`);

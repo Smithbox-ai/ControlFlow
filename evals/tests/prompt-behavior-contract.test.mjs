@@ -114,15 +114,10 @@ console.log('\n=== Planner — Behavioral Invariants ===');
     /plans\/project-context\.md/i.test(src) && /Semantic Risk Taxonomy/i.test(src)
   );
 
-  // All 7 semantic risk categories required
+  // Semantic risk categories must be delegated to canonical taxonomy source (not duplicated inline)
   check(
-    'Semantic risk: all 7 categories referenced or delegated to canonical taxonomy',
-    (
-      /data_volume/i.test(src) && /performance/i.test(src) &&
-      /concurrency/i.test(src) && /access_control/i.test(src) &&
-      /migration_rollback/i.test(src) && /dependency/i.test(src) &&
-      /operability/i.test(src)
-    ) || /plans\/project-context\.md.*Semantic Risk Taxonomy|Semantic Risk Taxonomy.*plans\/project-context\.md/i.test(src)
+    'Semantic risk: Planner references plans/project-context.md Semantic Risk Taxonomy (canonical source)',
+    /plans\/project-context\.md.*Semantic Risk Taxonomy|Semantic Risk Taxonomy.*plans\/project-context\.md/i.test(src)
   );
 
   const complexityGateSection = src.match(/4\. Complexity Gate:[\s\S]*?5\. Skill Selection:/i)?.[0] ?? '';
@@ -211,6 +206,18 @@ console.log('\n=== Planner — Behavioral Invariants ===');
     check(
       'Planner schema: ExecutabilityVerifier-subagent must NOT be in executor_agent enum (review-only)',
       !executorAgentEnum.includes('ExecutabilityVerifier-subagent')
+    );
+    // Phase 2: schema description ownership checks — routing deferred to Orchestrator/runtime-policy.json
+    check(
+      'Planner schema: complexity_tier description defers routing to Orchestrator via runtime-policy.json',
+      plannerSchema.properties?.complexity_tier?.description != null &&
+      /Orchestrator/i.test(plannerSchema.properties.complexity_tier.description) &&
+      /runtime-policy\.json/i.test(plannerSchema.properties.complexity_tier.description)
+    );
+    check(
+      'Planner schema: iteration_budget description references governance/runtime-policy.json as authority',
+      plannerSchema.properties?.iteration_budget?.description != null &&
+      /runtime-policy\.json/i.test(plannerSchema.properties.iteration_budget.description)
     );
   }
 }
@@ -514,6 +521,13 @@ console.log('\n=== Plan Template — Design Decisions Section ===');
   check(
     'Template: Architecture Visualization — Baseline DAG for 3+ phases',
     /3\+?\s*phases/i.test(template) && /DAG/i.test(template)
+  );
+
+  // Phase 2: plan quality standards must live primarily in the template
+  check(
+    'Template: plan quality standards section with all key standard names',
+    /Incremental/i.test(template) && /TDD/i.test(template) &&
+    /Specific/i.test(template) && /Testable/i.test(template) && /Practical/i.test(template)
   );
 }
 

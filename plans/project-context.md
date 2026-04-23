@@ -104,3 +104,15 @@ When a semantic risk entry triggers PlanAuditor review, Orchestrator maps the ri
 - Template files are stored in `plans/templates/` directory.
 - Implementation agents (CoreImplementer, UIImplementer, PlatformEngineer) share a common execution backbone documented in `docs/agent-engineering/MIGRATION-CORE-FIRST.md`. CoreImplementer is the canonical backbone reference; UI and Platform extend it with domain-specific gates.
 - Model-role routing uses the `by_tier` convention defined in `governance/model-routing.json`; the authoritative spec is `docs/agent-engineering/MODEL-ROUTING.md`. All 13 agents declare a valid `model_role:` frontmatter key matching a role entry in that file.
+
+## Canonical Source Matrix
+
+| Concern | Authoritative File | Notes |
+| --- | --- | --- |
+| Executor roster | `plans/project-context.md` | Defines allowed `executor_agent` names for phases. |
+| Complexity tiers | `plans/project-context.md` | Maps file counts/risk to pipeline depth. |
+| Semantic-risk taxonomy | `plans/project-context.md` | Defines the 7 risk categories evaluated during planning. |
+| Review routing | `governance/runtime-policy.json` | Active rules for PLAN_REVIEW and Completion Gate execution. |
+| Retry budgets | `governance/runtime-policy.json` | Exact numeric limits, backoffs, and escalation thresholds. |
+| Shared evidence discipline | `docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md` | Mandates evidence citations for claims across all agents. |
+| Gate-event contract | `docs/agent-engineering/RELIABILITY-GATES.md` | Governs PreFlect, Completion, and validation structural rules. |
