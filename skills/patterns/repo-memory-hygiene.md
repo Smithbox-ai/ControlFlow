@@ -23,6 +23,7 @@ Work through every step before calling `create`. If any step returns "DO NOT WRI
 ### Step 1: Normalize the subject
 
 Rewrite your intended `subject` field in canonical form:
+
 - Strip the plan name, task slug, or date from the subject.
 - Express it as a repo-wide invariant (e.g., "ControlFlow eval harness" not "memory-plan eval harness notes").
 - If the subject is task-specific (only applies to one plan), it belongs in **task-episodic memory** (`plans/artifacts/<task-slug>/`), not `/memories/repo/`. **DO NOT WRITE.**
@@ -94,6 +95,7 @@ Read the full current content.
 ### Step 2: Identify active-objective lines
 
 Keep only lines that answer: "What is the current task and phase, and what are the live blockers?" Maximum structure:
+
 - One "Active objective" bullet (what plan/task is running and which phase/wave).
 - One "Blockers" bullet (empty "none" if no blockers).
 - One "Pending" bullet for a single most-important next action (optional).
@@ -105,6 +107,7 @@ Remove: completed phase notes, iteration counts, verdict references, artifact pa
 ### Step 4: Verify the updated content passes the style check
 
 The content must pass `validateNotesMdStyle` (exported from `evals/drift-checks.mjs`). Violations that will fail CI:
+
 - Lines containing `iteration` or `verdict`.
 - Lines containing `phase-\d+-` artifact path fragments.
 - More than 3 consecutive bullet items under a single heading.
@@ -119,6 +122,7 @@ Count lines. If > 20, trim further. The 20-line budget is enforced by CI.
 ## When to Escalate (DO NOT WRITE)
 
 Return `ABSTAIN` or skip the write entirely when:
+
 - The fact is task-specific (only applies to the current plan).
 - A near-duplicate already exists in `<repository_memories>`.
 - All five required fields cannot be completed with direct evidence.
@@ -145,12 +149,14 @@ Ask: does this fact apply across multiple plans (not just the current one)? If t
 ### Step 3: Check for near-duplicates
 
 Scan the `<repository_memories>` context block for entries with semantically overlapping `subject` fields:
+
 - Same subject + same or less specific fact → **skip the write**; the existing entry is sufficient.
 - Same subject + existing entry is outdated or wrong → write **one** corrected entry with an explicit note (e.g., "supersedes prior entry about X"). Do not write both the old and corrected form.
 
 ### Step 4: Verify all required fields before writing
 
 Confirm all five required fields are present and complete before calling `create` on `/memories/repo/`:
+
 - `subject` — normalized, repo-wide (not task-specific).
 - `fact` — concrete, falsifiable statement.
 - `citations` — at least one concrete file path + line reference.
@@ -170,6 +176,7 @@ Read-only manual routine for an operator to run periodically. Does not modify me
 ### Step 1: Identify near-duplicate groups
 
 Scan the `<repository_memories>` context block for entries with semantically overlapping `subject` fields. For each group of overlapping entries:
+
 - Note the most specific or most recently written entry as the **"keeper"**.
 - List the remaining entries as **"candidates for natural decay"** (they will age out via the retention mechanism; no manual deletion is needed or possible).
 
@@ -184,6 +191,7 @@ Do not flag entries whose cited file path is a well-known stable path (e.g., `ev
 ### Step 3: Produce the Audit Report
 
 Output a plain-text **"Audit Report"** in the session with two sections:
+
 1. **Near-duplicate groups** — list each group with its keeper and candidates for natural decay.
 2. **Stale-citation entries** — list each flagged entry with the citation path and why it is suspect.
 

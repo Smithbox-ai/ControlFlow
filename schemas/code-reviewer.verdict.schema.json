@@ -59,6 +59,10 @@
             "type": "string",
             "enum": ["confirmed", "rejected", "unvalidated"],
             "description": "MUST be populated for every CRITICAL or MAJOR issue. confirmed: reviewer verified the issue exists and is reproducible. rejected: issue was a false positive after investigation. unvalidated: reviewer did not attempt verification. Orchestrator blocks only on issues with validation_status = 'confirmed'."
+          },
+          "rejection_reason": {
+            "type": "string",
+            "description": "Required when validation_status is 'rejected'. Explains why the finding is inaccurate, enabling Planner to improve plan specificity and reviewers to calibrate future audits. Every rejected finding MUST include this field per the False Positive Audit Trail requirement."
           }
         }
       }

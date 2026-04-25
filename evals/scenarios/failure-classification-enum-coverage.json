@@ -61,6 +61,8 @@
     "routing_table_followed": true,
     "all_schemas_accept_model_unavailable": true,
     "auditor_schemas_exclude_transient": true,
-    "planner_failure_scenarios_accept_model_unavailable": true
+    "planner_failure_scenarios_accept_model_unavailable": true,
+    "orchestrator_routing_for_model_unavailable": "Orchestrator routes model_unavailable to retry up to retry_budgets.model_unavailable_max times; on exhaustion, escalates to user via WAITING_APPROVAL",
+    "runtime_policy_model_unavailable_max_present": true
   }
 }

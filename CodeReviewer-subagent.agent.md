@@ -1,6 +1,6 @@
 ---
 description: 'Review code changes from a completed implementation phase.'
-tools: ['search', 'usages', 'problems', 'changes', 'runCommands', 'runTasks']
+tools: ['search', 'usages', 'problems', 'changes', 'runCommands', 'runTasks', 'read/readFile']
 model: Claude Opus 4.7 (copilot)
 model_role: capable-reviewer
 ---
@@ -76,7 +76,7 @@ Orchestrator injects into the delegation prompt:
 - `changed_files[]` — aggregate of all files modified/created across every completed phase, normalized by Orchestrator from executor reports (`CoreImplementer → changes[].file`, `UIImplementer → ui_changes[].file`, `TechnicalWriter → docs_created[].path + docs_updated[].path`, `PlatformEngineer → changes[].file`).
 - `plan_phases_snapshot[]` — array of `{phase_id, files[]}` extracted from the Planner plan artifact, representing each phase's originally planned file set.
 
-Do NOT attempt to self-source these from `plans/artifacts/` using `read/readFile` — CodeReviewer does not hold that grant. Use only the injected context and `search` tools.
+Do NOT self-source these from `plans/artifacts/` — use only the Orchestrator-injected context and `search` tools. `read/readFile` is permitted for navigating cited code locations during issue validation, but NOT for self-sourcing plan phase artifacts.
 
 #### 5.2 Execute Checks
 
@@ -95,7 +95,7 @@ Compare `changed_files[]` against the union of all `plan_phases_snapshot[].files
 - Any file in any `plan_phases_snapshot[].files` NOT present in `changed_files[]` → mark as `status: "missing"` in `planned_vs_actual[]`.
 - Files present in both → mark as `status: "present"`.
 
-**Novelty filter (mandatory):** When `review_scope=final`, only report findings in `issues[]` and `validated_blocking_issues[]` that were NOT already surfaced and resolved in per-phase reviews recorded under `plans/artifacts/<task>/`. Duplicate findings that were already addressed must be omitted. New findings that cross phase boundaries or emerge only from the holistic view are the primary target.
+**Novelty filter (mandatory):** When `review_scope=final`, Orchestrator injects `prior_phase_findings[]` (each entry: `{ phase_id, review_scope, status, issues, validated_blocking_issues }`) into the delegation payload. Use this array — not `plans/artifacts/` file reads — as the reference for already-surfaced findings. Only report findings in `issues[]` and `validated_blocking_issues[]` that were NOT already surfaced and resolved in the injected `prior_phase_findings[]`. Duplicate findings already addressed in prior phase reviews must be omitted. New findings that cross phase boundaries or emerge only from the holistic view are the primary target.
 
 #### 5.4 Output
 
@@ -139,7 +139,8 @@ Agent-specific additions: _none_
 ## Tools
 
 ### Allowed
-- Read/search/usages/changes/problems.
+- read/readFile for code navigation during issue validation.
+- search/usages/changes/problems.
 - run commands/tasks for test/build/lint verification.
 
 ### Disallowed

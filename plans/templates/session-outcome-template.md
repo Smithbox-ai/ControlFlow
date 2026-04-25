@@ -1,6 +1,7 @@
 # Session Outcome Template
 
 ## Usage
+
 Copy this block into `plans/session-outcomes.md` after completing a plan execution. Fill every field. Archive old entries when the log exceeds 50 entries.
 
 ---
@@ -15,7 +16,7 @@ Copy this block into `plans/session-outcomes.md` after completing a plan executi
 ### Review Pipeline
 
 | Agent | Result | Notes |
-|---|---|---|
+| --- | --- | --- |
 | AssumptionVerifier-subagent | COMPLETE / ABSTAIN | Mirages found: `<N>` |
 | PlanAuditor-subagent | APPROVED / NEEDS_REVISION / REJECTED | Final score: `<N>%` |
 | ExecutabilityVerifier-subagent | PASS / WARN / FAIL / N/A | Blocked tasks: `<N>` |

@@ -15,7 +15,7 @@ Thank you for your interest in contributing! This guide covers the key contribut
 
 ## Running the eval suite
 
-The eval suite validates schema compliance, P.A.R.T contract structure, tool grant consistency, behavioral invariants, and orchestration handoff discipline across all 13 agents — without invoking live agents.
+The eval suite is the canonical offline quality gate. It validates schema compliance, P.A.R.T contract structure, tool grant consistency, behavioral invariants, orchestration handoff discipline, drift checks, NOTES.md hygiene, archive behavior, and structural fingerprint coverage across all 13 agents — without invoking live agents.
 
 ```bash
 cd evals
@@ -74,7 +74,7 @@ npm run test:behavior
 
 1. Read the current agent file carefully. Understand the Non-Negotiable Rules, clarification contract, and tool routing section before making changes.
 2. Run `cd evals && npm test` **before and after** your edit to confirm no regressions.
-3. If you change output contracts (status values, required fields), update the corresponding schema in `schemas/` and any eval scenarios that assert those fields.
+3. If you change output contracts (status values, required fields, failure classifications), update the corresponding schema in `schemas/` and any eval scenarios that assert those fields. `model_unavailable` is a first-class routing classification; PlanAuditor and AssumptionVerifier exclude `transient`, while ExecutabilityVerifier can use all five current values.
 4. If you change tool grants in frontmatter, update `governance/agent-grants.json` to match — the eval suite enforces consistency between the two.
 
 ---
@@ -85,7 +85,9 @@ Skills are reusable domain pattern snippets that Planner selects per phase and i
 
 1. Create `skills/patterns/<topic>.md` following the style of existing patterns.
 2. Register the new file in `skills/index.md`.
-3. Run `npm test` — Pass 5 validates that every `skills/patterns/` file is registered in the index and every index entry resolves to a real file.
+3. Run `cd evals && npm test` — Pass 5 validates that every `skills/patterns/` file is registered in the index and every index entry resolves to a real file.
+
+For project-wide orchestration audits, prefer `skills/patterns/orchestration-audit-playbook.md` as the audit-specific checklist. It complements the completeness, integration, and LLM behavior skills by focusing on traceability, schema/prompt/grant alignment, hidden-defect triage, validation gates, and phase-boundary memory hygiene.
 
 ---
 

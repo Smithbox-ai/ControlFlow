@@ -167,6 +167,8 @@ The plan file must remain consistent with `schemas/planner.plan.schema.json`.
 
 See `plans/templates/plan-document-template.md` for the complete 11 quality standards. Every plan must satisfy: Incremental, TDD-driven, Specific, Testable, Practical (phase count 3–10), Parallelizable, Routable, Visualized, Failure-aware, Executable, and Risk-reviewed.
 
+**TRIVIAL exception:** A TRIVIAL-scope plan (≤2 files, single concern) may use as few as 1–3 phases (e.g., combined test/implementation/verification), provided: (a) all seven `risk_review` categories are emitted with `disposition: "not_applicable"`, and (b) the plan is schema-valid per `schemas/planner.plan.schema.json`. The 3–10 phase preference remains the target for all other tiers.
+
 ### Research Scaling
 
 Before planning, evaluate research needs:

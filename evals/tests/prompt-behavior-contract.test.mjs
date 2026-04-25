@@ -108,6 +108,13 @@ console.log('\n=== Planner — Behavioral Invariants ===');
     /phase count.*3.*10|3[–-]10/i.test(src)
   );
 
+  // Phase 6: TRIVIAL scope phase-count exception
+  check(
+    'Planner: TRIVIAL scope phase-count exception documented with all seven risk_review categories required',
+    /TRIVIAL.*exception|TRIVIAL.*as few as/i.test(src) &&
+    /risk_review.*not_applicable|not_applicable.*risk_review/i.test(src)
+  );
+
   // Semantic risk heuristics should anchor to the canonical taxonomy source.
   check(
     'Semantic risk taxonomy: Planner points to project-context canonical source',
@@ -371,6 +378,52 @@ console.log('\n=== CodeReviewer — Behavioral Invariants ===');
     'CodeReviewer: CodeReviewer never owns fix cycles (final scope constraint)',
     /never.*own.*fix.cycle|CodeReviewer.*NEVER.*own/i.test(src)
   );
+
+  // Phase 5: grant/wording alignment
+  check(
+    'CodeReviewer: read/readFile documented for issue validation code navigation',
+    /read\/readFile/i.test(src)
+  );
+
+  check(
+    'CodeReviewer: final scope does not claim read/readFile grant is unavailable (grant alignment)',
+    !/CodeReviewer does not hold that grant/i.test(src)
+  );
+
+  check(
+    'CodeReviewer: final scope prohibits self-sourcing plan artifacts (injected context only)',
+    /do NOT self.source.*plans\/artifacts|do not attempt to self.source.*plans\/artifacts/i.test(src)
+  );
+}
+
+// ──────────────────────────────────────────────
+// BrowserTester behavioral invariants (Phase 5)
+// ──────────────────────────────────────────────
+console.log('\n=== BrowserTester — Behavioral Invariants ===');
+{
+  const src = readAgent('BrowserTester-subagent');
+
+  check(
+    'BrowserTester: execution via provided scripts/harnesses (runCommands/runTasks), not direct browser control',
+    /runCommands|runTasks/i.test(src)
+  );
+
+  check(
+    'BrowserTester: ABSTAIN when no executable harness or script is provided',
+    /ABSTAIN/i.test(src) &&
+    /no executable.*harness|no.*harness.*provided|harness.*not provided/i.test(src)
+  );
+
+  check(
+    'BrowserTester: health-first gate uses fetch for URL reachability check',
+    /health.*check|health.first/i.test(src) && /fetch/i.test(src)
+  );
+
+  check(
+    'BrowserTester: COMPLETE, NEEDS_INPUT, FAILED, ABSTAIN status values present',
+    /COMPLETE/i.test(src) && /NEEDS_INPUT/i.test(src) &&
+    /FAILED/i.test(src) && /ABSTAIN/i.test(src)
+  );
 }
 
 // ──────────────────────────────────────────────
@@ -408,6 +461,18 @@ console.log('\n=== AssumptionVerifier — Behavioral Invariants ===');
     'AssumptionVerifier: blocking mirages distinguished from non-blocking',
     /blocking.*mirage|BLOCKING/i.test(src)
   );
+
+  // Phase 6: failure taxonomy alignment
+  check(
+    'AssumptionVerifier: transient excluded from failure classification, model_unavailable admitted',
+    /transient.*NOT applicable|transient.*excluded/i.test(src) &&
+    /model_unavailable/i.test(src)
+  );
+
+  check(
+    'AssumptionVerifier: failure_classification required when BLOCKING mirage is found',
+    /BLOCKING.*failure_classification|failure_classification.*BLOCKING|BLOCKING.*failure_classification.*required/i.test(src)
+  );
 }
 
 // ──────────────────────────────────────────────
@@ -430,6 +495,42 @@ console.log('\n=== PlanAuditor — Behavioral Invariants ===');
   check(
     'PlanAuditor: failure classification required on non-approved outcomes',
     /Failure Classification|failure.*class/i.test(src)
+  );
+
+  // Phase 6: model_unavailable in failure classification
+  check(
+    'PlanAuditor: model_unavailable in failure classification values (transient excluded)',
+    /model_unavailable/i.test(src) && /transient.*NOT applicable/i.test(src)
+  );
+
+  check(
+    'PlanAuditor: output requirements failure classification list excludes transient and includes model_unavailable',
+    /\*\*Failure Classification\*\*[^\n]*model_unavailable/i.test(src) &&
+    !/\*\*Failure Classification\*\*[^\n]*transient,/i.test(src)
+  );
+}
+
+// ──────────────────────────────────────────────
+// ExecutabilityVerifier behavioral invariants (Phase 6)
+// ──────────────────────────────────────────────
+console.log('\n=== ExecutabilityVerifier — Behavioral Invariants ===');
+{
+  const src = readAgent('ExecutabilityVerifier-subagent');
+
+  check(
+    'ExecutabilityVerifier: failure_classification required when status is FAIL',
+    /when status is.*FAIL.*failure_classification|FAIL.*failure_classification.*required|failure_classification.*required.*per schema/i.test(src)
+  );
+
+  check(
+    'ExecutabilityVerifier: all five failure_classification values documented (transient, fixable, needs_replan, escalate, model_unavailable)',
+    /transient/i.test(src) && /fixable/i.test(src) && /needs_replan/i.test(src) &&
+    /escalate/i.test(src) && /model_unavailable/i.test(src)
+  );
+
+  check(
+    'ExecutabilityVerifier: BLOCKED step requires blocker_description',
+    /BLOCKED.*blocker_description|blocker_description.*BLOCKED/i.test(src)
   );
 }
 

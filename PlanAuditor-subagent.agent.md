@@ -37,6 +37,7 @@ Audit implementation plans for architectural defects, security vulnerabilities, 
 - `fixable` — Plan has addressable issues: missing tests, unclear acceptance criteria, incomplete rollback steps.
 - `needs_replan` — Fundamental architecture flaw, circular dependencies, or critical security gap requiring Planner to redesign.
 - `escalate` — Destructive risk with no mitigation, data integrity concern, or ambiguous requirement with high impact.
+- `model_unavailable` — The model assigned to this audit was not reachable; Orchestrator should retry with an available model.
 
 ### Audit Methodology
 For each plan, evaluate against these dimensions:
@@ -148,7 +149,7 @@ Include these fields clearly labeled:
 - **Findings** — list each finding with severity (CRITICAL/MAJOR/MINOR), type, and description.
 - **Risk Summary** — counts per severity level.
 - **Recommendation** — actionable next step for Orchestrator.
-- **Failure Classification** — when status is not APPROVED: transient, fixable, needs_replan, or escalate.
+- **Failure Classification** — when status is NEEDS_REVISION or REJECTED: fixable, needs_replan, escalate, or model_unavailable. `transient` is excluded for plan audits.
 - **Score** — quantitative scoring per dimension.
 
 Findings must reference specific plan sections or codebase evidence per `docs/agent-engineering/RELIABILITY-GATES.md`.

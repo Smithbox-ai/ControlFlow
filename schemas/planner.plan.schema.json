@@ -194,8 +194,18 @@
     },
     "risk_review": {
       "type": "array",
-      "description": "Mandatory semantic risk checklist. Planner must evaluate every category before plan finalization. Non-applicable categories must still be listed with applicability: not_applicable.",
-      "minItems": 1,
+      "description": "Mandatory semantic risk checklist. Planner must evaluate every category before plan finalization. Non-applicable categories must still be listed with applicability: not_applicable. All seven categories (data_volume, performance, concurrency, access_control, migration_rollback, dependency, operability) must be present exactly once.",
+      "minItems": 7,
+      "maxItems": 7,
+      "allOf": [
+        { "contains": { "properties": { "category": { "const": "data_volume" } } }, "minContains": 1, "maxContains": 1 },
+        { "contains": { "properties": { "category": { "const": "performance" } } }, "minContains": 1, "maxContains": 1 },
+        { "contains": { "properties": { "category": { "const": "concurrency" } } }, "minContains": 1, "maxContains": 1 },
+        { "contains": { "properties": { "category": { "const": "access_control" } } }, "minContains": 1, "maxContains": 1 },
+        { "contains": { "properties": { "category": { "const": "migration_rollback" } } }, "minContains": 1, "maxContains": 1 },
+        { "contains": { "properties": { "category": { "const": "dependency" } } }, "minContains": 1, "maxContains": 1 },
+        { "contains": { "properties": { "category": { "const": "operability" } } }, "minContains": 1, "maxContains": 1 }
+      ],
       "items": {
         "type": "object",
         "additionalProperties": false,

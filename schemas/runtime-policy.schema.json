@@ -63,6 +63,7 @@
         "fixable_max",
         "needs_replan_max",
         "escalate_max",
+        "model_unavailable_max",
         "per_wave_transient_reduction_threshold",
         "per_wave_parallelism_reduction_factor"
       ],
@@ -73,7 +74,8 @@
         "needs_replan_max":                        { "type": "integer", "minimum": 0 },
         "escalate_max":                            { "type": "integer", "minimum": 0 },
         "per_wave_transient_reduction_threshold":  { "type": "integer", "minimum": 0 },
-        "per_wave_parallelism_reduction_factor":   { "type": "number",  "minimum": 0, "maximum": 1 }
+        "per_wave_parallelism_reduction_factor":   { "type": "number",  "minimum": 0, "maximum": 1 },
+        "model_unavailable_max":                    { "type": "integer", "minimum": 0 }
       }
     },
     "stagnation_detection": {
@@ -128,8 +130,8 @@
       "additionalProperties": false,
       "required": ["approval_per", "exception_destructive_phases"],
       "properties": {
-        "approval_per":               { "type": "string" },
-        "exception_destructive_phases": { "type": "string" }
+        "approval_per":               { "type": "string", "enum": ["wave"] },
+        "exception_destructive_phases": { "type": "string", "enum": ["per_phase"] }
       }
     },
     "budget_defaults": {
@@ -151,7 +153,7 @@
       "required": ["enabled_by_default", "auto_trigger_tiers", "allow_user_trigger", "max_fix_cycles"],
       "properties": {
         "enabled_by_default":   { "type": "boolean" },
-        "auto_trigger_tiers":   { "type": "array", "items": { "type": "string" } },
+        "auto_trigger_tiers":   { "type": "array", "items": { "type": "string", "enum": ["TRIVIAL", "SMALL", "MEDIUM", "LARGE"] } },
         "allow_user_trigger":   { "type": "boolean" },
         "max_fix_cycles":       { "type": "integer", "minimum": 0 }
       }

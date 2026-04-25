@@ -47,8 +47,8 @@
   "UIImplementer-subagent.agent.md": ["edit", "search", "runCommands", "runTasks", "usages", "problems", "changes", "testFailure", "fetch", "githubRepo"],
   "PlatformEngineer-subagent.agent.md": ["edit", "search", "runCommands", "runTasks", "usages", "problems", "changes", "testFailure", "fetch", "githubRepo"],
   "TechnicalWriter-subagent.agent.md": ["search", "usages", "problems", "changes", "edit", "fetch"],
-  "BrowserTester-subagent.agent.md": ["search", "usages", "problems", "changes", "edit", "fetch"],
-  "CodeReviewer-subagent.agent.md": ["search", "usages", "problems", "changes", "runCommands", "runTasks"],
+  "BrowserTester-subagent.agent.md": ["search", "usages", "problems", "changes", "edit", "fetch", "runCommands", "runTasks"],
+  "CodeReviewer-subagent.agent.md": ["search", "usages", "problems", "changes", "runCommands", "runTasks", "read/readFile"],
   "PlanAuditor-subagent.agent.md": [
     "read/readFile",
     "read/problems",

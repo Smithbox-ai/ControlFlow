@@ -29,11 +29,11 @@ A multi-agent orchestration system for VS Code Copilot. ControlFlow coordinates 
 ## Why ControlFlow?
 
 | | Single Agent | ControlFlow (13 agents) |
-|---|---|---|
+| --- | --- | --- |
 | **Planning** | Agent guesses architecture on-the-fly | Planner runs structured idea interview, produces phased plan with Mermaid diagrams |
 | **Quality gates** | None | PlanAuditor + AssumptionVerifier + ExecutabilityVerifier audit before implementation |
 | **Execution** | Sequential, monolithic | Wave-based parallel execution with inter-phase contracts |
-| **Failures** | Silent or catastrophic | Classified (`transient`/`fixable`/`needs_replan`/`escalate`) with automatic retry routing |
+| **Failures** | Silent or catastrophic | Classified (`transient`/`fixable`/`needs_replan`/`escalate`, plus `model_unavailable`) with bounded retry routing |
 | **Scope drift** | Common | [LLM Behavior Guidelines](skills/patterns/llm-behavior-guidelines.md) enforce surgical changes |
 | **Verification** | Manual | Offline eval suite + CodeReviewer gates every phase |
 
@@ -67,7 +67,7 @@ cd evals && npm install && npm test
 ## When to Use Which Agent
 
 | Scenario | Agent | What happens |
-|----------|-------|--------------|
+| ---------- | ------- | -------------- |
 | Abstract idea or vague goal | `@Planner` | Idea interview → phased plan → Mermaid diagram |
 | Detailed task, clear requirements | `@Orchestrator` | Dispatches subagents → verification gates → phase-by-phase execution |
 | Research question | `@Researcher` | Evidence-based investigation with confidence scores |
@@ -80,7 +80,7 @@ cd evals && npm install && npm test
 ## Pipeline by Complexity
 
 | Tier | Scope | Review Agents | Max Iterations |
-|------|-------|---------------|----------------|
+| ------ | ------- | --------------- | ---------------- |
 | **TRIVIAL** | 1–2 files, single concern | None (CodeReviewer still runs per-phase) | — |
 | **SMALL** | 3–5 files, single domain | PlanAuditor | 2 |
 | **MEDIUM** | 6–15 files, cross-domain | PlanAuditor + AssumptionVerifier | 5 |
@@ -88,12 +88,11 @@ cd evals && npm install && npm test
 
 Any plan with an unresolved `HIGH`-impact `risk_review` entry forces the full pipeline regardless of tier.
 
+CodeReviewer still runs after each implementation, testing, documentation, or platform phase. Ordinary multi-phase waves use one user approval per wave; destructive/high-risk phases and phases that are `FAILED` or `BLOCKED` require per-phase approval. Todo completion remains per-phase.
+
 ---
 
 ## Orchestration State Machine
-
-<details>
-<summary>Mermaid diagram (click to expand)</summary>
 
 ```mermaid
 stateDiagram-v2
@@ -104,37 +103,35 @@ stateDiagram-v2
     PLAN_REVIEW --> PLANNING: needs revision
     WAITING_APPROVAL --> ACTING: trivial plan (skip review)
     ACTING --> REVIEWING: phase complete
-    REVIEWING --> WAITING_APPROVAL: review done
-    WAITING_APPROVAL --> ACTING: next phase approved
+    REVIEWING --> WAITING_APPROVAL: review / approval point
+    WAITING_APPROVAL --> ACTING: next wave or phase approved
     WAITING_APPROVAL --> COMPLETE: all phases done
     COMPLETE --> [*]
 ```
 
-> Simplified — REJECTED transition, HIGH_RISK_APPROVAL_GATE, and ABSTAIN paths omitted for clarity. See `Orchestrator.agent.md` for the full state machine.
-
-</details>
+> Simplified — REJECTED transition, HIGH_RISK_APPROVAL_GATE, required PLAN_REVIEW ABSTAIN handling, and final review paths omitted for clarity. See `Orchestrator.agent.md` for the full state machine.
 
 ---
 
 ## Failure Routing
 
 | Classification | Action | Max Retries |
-|----------------|--------|-------------|
+| ---------------- | -------- | ------------- |
 | `transient` | Retry same agent | 3 |
 | `fixable` | Retry with fix hint | 1 |
 | `needs_replan` | Delegate to Planner | 1 |
 | `escalate` | Stop — present to user | 0 |
+| `model_unavailable` | Retry same agent with model-substitution semantics, then escalate on exhaustion | `retry_budgets.model_unavailable_max` |
 
 When any retry budget is exhausted the phase escalates to the user with accumulated failure evidence.
+
+PlanAuditor and AssumptionVerifier intentionally exclude `transient` and may use `model_unavailable` when their assigned model is unreachable. ExecutabilityVerifier can use all five failure classifications.
 
 ---
 
 ## Agent Architecture
 
 ### Interaction diagram
-
-<details>
-<summary>Mermaid diagram (click to expand)</summary>
 
 ```mermaid
 graph TB
@@ -164,7 +161,7 @@ graph TB
 
     subgraph Verification
         CodeReviewer[CodeReviewer<br/><i>code review & safety</i>]
-        BrowserTester[BrowserTester<br/><i>E2E & accessibility</i>]
+        BrowserTester[BrowserTester<br/><i>scripted E2E & accessibility</i>]
     end
 
     subgraph Documentation
@@ -199,19 +196,17 @@ graph TB
     style TechnicalWriter fill:#9B59B6,color:#fff
 ```
 
-</details>
-
 ### Primary Agents
 
 | Agent | File | Role |
-|-------|------|------|
+| ------- | ------ | ------ |
 | **Orchestrator** | `Orchestrator.agent.md` | Conductor, gate controller, delegation |
 | **Planner** | `Planner.agent.md` | Structured planning, idea interviews |
 
 ### Specialized Subagents
 
 | Agent | File | Role |
-|-------|------|------|
+| ------- | ------ | ------ |
 | **Researcher** | `Researcher-subagent.agent.md` | Evidence-first research |
 | **CodeMapper** | `CodeMapper-subagent.agent.md` | Read-only codebase discovery |
 | **CodeReviewer** | `CodeReviewer-subagent.agent.md` | Code review and safety gates |
@@ -222,7 +217,7 @@ graph TB
 | **UIImplementer** | `UIImplementer-subagent.agent.md` | Frontend implementation |
 | **PlatformEngineer** | `PlatformEngineer-subagent.agent.md` | CI/CD, containers, infrastructure |
 | **TechnicalWriter** | `TechnicalWriter-subagent.agent.md` | Documentation, diagrams, code-doc parity |
-| **BrowserTester** | `BrowserTester-subagent.agent.md` | E2E browser testing, accessibility audits |
+| **BrowserTester** | `BrowserTester-subagent.agent.md` | Runs provided E2E/accessibility scripts or harnesses; abstains when no executable harness is supplied |
 
 Models are resolved at runtime via `governance/model-routing.json` — see [docs/agent-engineering/MODEL-ROUTING.md](docs/agent-engineering/MODEL-ROUTING.md).
 
@@ -230,7 +225,7 @@ Models are resolved at runtime via `governance/model-routing.json` — see [docs
 
 ## Evaluation Suite
 
-`cd evals && npm test` runs the full offline suite — schema compliance, reference integrity, P.A.R.T section ordering, tool grant consistency, behavioral invariants, orchestration handoff discipline, and drift detection. No live agents, no network.
+`cd evals && npm test` is the canonical offline suite. It runs structural validation plus prompt-behavior, orchestration-handoff, drift, NOTES.md, archive-script, and fingerprint regression checks. No live agents, no network.
 
 See [`evals/README.md`](evals/README.md) for pass descriptions and how to add scenarios.
 
@@ -249,7 +244,7 @@ See [`evals/README.md`](evals/README.md) for pass descriptions and how to add sc
 │   ├── agent-engineering/         # Governance policies and reliability gates
 │   └── tutorial-ru/               # Full Russian-language tutorial (19 chapters)
 ├── governance/                    # Operational knobs and tool grants
-├── skills/                        # Reusable domain pattern library (11 patterns)
+├── skills/                        # Reusable domain pattern library (15 patterns)
 ├── evals/                         # Offline validation suite
 │   └── scenarios/                 # Eval scenario fixtures
 ├── plans/                         # Plan artifacts and templates
@@ -271,6 +266,7 @@ See [`evals/README.md`](evals/README.md) for pass descriptions and how to add sc
 ## Installation
 
 > **VS Code prompts directory:**
+>
 > - **Windows:** `%APPDATA%\Code\User\prompts`
 > - **macOS:** `~/Library/Application Support/Code/User/prompts`
 > - **Linux:** `~/.config/Code/User/prompts`
@@ -278,12 +274,14 @@ See [`evals/README.md`](evals/README.md) for pass descriptions and how to add sc
 1. Clone this repository.
 2. Copy the entire repo contents into the prompts directory (or symlink the repo there).
 3. Enable custom agents in VS Code settings:
+
    ```json
    {
      "chat.customAgentInSubagent.enabled": true,
      "github.copilot.chat.responsesApiReasoningEffort": "high"
    }
    ```
+
 4. Reload VS Code.
 5. Verify: type `@Planner` in Copilot Chat — the agent should appear in suggestions.
 6. Run evals: `cd evals && npm install && npm test`

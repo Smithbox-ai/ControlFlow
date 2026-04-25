@@ -25,6 +25,13 @@ No plan revision, implementation, external API calls, code execution, or modific
 - Confidence below 0.7 triggers automatic `ABSTAIN`.
 - Every mirage finding must include evidence (file paths, actual code references).
 
+### Failure Classification (Deviation from Standard)
+`transient` is NOT applicable for mirage audits — read-only reviewers do not have a flake retry semantic. When BLOCKING mirages are found, `failure_classification` is required. It is also required when the model was unavailable. Valid values:
+- `fixable` — Plan has correctable mirages (phantom paths, fixable dependency issues).
+- `needs_replan` — BLOCKING mirages reveal fundamental assumption failures requiring Planner redesign.
+- `escalate` — BLOCKING mirages reveal security or data integrity risk requiring human decision.
+- `model_unavailable` — The model assigned to this verifier was not reachable; retry with an available model.
+
 ### Verification Protocol
 For each plan claim: (1) **Identify** the claim or assumption; (2) **Classify** as codebase-verifiable, external-knowledge, or logic-based; (3) **Verify** via actual files/imports/schema; (4) **Tag** as `VERIFIED`, `UNVERIFIED`, or `MIRAGE`.
 

@@ -95,6 +95,15 @@
                   "type": "string",
                   "description": "Description of the blocker. Required when status is BLOCKED."
                 }
+              },
+              "if": {
+                "properties": {
+                  "status": { "const": "BLOCKED" }
+                },
+                "required": ["status"]
+              },
+              "then": {
+                "required": ["blocker_description"]
               }
             }
           },
@@ -127,5 +136,14 @@
       "enum": ["transient", "fixable", "needs_replan", "escalate", "model_unavailable"],
       "description": "Required when status is FAIL."
     }
+  },
+  "if": {
+    "properties": {
+      "status": { "const": "FAIL" }
+    },
+    "required": ["status"]
+  },
+  "then": {
+    "required": ["failure_classification"]
   }
 }

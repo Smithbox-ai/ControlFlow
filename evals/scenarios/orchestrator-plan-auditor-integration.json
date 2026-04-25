@@ -168,6 +168,29 @@
         "plan_auditor_invoked": false,
         "proceeds_to": "ACTING"
       }
+    },
+    {
+      "label": "required-plan-review-abstain-escalates",
+      "description": "When PLAN_REVIEW is required by tier (LARGE) and PlanAuditor returns ABSTAIN, Orchestrator must retry once then escalate to user — not silently proceed",
+      "input": {
+        "plan": {
+          "phase_count": 5,
+          "confidence": 0.92,
+          "has_destructive_ops": false,
+          "complexity_tier": "LARGE"
+        },
+        "plan_auditor_response": {
+          "status": "ABSTAIN",
+          "reasons": ["Insufficient context to evaluate plan correctness"]
+        }
+      },
+      "expected_behavior": {
+        "abstain_treated_as_fixable": true,
+        "retry_once": true,
+        "on_repeated_abstain_escalates": true,
+        "state_transition_on_repeated_abstain": "WAITING_APPROVAL",
+        "does_not_silently_proceed": true
+      }
     }
   ],
   "assertions": [
@@ -179,7 +202,8 @@
     "governance/runtime-policy.json remains the authoritative source for PLAN_REVIEW trigger thresholds and tier-specific iteration caps",
     "REJECTED status transitions to WAITING_APPROVAL",
     "NEEDS_REVISION routes back to Planner (max iterations per complexity tier: SMALL=2, MEDIUM/LARGE=5)",
-    "ABSTAIN from PlanAuditor does not block pipeline",
+    "ABSTAIN from PlanAuditor does not block pipeline for optional PLAN_REVIEW triggers (tier-skipped or conditions not met)",
+    "ABSTAIN from PlanAuditor on required PLAN_REVIEW (required by tier, confidence, or HIGH-risk) retries once and escalates to user if retry also returns ABSTAIN — does not silently proceed",
     "PlanAuditor is invoked for plans with any risk_review entry applicability=applicable AND impact=HIGH AND disposition != resolved",
     "When triggered by semantic risk, Orchestrator derives focus_areas from risk category mapping and includes them in delegation",
     "PLAN_REVIEW reruns default to full rerun for sensitive or ambiguous changes, including prompts, policy surfaces, routing, commands, contracts, and orchestration handoff tests/scenarios",

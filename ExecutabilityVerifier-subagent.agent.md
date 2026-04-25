@@ -35,6 +35,15 @@ Keep the 8-point checklist, 7-step walkthrough, stop-at-first-blocker rule, sche
 - Status enums: `PASS`, `FAIL`, `WARN`, `ABSTAIN`.
 - Confidence below 0.6 triggers automatic `ABSTAIN`.
 
+### Failure Classification
+When status is `FAIL`, `failure_classification` is required per schema. Valid values:
+- `transient` — Simulation was impaired by a temporary environment issue (missing file index, tool timeout); retry with identical scope.
+- `fixable` — A blocking task has a correctable gap (missing file path, underspecified acceptance criteria); retry after plan fix.
+- `needs_replan` — Tasks are fundamentally unexecutable without a design change; route to Planner.
+- `escalate` — A blocking step carries destructive or security risk requiring human decision.
+- `model_unavailable` — The model assigned to this verifier was not reachable; retry with an available model.
+Additionally, when any walkthrough step has `status: "BLOCKED"`, the `blocker_description` field is required in that step.
+
 ### Simulation Protocol
 
 **Phase A — Context Reset**

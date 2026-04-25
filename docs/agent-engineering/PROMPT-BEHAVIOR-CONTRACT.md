@@ -9,6 +9,7 @@ P.A.R.T governs section order and structural completeness. This contract governs
 ## Ownership of Shared Behavioral Invariants
 
 To avoid drift and context bloat, prompt authors must follow these ownership rules when updating agent instructions:
+
 1. **Point at shared canon:** Reference authoritative documents (e.g., `plans/project-context.md`, `governance/runtime-policy.json`) instead of restating large matrices in agent system prompts.
 2. **Reference, don't restate:** For exact values like tier routing, retry budgets, and review pipeline sequences, refer to the authoritative file rather than hardcoding numbers.
 3. **Inline only unique rules:** Agent prompts may only inline behavioral rules that they uniquely own or strict overrides explicitly deviating from shared policy.
@@ -48,7 +49,7 @@ Agent-specific rules override shared policy only when explicitly declared.
 | Scope | Behavior |
 | --- | --- |
 | Shared policy (`.github/copilot-instructions.md`) | Applies to ALL agents unless an agent declares a deviation |
-| Agent-specific deviation | Must state explicitly what differs and why (e.g., PlanAuditor excludes `transient` from failure classification) |
+| Agent-specific deviation | Must state explicitly what differs and why (e.g., PlanAuditor and AssumptionVerifier exclude `transient`; ExecutabilityVerifier can use all five current failure classifications) |
 | No silent override | Removing or weakening a shared rule in an agent file without a documented deviation note is a compliance violation |
 
 ### 4. ABSTAIN and Escalation Discipline
@@ -62,6 +63,8 @@ Agents must use bounded status enums and escalate rather than guess.
 | CodeMapper | Results contradictory or coverage insufficient → `ABSTAIN` with reasons |
 | Orchestrator | 3 failures with same classification → escalate to user regardless of individual classification |
 
+If PlanAuditor or AssumptionVerifier returns `ABSTAIN` during a required PLAN_REVIEW, Orchestrator retries once and escalates to the user if evidence is still unavailable. Optional PLAN_REVIEW abstentions may be logged and allowed to proceed according to Orchestrator policy.
+
 ### 5. Handoff Artifact Contract
 
 Before handing off to the next agent or phase, the producing agent must generate a durable artifact.
@@ -70,6 +73,7 @@ Before handing off to the next agent or phase, the producing agent must generate
 | --- | --- |
 | Planner → Orchestrator | Markdown plan file at `plan_path` (even for `ABSTAIN` and `REPLAN_REQUIRED`) |
 | Orchestrator → subagent | Delegation payload with `trace_id`, `task_id`, `plan_path` |
+| Orchestrator → CodeReviewer final review | Delegation payload includes `changed_files[]`, `plan_phases_snapshot[]`, and `prior_phase_findings[]` so novelty filtering does not depend on CodeReviewer self-sourcing prior artifacts |
 | Researcher → caller | Research findings with evidence array and status enum |
 | CodeReviewer → Orchestrator | Verdict with `validated_blocking_issues` array |
 
@@ -88,10 +92,11 @@ Before handing off to the next agent or phase, the producing agent must generate
 
 ## Regression Coverage
 
-These behavioral invariants are verified by:
+These behavioral invariants are verified by offline eval harnesses:
 
-- `evals/tests/prompt-behavior-contract.test.mjs` — 74 checks across Planner, Researcher, CodeMapper, CoreImplementer (failure_classification), CodeReviewer (validated_blocking_issues), TechnicalWriter (doc-only scope), AssumptionVerifier (COMPLETE/ABSTAIN), PlanAuditor (executability_checklist), Memory Use Discipline invariants, and shared policy
-- `evals/tests/orchestration-handoff-contract.test.mjs` — 49 checks on Orchestrator PLAN_REVIEW gating, rerun invalidation, delegation routing, failure handling, phase verification, todo lifecycle, and observability
+- `evals/tests/prompt-behavior-contract.test.mjs` — prompt-level invariants across the agent roster and shared policy.
+- `evals/tests/orchestration-handoff-contract.test.mjs` — Orchestrator PLAN_REVIEW gating, rerun invalidation, delegation routing, failure handling, phase verification, todo lifecycle, observability, batch approval, and final-review payload discipline.
+- `evals/tests/drift-detection.test.mjs`, `evals/tests/notes-md-drift.test.mjs`, `evals/tests/archive-script.test.mjs`, and `evals/tests/fingerprint.test.mjs` — drift helper, memory-note, archive, and structural fingerprint regression coverage.
 
 ## Relationship to Other Specs
 

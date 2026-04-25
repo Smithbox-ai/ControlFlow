@@ -25,6 +25,7 @@
     "validation_protocol": {
       "description": "Every CRITICAL or MAJOR issue must have validation_status populated as confirmed, rejected, or unvalidated",
       "blocking_gate": "Orchestrator blocks only on validated_blocking_issues, not raw issues array"
-    }
+    },
+    "rejection_reason_required_for_rejected_issues": "A rejected finding MUST include rejection_reason; schema allows the field on issues with validation_status=rejected per False Positive Audit Trail requirement"
   }
 }

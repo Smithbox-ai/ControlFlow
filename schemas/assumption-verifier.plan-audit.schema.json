@@ -162,5 +162,21 @@
       "enum": ["fixable", "needs_replan", "escalate", "model_unavailable"],
       "description": "Required when mirages with BLOCKING severity are found or when the model was unavailable. Note: 'transient' is excluded — read-only reviewers do not have a flake retry semantic. 'model_unavailable' is admitted because it substitutes the model (not the prompt) and therefore does not violate the transient-exclusion rationale. model_unavailable: the model assigned to this verifier was not reachable; retry with an available model."
     }
+  },
+  "if": {
+    "properties": {
+      "mirage_findings": {
+        "contains": {
+          "properties": {
+            "severity": { "const": "BLOCKING" }
+          },
+          "required": ["severity"]
+        }
+      }
+    },
+    "required": ["mirage_findings"]
+  },
+  "then": {
+    "required": ["failure_classification"]
   }
 }

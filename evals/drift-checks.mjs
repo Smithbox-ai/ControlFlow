@@ -665,7 +665,7 @@ export function computeStructuralFingerprint() {
       else if (ent.isFile() && ent.name.endsWith('.json')) hashFile(full);
     }
   }
-  for (const subdir of ['runtime-policy', 'tutorial-parity']) {
+  for (const subdir of ['runtime-policy', 'tutorial-parity', 'planner', 'assumption-verifier', 'executability-verifier']) {
     walkJson(join(CF_SCENARIOS_DIR, subdir));
   }
   // root agent prompt files

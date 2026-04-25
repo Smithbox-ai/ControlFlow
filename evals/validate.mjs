@@ -246,6 +246,8 @@ for (const file of schemaFiles) {
         { file: 'valid-baseline.json', shouldPass: true },
         { file: 'invalid-misspelled-key.json', shouldPass: false },
         { file: 'invalid-wrong-type.json', shouldPass: false },
+        { file: 'invalid-enum-approval-per.json', shouldPass: false },
+        { file: 'invalid-enum-auto-trigger-tiers.json', shouldPass: false },
       ];
       for (const { file, shouldPass } of rpFixtures) {
         const fp = join(rpScenariosDir, file);
@@ -269,6 +271,140 @@ for (const file of schemaFiles) {
           }
         } catch (e) {
           fail(`Runtime-policy scenario: cannot load ${file} — ${e.message}`);
+        }
+      }
+    }
+  }
+}
+
+// ── Planner plan schema: validate fixtures ────────────────────────────────────
+{
+  const plannerSchemaKey = 'planner.plan.schema.json';
+  const plannerSchema = parsedSchemas[plannerSchemaKey];
+  if (!plannerSchema) {
+    fail('Pass 1: planner.plan.schema.json not loaded — cannot validate planner fixtures');
+  } else {
+    const validatePlanner = ajv.getSchema(plannerSchema.$id);
+    if (!validatePlanner) {
+      fail('Pass 1: planner plan schema validator not found in ajv cache');
+    } else {
+      const plannerFixturesDir = join(SCENARIOS_DIR, 'planner');
+      const plannerFixtures = [
+        { file: 'valid-all-categories.json', shouldPass: true },
+        { file: 'invalid-missing-category.json', shouldPass: false },
+        { file: 'invalid-duplicate-category.json', shouldPass: false },
+      ];
+      for (const { file, shouldPass } of plannerFixtures) {
+        const fp = join(plannerFixturesDir, file);
+        if (!existsSync(fp)) {
+          fail(`Planner fixture missing: evals/scenarios/planner/${file}`);
+          continue;
+        }
+        try {
+          const raw = JSON.parse(readFileSync(fp, 'utf8'));
+          const expectedReason = raw._expected_validation;
+          const { _expected_validation: _ev, _comment: _c, ...data } = raw;
+          const valid = validatePlanner(data);
+          if (shouldPass && valid) {
+            pass(`Planner fixture (expected pass): ${file}`);
+          } else if (!shouldPass && !valid) {
+            pass(`Planner fixture (expected fail): ${file} — ${expectedReason}`);
+          } else if (shouldPass && !valid) {
+            fail(`Planner fixture: ${file} expected to PASS but failed — ${ajv.errorsText(validatePlanner.errors)}`);
+          } else {
+            fail(`Planner fixture: ${file} expected to FAIL but passed unexpectedly`);
+          }
+        } catch (e) {
+          fail(`Planner fixture: cannot load ${file} — ${e.message}`);
+        }
+      }
+    }
+  }
+}
+
+// ── AssumptionVerifier schema: validate fixtures ──────────────────────────────
+{
+  const avSchemaKey = 'assumption-verifier.plan-audit.schema.json';
+  const avSchema = parsedSchemas[avSchemaKey];
+  if (!avSchema) {
+    fail('Pass 1: assumption-verifier.plan-audit.schema.json not loaded — cannot validate fixtures');
+  } else {
+    const validateAV = ajv.getSchema(avSchema.$id);
+    if (!validateAV) {
+      fail('Pass 1: assumption-verifier schema validator not found in ajv cache');
+    } else {
+      const avFixturesDir = join(SCENARIOS_DIR, 'assumption-verifier');
+      const avFixtures = [
+        { file: 'valid-blocking-with-classification.json', shouldPass: true },
+        { file: 'invalid-blocking-no-classification.json', shouldPass: false },
+      ];
+      for (const { file, shouldPass } of avFixtures) {
+        const fp = join(avFixturesDir, file);
+        if (!existsSync(fp)) {
+          fail(`AssumptionVerifier fixture missing: evals/scenarios/assumption-verifier/${file}`);
+          continue;
+        }
+        try {
+          const raw = JSON.parse(readFileSync(fp, 'utf8'));
+          const expectedReason = raw._expected_validation;
+          const { _expected_validation: _ev, _comment: _c, ...data } = raw;
+          const valid = validateAV(data);
+          if (shouldPass && valid) {
+            pass(`AssumptionVerifier fixture (expected pass): ${file}`);
+          } else if (!shouldPass && !valid) {
+            pass(`AssumptionVerifier fixture (expected fail): ${file} — ${expectedReason}`);
+          } else if (shouldPass && !valid) {
+            fail(`AssumptionVerifier fixture: ${file} expected to PASS but failed — ${ajv.errorsText(validateAV.errors)}`);
+          } else {
+            fail(`AssumptionVerifier fixture: ${file} expected to FAIL but passed unexpectedly`);
+          }
+        } catch (e) {
+          fail(`AssumptionVerifier fixture: cannot load ${file} — ${e.message}`);
+        }
+      }
+    }
+  }
+}
+
+// ── ExecutabilityVerifier schema: validate fixtures ───────────────────────────
+{
+  const evSchemaKey = 'executability-verifier.execution-report.schema.json';
+  const evSchema = parsedSchemas[evSchemaKey];
+  if (!evSchema) {
+    fail('Pass 1: executability-verifier.execution-report.schema.json not loaded — cannot validate fixtures');
+  } else {
+    const validateEV = ajv.getSchema(evSchema.$id);
+    if (!validateEV) {
+      fail('Pass 1: executability-verifier schema validator not found in ajv cache');
+    } else {
+      const evFixturesDir = join(SCENARIOS_DIR, 'executability-verifier');
+      const evFixtures = [
+        { file: 'valid-fail-with-classification.json', shouldPass: true },
+        { file: 'invalid-fail-no-classification.json', shouldPass: false },
+        { file: 'invalid-blocked-no-description.json', shouldPass: false },
+      ];
+      for (const { file, shouldPass } of evFixtures) {
+        const fp = join(evFixturesDir, file);
+        if (!existsSync(fp)) {
+          fail(`ExecutabilityVerifier fixture missing: evals/scenarios/executability-verifier/${file}`);
+          continue;
+        }
+        try {
+          const raw = JSON.parse(readFileSync(fp, 'utf8'));
+          const expectedReason = raw._expected_validation;
+          const { _expected_validation: _ev, _comment: _c, ...data } = raw;
+          const valid = validateEV(data);
+          if (shouldPass && valid) {
+            pass(`ExecutabilityVerifier fixture (expected pass): ${file}`);
+          } else if (!shouldPass && !valid) {
+            pass(`ExecutabilityVerifier fixture (expected fail): ${file} — ${expectedReason}`);
+          } else if (shouldPass && !valid) {
+            fail(`ExecutabilityVerifier fixture: ${file} expected to PASS but failed — ${ajv.errorsText(validateEV.errors)}`);
+          } else {
+            fail(`ExecutabilityVerifier fixture: ${file} expected to FAIL but passed unexpectedly`);
+          }
+        } catch (e) {
+          fail(`ExecutabilityVerifier fixture: cannot load ${file} — ${e.message}`);
         }
       }
     }

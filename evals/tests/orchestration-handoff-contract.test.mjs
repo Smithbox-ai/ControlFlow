@@ -66,6 +66,11 @@ check(
   /applicable.*risk_review.*HIGH.*not.*resolved/i.test(orch)
 );
 
+check(
+  'Required PLAN_REVIEW: ABSTAIN on required review retries once then escalates to user',
+  /required.*PLAN_REVIEW.*ABSTAIN.*retry.*WAITING_APPROVAL|ABSTAIN.*required.*PLAN_REVIEW.*retry.*WAITING_APPROVAL/i.test(orch)
+);
+
 // ──────────────────────────────────────────────
 // Complexity-aware delegation routing
 // ──────────────────────────────────────────────
@@ -178,6 +183,11 @@ check(
   /escalate.*STOP|escalate.*WAITING_APPROVAL/i.test(orch)
 );
 
+check(
+  'Failure routing: model_unavailable → retry up to retry_budgets.model_unavailable_max then escalate',
+  /model_unavailable.*retry.*model_unavailable_max/i.test(orch)
+);
+
 // 3-strike escalation policy
 check(
   'Escalation: 3 failures with same classification → escalate to user',
@@ -273,6 +283,10 @@ console.log('\n=== Orchestrator — Batch Approval Policy ===');
     runtimePolicy.batch_approval?.approval_per === 'wave'
   );
   check(
+    'Runtime policy: retry_budgets contains model_unavailable_max',
+    'model_unavailable_max' in (runtimePolicy.retry_budgets ?? {})
+  );
+  check(
     'Orchestrator: batch approval section specifies one approval per wave, not per phase',
     /ONE approval request per wave/i.test(orch)
   );
@@ -281,6 +295,22 @@ console.log('\n=== Orchestrator — Batch Approval Policy ===');
     /exception.*destructive.*per.?phase|destructive.*production.*per.?phase/i.test(orch)
   );
 }
+
+// ──────────────────────────────────────────────
+// Stopping Rules Harmonization (Phase 6)
+// ──────────────────────────────────────────────
+console.log('\n=== Orchestrator — Stopping Rules Harmonization ===');
+
+check(
+  'Stopping rules: wave-level approval for ordinary phases, per-phase only for destructive/high-risk or failed/blocked',
+  /After each wave.*Batch Approval/i.test(orch) &&
+  /per.phase.*destructive|destructive.*per.phase/i.test(orch)
+);
+
+check(
+  'Stopping rules: code review and todo completion remain per-phase even in batch-approval waves',
+  /per.phase.*regardless of wave|code review.*per.phase|CodeReviewer.*per.phase/i.test(orch)
+);
 
 // ──────────────────────────────────────────────
 // Delegation protocol: parallel dispatch
@@ -404,6 +434,11 @@ check(
 check(
   'Completion Gate: CodeReviewer dispatched with review_scope=final and phase_id=0 sentinel',
   /review_scope.*final/i.test(orch) && /phase_id.*0.*sentinel|sentinel.*phase_id.*0/i.test(orch)
+);
+
+check(
+  'Completion Gate: CodeReviewer final dispatch includes prior_phase_findings[] for novelty filtering',
+  /prior_phase_findings/i.test(orch)
 );
 
 check(

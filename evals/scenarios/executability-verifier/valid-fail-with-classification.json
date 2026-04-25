@@ -1,0 +1,36 @@
+{
+  "_expected_validation": "pass: status FAIL with failure_classification provided",
+
+  "schema_version": "1.0.0",
+  "agent": "ExecutabilityVerifier-subagent",
+  "status": "FAIL",
+  "confidence": 0.8,
+  "abstain": { "is_abstaining": false, "reasons": [] },
+  "tasks_simulated": [
+    {
+      "task_id": "Phase1-Step1",
+      "pre_execution_checklist": {
+        "what_clear": true,
+        "where_clear": false,
+        "how_clear": false,
+        "inputs_defined": true,
+        "outputs_defined": false,
+        "dependencies_met": true,
+        "verify_command_complete": false,
+        "test_specifics_concrete": false
+      },
+      "walkthrough_steps": [
+        {
+          "step": "open_file",
+          "status": "BLOCKED",
+          "blocker_description": "Target file path not specified in task description."
+        }
+      ],
+      "task_verdict": "BLOCKED",
+      "checklist_score": 0.375
+    }
+  ],
+  "overall_executability_score": 0.375,
+  "recommendation": "Clarify target file path and verification command before execution.",
+  "failure_classification": "fixable"
+}

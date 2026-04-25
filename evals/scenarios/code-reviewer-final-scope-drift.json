@@ -23,7 +23,9 @@
     ],
     "final_scope_invariants": {
       "review_scope_value": "final",
-      "out_of_scope_changes_must_contain": "src/utils/unplanned-helper.ts"
+      "out_of_scope_changes_must_contain": "src/utils/unplanned-helper.ts",
+      "uses_injected_prior_phase_findings": true,
+      "no_self_sourced_plan_artifacts": true
     }
   }
 }

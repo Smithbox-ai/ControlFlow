@@ -54,6 +54,7 @@
     "fixable_max": 1,
     "needs_replan_max": 1,
     "escalate_max": 0,
+    "model_unavailable_max": 2,
     "per_wave_transient_reduction_threshold": 2,
     "per_wave_parallelism_reduction_factor": 0.5
   },

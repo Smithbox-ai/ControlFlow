@@ -35,7 +35,8 @@ Run deterministic orchestration for: `Research -> Design -> Planning -> Implemen
 - `PLAN_REVIEW` is the adversarial audit gate. `governance/runtime-policy.json` is the authoritative source for trigger thresholds, tier routing, `max_iterations`, and retry budgets; Execution Protocol §4 is authoritative for the detailed PLAN_REVIEW flow and delegation order.
 - `PLAN_REVIEW` exits to `ACTING` on approval, loops back through Planner on `NEEDS_REVISION` or blocking mirages, and transitions to `WAITING_APPROVAL` on `REJECTED`, stagnation, max-iteration exhaustion, or other approval-gated risk.
 - If PlanAuditor returns `REJECTED`: transition to `WAITING_APPROVAL` with findings for user decision.
-- If PlanAuditor or AssumptionVerifier returns `ABSTAIN`: log and proceed (do not block on audit uncertainty).
+- If PlanAuditor or AssumptionVerifier returns `ABSTAIN` on an **optional** PLAN_REVIEW trigger: log and proceed (audit uncertainty does not block optional reviews).
+- If PlanAuditor or AssumptionVerifier returns `ABSTAIN` on a **required** PLAN_REVIEW (required by tier, confidence, or HIGH-risk): retry once. If the retry also returns `ABSTAIN`, escalate to user via `WAITING_APPROVAL`. Do not silently proceed when required review evidence is unavailable.
 - Any high-risk action transitions to `WAITING_APPROVAL` via `HIGH_RISK_APPROVAL_GATE`.
 
 ### Planning vs Acting Split (Hard Rule)
@@ -220,8 +221,9 @@ Reference: `docs/agent-engineering/TOOL-ROUTING.md`
      - If active:
        1. **Normalize changed_files[]**: Aggregate all files modified/created across every completed phase from executor reports. Mapping: `CoreImplementer → changes[].file`, `UIImplementer → ui_changes[].file`, `TechnicalWriter → docs_created[].path + docs_updated[].path`, `PlatformEngineer → changes[].file`. Deduplicate.
        2. **Build plan_phases_snapshot[]**: Extract `[{phase_id, files[]}]` from the Planner plan artifact. Omit `executor_agent` (not needed in snapshot; resolved from plan_path if fix-cycle is needed).
-       3. **Dispatch CodeReviewer-subagent** with `review_scope: "final"`, `phase_id: 0` (sentinel), `changed_files[]`, and `plan_phases_snapshot[]`.
-       4. **Route findings:**
+       3. **Collect prior_phase_findings[]**: Gather the CodeReviewer verdict from each completed phase code review (those dispatched with `review_scope: "phase"` or `"wave"`). For each, capture `{ phase_id, review_scope, status, issues, validated_blocking_issues }`. This enables novelty filtering in the final review without requiring CodeReviewer to self-source from `plans/artifacts/`.
+       4. **Dispatch CodeReviewer-subagent** with `review_scope: "final"`, `phase_id: 0` (sentinel), `changed_files[]`, `plan_phases_snapshot[]`, and `prior_phase_findings[]`.
+       5. **Route findings:**
           - If `validated_blocking_issues` contains CRITICAL or MAJOR entries: resolve the fix executor for each issue by inspecting plan phases — highest phase_id wins: the phase with the highest `phase_id` whose `files[]` contains the affected file is the executor owner. Dispatch that executor with targeted fix scope. Re-run CodeReviewer with `review_scope: "final"` (max `max_fix_cycles` = 1 per `final_review_gate.max_fix_cycles`). If still blocked after the fix cycle → escalate to user via `WAITING_APPROVAL`. CodeReviewer **NEVER** owns the fix cycle.
           - If `validated_blocking_issues` is empty: log a final-review advisory to `plans/artifacts/<task>/final_review.md` and continue.
    - Append a session-outcome entry to `plans/session-outcomes.md` using `plans/templates/session-outcome-template.md` BEFORE producing the final completion summary. This preserves the stop-rule contract (user sees the completion summary after telemetry is flushed, not before).
@@ -247,7 +249,7 @@ Decide whether to handle directly or delegate based on:
 ### Stopping Rules
 Mandatory pause points requiring explicit user acknowledgment before proceeding:
 1. **After plan approval** — Plan must be reviewed and approved by the user before any implementation begins.
-2. **After each phase review** — Phase review verdict must be presented to the user; continue only on explicit approval.
+2. **After each wave (Batch Approval)** — For ordinary multi-phase waves, present ONE approval request per wave per the Batch Approval policy below. Per-phase approval is required only when a phase is destructive/high-risk, FAILED, or BLOCKED. Code review (CodeReviewer-subagent) and todo item completion remain per-phase regardless of wave grouping.
 3. **After completion summary** — Final summary must be reviewed before any commit or merge action.
 
 Violating a stopping rule is equivalent to skipping a gate.
@@ -274,6 +276,7 @@ When a subagent returns a `failure_classification`, Orchestrator routes automati
 | `fixable` | Retry the same agent with fix hint from failure reason | 1 |
 | `needs_replan` | Delegate to Planner for targeted replan of failed phase | 1 |
 | `escalate` | STOP — transition to `WAITING_APPROVAL`, present to user | 0 |
+| `model_unavailable` | Retry the same agent up to `retry_budgets.model_unavailable_max` times; on exhaustion, escalate to user via `WAITING_APPROVAL` | retry_budgets.model_unavailable_max |
 
 If retry limit is exhausted, escalate to user with accumulated failure evidence.
 

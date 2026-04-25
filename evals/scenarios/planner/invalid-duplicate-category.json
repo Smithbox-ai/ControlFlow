@@ -1,0 +1,86 @@
+{
+  "_expected_validation": "fail: risk_review has 7 items but 'data_volume' appears twice and 'concurrency' is missing — duplicate category violates maxContains:1 per-category constraint",
+
+  "schema_version": "1.2.0",
+  "agent": "Planner",
+  "status": "READY_FOR_EXECUTION",
+  "task_title": "Add JWT authentication endpoint",
+  "summary": "Add a JWT authentication endpoint to the REST API using an existing auth library.",
+  "confidence": 0.9,
+  "abstain": { "is_abstaining": false, "reasons": [] },
+  "phases": [
+    {
+      "phase_id": 1,
+      "title": "Implement JWT endpoint handler",
+      "objective": "Create the JWT authentication endpoint and tests.",
+      "wave": 1,
+      "executor_agent": "CoreImplementer-subagent",
+      "files": [
+        { "path": "src/auth/jwt.ts", "action": "create", "reason": "New JWT endpoint handler" }
+      ],
+      "tests": ["npm test"],
+      "steps": ["Write failing tests", "Implement JWT handler", "Run tests"],
+      "acceptance_criteria": ["Endpoint returns signed JWT on valid credentials"],
+      "quality_gates": ["tests_pass"]
+    }
+  ],
+  "open_questions": [],
+  "risks": [],
+  "risk_review": [
+    {
+      "category": "data_volume",
+      "applicability": "not_applicable",
+      "impact": "LOW",
+      "evidence_source": "Single-record auth query.",
+      "disposition": "not_applicable"
+    },
+    {
+      "category": "data_volume",
+      "applicability": "not_applicable",
+      "impact": "LOW",
+      "evidence_source": "Duplicate data_volume entry — concurrency is intentionally missing.",
+      "disposition": "not_applicable"
+    },
+    {
+      "category": "performance",
+      "applicability": "not_applicable",
+      "impact": "LOW",
+      "evidence_source": "JWT signing is O(1).",
+      "disposition": "not_applicable"
+    },
+    {
+      "category": "access_control",
+      "applicability": "applicable",
+      "impact": "HIGH",
+      "evidence_source": "Endpoint issues auth tokens.",
+      "disposition": "resolved"
+    },
+    {
+      "category": "migration_rollback",
+      "applicability": "not_applicable",
+      "impact": "LOW",
+      "evidence_source": "No database schema changes required.",
+      "disposition": "not_applicable"
+    },
+    {
+      "category": "dependency",
+      "applicability": "not_applicable",
+      "impact": "LOW",
+      "evidence_source": "Uses existing JWT library.",
+      "disposition": "not_applicable"
+    },
+    {
+      "category": "operability",
+      "applicability": "not_applicable",
+      "impact": "LOW",
+      "evidence_source": "Standard REST endpoint.",
+      "disposition": "not_applicable"
+    }
+  ],
+  "success_criteria": ["Endpoint returns JWT on valid credentials"],
+  "complexity_tier": "SMALL",
+  "handoff": {
+    "target_agent": "Orchestrator",
+    "prompt": "Execute phases as planned."
+  }
+}
