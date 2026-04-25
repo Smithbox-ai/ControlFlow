@@ -137,99 +137,43 @@ export function getLatestSessionOutcome(content) {
   };
 }
 
-// ── Session outcome hygiene ───────────────────────────────────────────────
+const REQUIRED_OUTCOME_FIELDS = ['Plan ID', 'Date', 'Complexity Tier', 'Status'];
 
-/**
- * Analyse `plans/session-outcomes.md` content for hygiene signals.
- * Returns deterministic, offline summary — never throws on live content.
- *
- * @param {string} content - Full file text (empty string is safe).
- * @param {{ archiveThreshold?: number }} [opts]
- * @returns {{ totalEntries: number, entriesMissingFields: Array<{planId:string,missingFields:string[]}>, duplicatePlanIds: string[], archiveWarning: boolean, lastEntryDate: string|null }}
- */
 export function summarizeSessionOutcomes(content, opts = {}) {
-  const archiveThreshold = opts.archiveThreshold ?? 50;
-  const indices = [];
-  const entryRe = /^## Entry\b/gm;
-  let m;
-  while ((m = entryRe.exec(content)) !== null) indices.push(m.index);
-
-  const grab = (block, label) => {
-    const re = new RegExp(`\\*\\*${label}:\\*\\*\\s*\`?([^\`\\n]+?)\`?\\s*$`, 'm');
-    const hit = block.match(re);
-    return hit ? hit[1].trim() : null;
-  };
-
+  const threshold = opts.archiveThreshold ?? 50;
+  const parts = (content || '').split(/^## Entry\s*$/m).slice(1);
+  const totalEntries = parts.length;
   const entriesMissingFields = [];
-  const planIdCount = Object.create(null);
+  const planIdCounts = {};
   let lastEntryDate = null;
 
-  for (let i = 0; i < indices.length; i++) {
-    const start = indices[i];
-    const end = i + 1 < indices.length ? indices[i + 1] : content.length;
-    const block = content.slice(start, end);
-
-    const planId = grab(block, 'Plan ID');
-    const date = grab(block, 'Date');
-    const tier = grab(block, 'Complexity Tier');
-    const status = grab(block, 'Status');
-
-    if (i === 0) lastEntryDate = date;
-
+  for (let i = 0; i < parts.length; i++) {
+    const block = parts[i];
     const missing = [];
-    if (!planId) missing.push('Plan ID');
-    if (!date) missing.push('Date');
-    if (!tier) missing.push('Complexity Tier');
-    if (!status) missing.push('Status');
-
-    if (missing.length > 0) {
-      entriesMissingFields.push({ planId: planId ?? '(unknown)', missingFields: missing });
+    for (const field of REQUIRED_OUTCOME_FIELDS) {
+      if (!new RegExp(`\\*\\*${field}:\\*\\*`).test(block)) missing.push(field);
     }
-    if (planId) {
-      planIdCount[planId] = (planIdCount[planId] ?? 0) + 1;
+    if (missing.length > 0) {
+      const pm = block.match(/\*\*Plan ID:\*\*\s*`?([^`\n]+?)`?\s*$/m);
+      entriesMissingFields.push({ label: pm ? pm[1].trim() : `entry-${i + 1}`, missing });
+    }
+    const pm = block.match(/\*\*Plan ID:\*\*\s*`?([^`\n]+?)`?\s*$/m);
+    if (pm) {
+      const pid = pm[1].trim();
+      planIdCounts[pid] = (planIdCounts[pid] ?? 0) + 1;
+    }
+    if (i === 0) {
+      const dm = block.match(/\*\*Date:\*\*\s*`?([^`\n]+?)`?\s*$/m);
+      lastEntryDate = dm ? dm[1].trim() : null;
     }
   }
 
-  const duplicatePlanIds = Object.entries(planIdCount)
-    .filter(([, c]) => c > 1)
+  const duplicatePlanIds = Object.entries(planIdCounts)
+    .filter(([, count]) => count > 1)
     .map(([id]) => id)
     .sort();
 
-  return {
-    totalEntries: indices.length,
-    entriesMissingFields,
-    duplicatePlanIds,
-    archiveWarning: indices.length >= archiveThreshold,
-    lastEntryDate,
-  };
-}
-
-// ── Traceability coverage ─────────────────────────────────────────────────
-
-/**
- * Inspect artifact directories for the presence of `traceability-index.yaml`.
- * Returns sorted arrays for deterministic output.
- *
- * @param {string[]} artifactDirs - Directory names under `plans/artifacts/`.
- * @param {string} root - Repo root path.
- * @returns {{ withIndex: string[], withoutIndex: string[] }}
- */
-export function summarizeTraceabilityCoverage(artifactDirs, root) {
-  const withIndex = [];
-  const withoutIndex = [];
-  const artifactsBase = join(root, 'plans', 'artifacts');
-  for (const dir of artifactDirs) {
-    const indexPath = join(artifactsBase, dir, 'traceability-index.yaml');
-    if (existsSync(indexPath)) {
-      withIndex.push(dir);
-    } else {
-      withoutIndex.push(dir);
-    }
-  }
-  return {
-    withIndex: withIndex.sort(),
-    withoutIndex: withoutIndex.sort(),
-  };
+  return { totalEntries, entriesMissingFields, duplicatePlanIds, archiveWarning: totalEntries >= threshold, lastEntryDate };
 }
 
 // ── Artifacts coverage ────────────────────────────────────────────────────
@@ -253,6 +197,23 @@ export function checkActiveObjectiveArtifact(activeObjective, artifactDirs) {
   const stripped = slug.replace(/-plan$/, '');
   const hasArtifact = artifactDirs.includes(slug) || artifactDirs.includes(stripped);
   return { slug, hasArtifact };
+}
+
+// ── Traceability index coverage ───────────────────────────────────────────
+
+export function summarizeTraceabilityCoverage(artifactDirs, artifactsRoot) {
+  const withIndex = [];
+  const withoutIndex = [];
+  for (const dir of artifactDirs) {
+    if (existsSync(join(artifactsRoot, dir, 'traceability-index.yaml'))) {
+      withIndex.push(dir);
+    } else {
+      withoutIndex.push(dir);
+    }
+  }
+  withIndex.sort();
+  withoutIndex.sort();
+  return { withIndex, withoutIndex };
 }
 
 // ── Report generation ────────────────────────────────────────────────────
@@ -290,10 +251,12 @@ export function generateReport(root, opts = {}) {
   const sessionHygiene = summarizeSessionOutcomes(sessionContent);
 
   const artifactDirs = listArtifactDirs(join(root, 'plans', 'artifacts'));
+  const artifactsRoot = join(root, 'plans', 'artifacts');
   const aoCheck = checkActiveObjectiveArtifact(
     notes?.activeObjective || '',
     artifactDirs
   );
+  const coverage = summarizeTraceabilityCoverage(artifactDirs, artifactsRoot);
 
   const out = [];
   out.push('# Operator Health Report');
@@ -378,37 +341,32 @@ export function generateReport(root, opts = {}) {
   // Session Outcome Hygiene
   out.push('## Session Outcome Hygiene');
   out.push(`- Total entries: ${sessionHygiene.totalEntries}`);
-  if (sessionHygiene.lastEntryDate) {
-    out.push(`- Last entry date: ${sessionHygiene.lastEntryDate}`);
-  }
-  if (sessionHygiene.archiveWarning) {
-    out.push(
-      `- WARNING: Entry count (${sessionHygiene.totalEntries}) meets or exceeds archive threshold.`
-    );
-  }
-  if (sessionHygiene.entriesMissingFields.length > 0) {
+  out.push(`- Last entry date: ${sessionHygiene.lastEntryDate ?? '(none)'}`);
+  if (sessionHygiene.entriesMissingFields.length === 0) {
+    out.push('- Entries missing required fields: 0');
+  } else {
     out.push(`- Entries missing required fields: ${sessionHygiene.entriesMissingFields.length}`);
     for (const e of sessionHygiene.entriesMissingFields) {
-      out.push(`  - ${e.planId}: missing ${e.missingFields.join(', ')}`);
+      out.push(`  - ${e.label} (missing: ${e.missing.join(', ')})`);
     }
-  } else {
-    out.push('- All entries have required fields.');
   }
-  if (sessionHygiene.duplicatePlanIds.length > 0) {
-    out.push(`- Duplicate Plan IDs (${sessionHygiene.duplicatePlanIds.length}):`);
-    for (const id of sessionHygiene.duplicatePlanIds) out.push(`  - ${id}`);
+  if (sessionHygiene.duplicatePlanIds.length === 0) {
+    out.push('- Duplicate Plan IDs: 0');
   } else {
-    out.push('- No duplicate Plan IDs.');
+    out.push(`- Duplicate Plan IDs: ${sessionHygiene.duplicatePlanIds.length}`);
+    for (const id of sessionHygiene.duplicatePlanIds) out.push(`  - ${id}`);
+  }
+  if (sessionHygiene.archiveWarning) {
+    out.push(`- ARCHIVE WARNING: ${sessionHygiene.totalEntries} entries; consider archiving.`);
   }
   out.push('');
 
   // Traceability Index Coverage
-  const traceabilityCoverage = summarizeTraceabilityCoverage(artifactDirs, root);
   out.push('## Traceability Index Coverage');
-  out.push(`- With index (${traceabilityCoverage.withIndex.length}):`);
-  for (const d of traceabilityCoverage.withIndex) out.push(`  - ${d}`);
-  out.push(`- Without index (${traceabilityCoverage.withoutIndex.length}):`);
-  for (const d of traceabilityCoverage.withoutIndex) out.push(`  - ${d}`);
+  out.push(`- With traceability index (${coverage.withIndex.length}):`);
+  for (const d of coverage.withIndex) out.push(`  - ${d}`);
+  out.push(`- Without traceability index (${coverage.withoutIndex.length}):`);
+  for (const d of coverage.withoutIndex) out.push(`  - ${d}`);
   out.push('');
 
   return out.join('\n') + '\n';

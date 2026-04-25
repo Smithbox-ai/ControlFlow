@@ -16,12 +16,12 @@ import {
   parsePlanStatus,
   summarizePlans,
   getLatestSessionOutcome,
-  summarizeSessionOutcomes,
-  summarizeTraceabilityCoverage,
   listArtifactDirs,
   inferPlanSlugFromObjective,
   checkActiveObjectiveArtifact,
   generateReport,
+  summarizeSessionOutcomes,
+  summarizeTraceabilityCoverage,
 } from '../report-health.mjs';
 
 let passed = 0;
@@ -139,106 +139,60 @@ console.log('\n=== report-health: getLatestSessionOutcome ===');
 
 console.log('\n=== report-health: summarizeSessionOutcomes ===');
 {
-  // empty content
+  const entryAll = '## Entry\n\n**Plan ID:** `alpha-plan`\n**Date:** `2026-01-01`\n**Complexity Tier:** `SMALL`\n**Status:** `SUCCESS`\n\n';
+  const entryMissing = '## Entry\n\n**Plan ID:** `beta-plan`\n**Date:** `2026-02-01`\n\n';
+  const entryDup = '## Entry\n\n**Plan ID:** `alpha-plan`\n**Date:** `2026-03-01`\n**Complexity Tier:** `LARGE`\n**Status:** `SUCCESS`\n\n';
+
+  const r = summarizeSessionOutcomes(entryAll + entryMissing + entryDup);
+  assert(r.totalEntries === 3, 'counts all entries');
+  assert(r.entriesMissingFields.length === 1, 'reports one missing-field entry');
+  assert(r.entriesMissingFields[0].label === 'beta-plan', 'missing-field entry labeled by plan ID');
+  assert(r.entriesMissingFields[0].missing.includes('Complexity Tier'), 'reports missing Complexity Tier');
+  assert(r.entriesMissingFields[0].missing.includes('Status'), 'reports missing Status');
+  assert(!r.entriesMissingFields[0].missing.includes('Date'), 'present Date not flagged');
+  assert(r.duplicatePlanIds.includes('alpha-plan'), 'detects duplicate Plan ID');
+  assert(r.archiveWarning === false, 'no archive warning at 3 entries');
+  assert(r.lastEntryDate === '2026-01-01', 'last entry date from first entry');
+
+  // Archive threshold
+  const manyEntries = Array.from({ length: 50 }, (_, i) =>
+    `## Entry\n\n**Plan ID:** \`plan-${i}\`\n**Date:** \`2026-01-01\`\n**Complexity Tier:** \`SMALL\`\n**Status:** \`SUCCESS\`\n\n`
+  ).join('');
+  assert(summarizeSessionOutcomes(manyEntries).archiveWarning === true, 'archive warning at threshold 50');
+  assert(summarizeSessionOutcomes(manyEntries, { archiveThreshold: 51 }).archiveWarning === false, 'no archive warning below custom threshold');
+
+  // Empty content
   const empty = summarizeSessionOutcomes('');
-  assert(empty.totalEntries === 0, 'empty: zero entries');
-  assert(empty.entriesMissingFields.length === 0, 'empty: no missing-field entries');
-  assert(empty.duplicatePlanIds.length === 0, 'empty: no duplicates');
-  assert(empty.archiveWarning === false, 'empty: no archive warning');
-  assert(empty.lastEntryDate === null, 'empty: null lastEntryDate');
-
-  // one complete entry
-  const complete = summarizeSessionOutcomes(
-    '## Entry\n\n**Plan ID:** `my-plan`\n**Date:** `2026-01-01`\n**Complexity Tier:** `SMALL`\n**Status:** `SUCCESS`\n'
-  );
-  assert(complete.totalEntries === 1, 'complete: one entry');
-  assert(complete.entriesMissingFields.length === 0, 'complete: no missing fields');
-  assert(complete.duplicatePlanIds.length === 0, 'complete: no duplicates');
-  assert(complete.archiveWarning === false, 'complete: no archive warning');
-  assert(complete.lastEntryDate === '2026-01-01', 'complete: lastEntryDate from first entry');
-
-  // entry missing Complexity Tier and Status
-  const incomplete = summarizeSessionOutcomes(
-    '## Entry\n\n**Plan ID:** `missing-plan`\n**Date:** `2026-01-02`\n'
-  );
-  assert(incomplete.totalEntries === 1, 'incomplete: one entry');
-  assert(incomplete.entriesMissingFields.length === 1, 'incomplete: one missing-field entry');
-  assert(incomplete.entriesMissingFields[0].planId === 'missing-plan', 'incomplete: correct planId');
-  assert(
-    incomplete.entriesMissingFields[0].missingFields.includes('Complexity Tier'),
-    'incomplete: flags missing Complexity Tier'
-  );
-  assert(
-    incomplete.entriesMissingFields[0].missingFields.includes('Status'),
-    'incomplete: flags missing Status'
-  );
-
-  // duplicate Plan IDs
-  const dupContent =
-    '## Entry\n\n**Plan ID:** `dup-plan`\n**Date:** `2026-01-01`\n**Complexity Tier:** `SMALL`\n**Status:** `SUCCESS`\n\n' +
-    '## Entry\n\n**Plan ID:** `dup-plan`\n**Date:** `2026-01-02`\n**Complexity Tier:** `MEDIUM`\n**Status:** `SUCCESS`\n';
-  const dup = summarizeSessionOutcomes(dupContent);
-  assert(dup.duplicatePlanIds.length === 1, 'dup: one duplicate id');
-  assert(dup.duplicatePlanIds[0] === 'dup-plan', 'dup: correct duplicate id');
-  assert(dup.entriesMissingFields.length === 0, 'dup: no missing fields when dup has all fields');
-
-  // archive threshold MET (exactly 50)
-  const manyEntries = Array.from(
-    { length: 50 },
-    (_, i) =>
-      `## Entry\n\n**Plan ID:** \`plan-${i}\`\n**Date:** \`2026-01-01\`\n**Complexity Tier:** \`SMALL\`\n**Status:** \`SUCCESS\`\n`
-  ).join('\n');
-  const many = summarizeSessionOutcomes(manyEntries);
-  assert(many.archiveWarning === true, 'threshold: archive warning at 50');
-  assert(many.totalEntries === 50, 'threshold: 50 entries counted');
-
-  // archive threshold NOT met (49)
-  const almostEntries = Array.from(
-    { length: 49 },
-    (_, i) =>
-      `## Entry\n\n**Plan ID:** \`plan-${i}\`\n**Date:** \`2026-01-01\`\n**Complexity Tier:** \`SMALL\`\n**Status:** \`SUCCESS\`\n`
-  ).join('\n');
-  const almost = summarizeSessionOutcomes(almostEntries);
-  assert(almost.archiveWarning === false, 'threshold: no warning at 49');
-
-  // custom threshold via opts.archiveThreshold
-  const customThreshold = summarizeSessionOutcomes(
-    '## Entry\n\n**Plan ID:** `t1`\n**Date:** `2026-01-01`\n**Complexity Tier:** `SMALL`\n**Status:** `SUCCESS`\n',
-    { archiveThreshold: 1 }
-  );
-  assert(customThreshold.archiveWarning === true, 'custom threshold: warning triggered at 1');
+  assert(empty.totalEntries === 0, 'zero entries for empty content');
+  assert(empty.archiveWarning === false, 'no archive warning for empty');
+  assert(empty.duplicatePlanIds.length === 0, 'no duplicates for empty');
+  assert(empty.lastEntryDate === null, 'null lastEntryDate for empty');
 }
 
 console.log('\n=== report-health: summarizeTraceabilityCoverage ===');
 {
-  const root = mkdtempSync(join(tmpdir(), 'tracecov-'));
+  const trRoot = mkdtempSync(join(tmpdir(), 'coverage-'));
   try {
-    mkdirSync(join(root, 'plans', 'artifacts', 'has-index'), { recursive: true });
-    mkdirSync(join(root, 'plans', 'artifacts', 'no-index'), { recursive: true });
-    writeFileSync(
-      join(root, 'plans', 'artifacts', 'has-index', 'traceability-index.yaml'),
-      'type: traceability-index\n'
-    );
+    mkdirSync(join(trRoot, 'plans', 'artifacts', 'traced'), { recursive: true });
+    writeFileSync(join(trRoot, 'plans', 'artifacts', 'traced', 'traceability-index.yaml'), 'schema_version: 1\n');
+    mkdirSync(join(trRoot, 'plans', 'artifacts', 'untraced'), { recursive: true });
+    const artifactsRoot = join(trRoot, 'plans', 'artifacts');
 
-    const cov = summarizeTraceabilityCoverage(['has-index', 'no-index'], root);
-    assert(
-      cov.withIndex.length === 1 && cov.withIndex[0] === 'has-index',
-      'withIndex contains dir that has index'
-    );
-    assert(
-      cov.withoutIndex.length === 1 && cov.withoutIndex[0] === 'no-index',
-      'withoutIndex contains dir missing index'
-    );
+    const r = summarizeTraceabilityCoverage(['traced', 'untraced'], artifactsRoot);
+    assert(r.withIndex.includes('traced'), 'dir with index in withIndex');
+    assert(r.withoutIndex.includes('untraced'), 'dir without index in withoutIndex');
+    assert(!r.withIndex.includes('untraced'), 'untraced not in withIndex');
+    assert(!r.withoutIndex.includes('traced'), 'traced not in withoutIndex');
 
-    // alphabetical sort
-    const cov2 = summarizeTraceabilityCoverage(['zz-no', 'aa-no'], root);
-    assert(cov2.withoutIndex[0] === 'aa-no', 'withoutIndex sorted alphabetically');
+    // Sorted
+    const r2 = summarizeTraceabilityCoverage(['zebra', 'apple'], artifactsRoot);
+    assert(r2.withoutIndex[0] === 'apple' && r2.withoutIndex[1] === 'zebra', 'withoutIndex is sorted');
 
-    // empty input
-    const empty = summarizeTraceabilityCoverage([], root);
-    assert(empty.withIndex.length === 0 && empty.withoutIndex.length === 0, 'empty input: both arrays empty');
+    // Empty input
+    const r3 = summarizeTraceabilityCoverage([], artifactsRoot);
+    assert(r3.withIndex.length === 0 && r3.withoutIndex.length === 0, 'empty input returns empty arrays');
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    rmSync(trRoot, { recursive: true, force: true });
   }
 }
 
@@ -247,18 +201,26 @@ console.log('\n=== report-health: smoke generateReport on temp fixture ===');
   const root = mkdtempSync(join(tmpdir(), 'health-report-'));
   try {
     mkdirSync(join(root, 'plans', 'artifacts', 'demo'), { recursive: true });
-    mkdirSync(join(root, 'plans', 'artifacts', 'indexed-dir'), { recursive: true });
+    mkdirSync(join(root, 'plans', 'artifacts', 'traced-dir'), { recursive: true });
     writeFileSync(
-      join(root, 'plans', 'artifacts', 'indexed-dir', 'traceability-index.yaml'),
-      'type: traceability-index\n'
+      join(root, 'plans', 'artifacts', 'traced-dir', 'traceability-index.yaml'),
+      'schema_version: 1\n'
     );
+    mkdirSync(join(root, 'plans', 'artifacts', 'untraced-dir'), { recursive: true });
     writeFileSync(join(root, 'plans', 'demo-plan.md'), '# Demo\n\n**Status:** DONE\n');
     writeFileSync(join(root, 'plans', 'no-status.md'), '# X\nno status\n');
     writeFileSync(
       join(root, 'plans', 'session-outcomes.md'),
-      '## Entry\n\n**Plan ID:** `demo-plan`\n**Date:** `2026-04-25`\n**Complexity Tier:** `SMALL`\n**Status:** `SUCCESS`\n\n' +
-        '## Entry\n\n**Plan ID:** `partial-plan`\n**Date:** `2026-04-20`\n\n' +
-        '## Entry\n\n**Plan ID:** `demo-plan`\n**Date:** `2026-04-18`\n**Complexity Tier:** `SMALL`\n**Status:** `PARTIAL`\n'
+      [
+        '## Entry', '',
+        '**Plan ID:** `demo-plan`', '**Date:** `2026-04-25`',
+        '**Complexity Tier:** `SMALL`', '**Status:** `SUCCESS`', '',
+        '## Entry', '',
+        '**Plan ID:** `incomplete-plan`', '**Date:** `2026-04-20`', '',
+        '## Entry', '',
+        '**Plan ID:** `demo-plan`', '**Date:** `2026-04-10`',
+        '**Complexity Tier:** `SMALL`', '**Status:** `SUCCESS`', '',
+      ].join('\n')
     );
     writeFileSync(
       join(root, 'NOTES.md'),
@@ -287,6 +249,12 @@ console.log('\n=== report-health: smoke generateReport on temp fixture ===');
       report.includes('Active-objective plan slug `demo-plan` has matching artifact directory.'),
       'report confirms matching artifact dir'
     );
+    assert(report.includes('## Session Outcome Hygiene'), 'report has Session Outcome Hygiene section');
+    assert(report.includes('incomplete-plan'), 'report warns about missing-field entry');
+    assert(report.includes('Duplicate Plan IDs: 1'), 'report shows duplicate plan ID count');
+    assert(report.includes('## Traceability Index Coverage'), 'report has Traceability Index Coverage section');
+    assert(report.includes('traced-dir'), 'report lists traced-dir in coverage');
+    assert(report.includes('untraced-dir'), 'report lists untraced-dir in coverage');
 
     // Missing artifact warning
     writeFileSync(
@@ -305,17 +273,6 @@ console.log('\n=== report-health: smoke generateReport on temp fixture ===');
       r3.includes('WARNING: git status unavailable'),
       'warns when git status is unavailable'
     );
-
-    // New sections: Session Outcome Hygiene and Traceability Index Coverage
-    const r4 = generateReport(root, { gitStatus: '' });
-    assert(r4.includes('## Session Outcome Hygiene'), 'smoke: session hygiene section heading present');
-    assert(r4.includes('## Traceability Index Coverage'), 'smoke: traceability coverage section heading present');
-    assert(r4.includes('partial-plan: missing'), 'smoke: missing-field entry flagged in session hygiene');
-    assert(r4.includes('Duplicate Plan IDs (1)'), 'smoke: one duplicate plan ID reported');
-    assert(r4.includes('With index (1)'), 'smoke: one dir with traceability index');
-    assert(r4.includes('  - indexed-dir'), 'smoke: indexed-dir listed under with-index');
-    assert(r4.includes('Without index'), 'smoke: without-index group present');
-    assert(r4.includes('  - demo'), 'smoke: demo dir listed under without-index');
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

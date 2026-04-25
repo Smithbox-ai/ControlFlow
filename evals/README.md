@@ -170,6 +170,8 @@ npm test
 | `tests/archive-script.test.mjs` | Task-episodic archive script behavior against isolated fixture trees. |
 | `tests/fingerprint.test.mjs` | Structural fingerprint invalidation for nested scenario fixtures. |
 | `tests/report-health.test.mjs` | Operator health report helpers and smoke generation against isolated fixture trees. |
+| `tests/capability-matrix.test.mjs` | Capability-matrix reconciliation of tool grants, agent frontmatter, and project context. |
+| `tests/skill-discoverability.test.mjs` | Protects skill metadata discoverability and ensures skills remain accurately referenced. |
 
 ### Operator Health Report
 
@@ -179,10 +181,23 @@ npm test
 - current `git status --porcelain` grouped by repository surface (agents, schemas, governance, evals, docs, skills, plans/artifacts, plans, other)
 - `NOTES.md` active objective, blockers, pending lines, and line count
 - plan files grouped by `**Status:**` value plus a count of plan files without an explicit status
-- the latest `plans/session-outcomes.md` entry summary
+- session outcome hygiene metrics against the latest `plans/session-outcomes.md` entry
+- traceability index coverage, confirming behavior of the pattern rooted at `plans/templates/traceability-index-template.yaml` (with sample at `plans/artifacts/repo-health-traceability/traceability-index.yaml`)
 - artifact directory count plus a warning when the active-objective plan slug has no matching `plans/artifacts/<slug>` directory
 
 The CLI uses Node stdlib only, performs no network calls, executes no live agents, and writes nothing.
+
+### Capability Matrix and Discoverability
+
+`npm run capability-matrix` executes `evals/capability-matrix.mjs`, a CLI tool that reconciles tool grants, agent frontmatter, and project context (`plans/project-context.md`), surfacing structural drift flags if they fall out of sync. This behavior is protected by `evals/tests/capability-matrix.test.mjs`.
+
+Skill discoverability is safeguarded by `evals/tests/skill-discoverability.test.mjs`, which protects the path resolution and indexing that allow Planner and Orchestrator to route skills correctly.
+
+### Plan-Writing Constraints and Overlap Detection
+
+When authoring plans, a strict format rule applies: in `Files:` bullets, backtick **only** the actual create/modify/move target paths. Pass 10 explicitly parses these backticked paths to compute file-overlap risk.
+
+To coordinate overlaps securely, the orchestrator relies on cross-plan overlap anchor-map artifacts generated during Phase 0 (e.g., `plans/artifacts/repo-health-traceability/cross-plan-overlap-anchor-map.yaml` and `plans/artifacts/runtime-model-resolver/cross-plan-overlap-anchor-map.yaml`). These maps enforce a strict coordination-only scope, documenting overlapping areas without inadvertently authorizing capability or tool executions.
 
 ### Exit codes
 
