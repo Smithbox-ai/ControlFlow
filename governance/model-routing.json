@@ -6,7 +6,7 @@
   "roles": {
     "orchestration-capable": {
       "primary": "Claude Sonnet 4.6 (copilot)",
-      "fallbacks": ["Claude Opus 4.7 (copilot)", "GPT-5.4 (copilot)"],
+      "fallbacks": ["GPT-5.5 (copilot)", "Claude Opus 4.7 (copilot)"],
       "cost_tier": "medium",
       "latency_tier": "medium",
       "consumers": ["Orchestrator.agent.md"],
@@ -15,36 +15,31 @@
         "TRIVIAL": { "inherit_from": "default" },
         "SMALL":   { "inherit_from": "default" },
         "MEDIUM":  { "inherit_from": "default" },
-        "LARGE":   { "inherit_from": "default" }
+        "LARGE": {
+          "primary": "GPT-5.5 (copilot)",
+          "fallbacks": ["Claude Opus 4.7 (copilot)", "Claude Sonnet 4.6 (copilot)"],
+          "cost_tier": "high",
+          "latency_tier": "slow"
+        }
       }
     },
     "capable-planner": {
-      "primary": "Claude Opus 4.7 (copilot)",
-      "fallbacks": ["Claude Sonnet 4.6 (copilot)", "GPT-5.4 (copilot)"],
+      "primary": "GPT-5.5 (copilot)",
+      "fallbacks": ["Claude Opus 4.7 (copilot)", "Claude Sonnet 4.6 (copilot)"],
       "cost_tier": "high",
       "latency_tier": "slow",
       "consumers": ["Planner.agent.md"],
       "reasoning_effort_hint": "high",
       "by_tier": {
-        "TRIVIAL": {
-          "primary": "Claude Sonnet 4.6 (copilot)",
-          "fallbacks": ["Claude Opus 4.7 (copilot)", "GPT-5.4 (copilot)"],
-          "cost_tier": "medium",
-          "latency_tier": "medium"
-        },
-        "SMALL": {
-          "primary": "Claude Sonnet 4.6 (copilot)",
-          "fallbacks": ["Claude Opus 4.7 (copilot)", "GPT-5.4 (copilot)"],
-          "cost_tier": "medium",
-          "latency_tier": "medium"
-        },
-        "MEDIUM": { "inherit_from": "default" },
-        "LARGE":  { "inherit_from": "default" }
+        "TRIVIAL": { "inherit_from": "default" },
+        "SMALL":   { "inherit_from": "default" },
+        "MEDIUM":  { "inherit_from": "default" },
+        "LARGE":   { "inherit_from": "default" }
       }
     },
     "capable-implementer": {
       "primary": "Claude Sonnet 4.6 (copilot)",
-      "fallbacks": ["Claude Opus 4.7 (copilot)", "GPT-5.4 (copilot)"],
+      "fallbacks": ["GPT-5.5 (copilot)", "Claude Opus 4.7 (copilot)"],
       "cost_tier": "medium",
       "latency_tier": "medium",
       "consumers": [
@@ -61,12 +56,17 @@
         },
         "SMALL":  { "inherit_from": "default" },
         "MEDIUM": { "inherit_from": "default" },
-        "LARGE":  { "inherit_from": "default" }
+        "LARGE": {
+          "primary": "GPT-5.5 (copilot)",
+          "fallbacks": ["Claude Sonnet 4.6 (copilot)", "Claude Opus 4.7 (copilot)"],
+          "cost_tier": "high",
+          "latency_tier": "slow"
+        }
       }
     },
     "ui-implementer": {
       "primary": "Gemini 3.1 Pro (Preview) (copilot)",
-      "fallbacks": ["Claude Sonnet 4.6 (copilot)", "GPT-5.4 (copilot)"],
+      "fallbacks": ["GPT-5.5 (copilot)", "Claude Opus 4.7 (copilot)"],
       "cost_tier": "medium",
       "latency_tier": "medium",
       "consumers": ["UIImplementer-subagent.agent.md"],
@@ -80,7 +80,7 @@
     },
     "documentation": {
       "primary": "Gemini 3.1 Pro (Preview) (copilot)",
-      "fallbacks": ["Claude Sonnet 4.6 (copilot)", "GPT-5.4 mini (copilot)"],
+      "fallbacks": ["GPT-5.5 (copilot)", "Claude Sonnet 4.6 (copilot)"],
       "cost_tier": "medium",
       "latency_tier": "medium",
       "consumers": ["TechnicalWriter-subagent.agent.md"],
@@ -99,33 +99,28 @@
     },
     "capable-reviewer": {
       "primary": "Claude Opus 4.7 (copilot)",
-      "fallbacks": ["GPT-5.4 (copilot)", "Claude Sonnet 4.6 (copilot)"],
+      "fallbacks": ["GPT-5.5 (copilot)", "Claude Sonnet 4.6 (copilot)"],
       "cost_tier": "high",
       "latency_tier": "slow",
       "consumers": [
         "CodeReviewer-subagent.agent.md",
-        "PlanAuditor-subagent.agent.md"
+        "PlanAuditor-subagent.agent.md",
+        "AssumptionVerifier-subagent.agent.md"
       ],
       "reasoning_effort_hint": "high",
       "by_tier": {
-        "TRIVIAL": {
-          "primary": "Claude Sonnet 4.6 (copilot)",
-          "fallbacks": ["Claude Opus 4.7 (copilot)", "GPT-5.4 (copilot)"],
-          "cost_tier": "medium",
-          "latency_tier": "medium"
-        },
-        "SMALL":  { "inherit_from": "default" },
-        "MEDIUM": { "inherit_from": "default" },
-        "LARGE":  { "inherit_from": "default" }
+        "TRIVIAL": { "inherit_from": "default" },
+        "SMALL":   { "inherit_from": "default" },
+        "MEDIUM":  { "inherit_from": "default" },
+        "LARGE":   { "inherit_from": "default" }
       }
     },
     "review-readonly": {
       "primary": "Claude Sonnet 4.6 (copilot)",
-      "fallbacks": ["Claude Opus 4.7 (copilot)", "GPT-5.4 (copilot)"],
+      "fallbacks": ["Claude Opus 4.7 (copilot)", "GPT-5.5 (copilot)"],
       "cost_tier": "medium",
       "latency_tier": "medium",
       "consumers": [
-        "AssumptionVerifier-subagent.agent.md",
         "ExecutabilityVerifier-subagent.agent.md"
       ],
       "reasoning_effort_hint": "high",
@@ -166,8 +161,8 @@
     },
     "research-capable": {
       "primary": "GPT-5.4 (copilot)",
-      "fallbacks": ["Claude Opus 4.7 (copilot)", "Claude Sonnet 4.6 (copilot)"],
-      "cost_tier": "high",
+      "fallbacks": ["GPT-5.5 (copilot)", "Claude Opus 4.7 (copilot)"],
+      "cost_tier": "medium",
       "latency_tier": "medium",
       "consumers": ["Researcher-subagent.agent.md"],
       "reasoning_effort_hint": "high",
@@ -180,8 +175,28 @@
         },
         "SMALL":  { "inherit_from": "default" },
         "MEDIUM": { "inherit_from": "default" },
-        "LARGE":  { "inherit_from": "default" }
+        "LARGE": {
+          "primary": "GPT-5.5 (copilot)",
+          "fallbacks": ["Claude Opus 4.7 (copilot)", "GPT-5.4 (copilot)"],
+          "cost_tier": "high",
+          "latency_tier": "slow"
+        }
       }
     }
+  },
+  "agent_role_index": {
+    "Orchestrator": "orchestration-capable",
+    "Planner": "capable-planner",
+    "CoreImplementer-subagent": "capable-implementer",
+    "PlatformEngineer-subagent": "capable-implementer",
+    "UIImplementer-subagent": "ui-implementer",
+    "TechnicalWriter-subagent": "documentation",
+    "CodeReviewer-subagent": "capable-reviewer",
+    "PlanAuditor-subagent": "capable-reviewer",
+    "AssumptionVerifier-subagent": "capable-reviewer",
+    "ExecutabilityVerifier-subagent": "review-readonly",
+    "BrowserTester-subagent": "browser-testing",
+    "CodeMapper-subagent": "fast-readonly",
+    "Researcher-subagent": "research-capable"
   }
 }

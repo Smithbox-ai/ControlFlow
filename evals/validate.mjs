@@ -42,6 +42,7 @@ import { fileURLToPath } from 'url';
 import {
   MODEL_ROLE_CHECK_ENABLED,
   validateModelRole,
+  validateAgentRoleIndex,
   validateByTierShape,
   parseRosterFromProjectContext,
   compareRosterEnum,
@@ -1187,15 +1188,27 @@ header('Pass 7c: Tutorial Parity');
 // Check #1 (`model_role` resolution) is gated off pending Phase 4 spike re-enable.
 header('Pass 8: Drift Detection — Roster ↔ Enum Bidirectional Alignment');
 
+const routingPath = join(ROOT, 'governance', 'model-routing.json');
+let routingJson = null;
+try {
+  routingJson = JSON.parse(readFileSync(routingPath, 'utf8'));
+} catch (e) {
+  fail(`Pass 8 Check #1: cannot read governance/model-routing.json — ${e.message}`);
+}
+
+if (routingJson) {
+  const agentRoleIndex = validateAgentRoleIndex(routingJson);
+  if (!agentRoleIndex.ok) {
+    for (const err of agentRoleIndex.errors) {
+      fail(`Pass 8 Check #1a: agent_role_index — ${err}`);
+    }
+  } else {
+    pass('agent_role_index consistency: top-level index is bidirectionally aligned with roles[*].consumers');
+  }
+}
+
 // Check #1 — model_role resolution (enabled after Phase 2 spike pass).
 if (MODEL_ROLE_CHECK_ENABLED) {
-  const routingPath = join(ROOT, 'governance', 'model-routing.json');
-  let routingJson = null;
-  try {
-    routingJson = JSON.parse(readFileSync(routingPath, 'utf8'));
-  } catch (e) {
-    fail(`Pass 8 Check #1: cannot read governance/model-routing.json — ${e.message}`);
-  }
   if (routingJson) {
     let allPass = true;
     for (const agentFile of agentFiles) {

@@ -206,6 +206,11 @@ Reference: `docs/agent-engineering/TOOL-ROUTING.md`
    - Run PreFlect gate.
    - Resolve the phase owner from `phase.executor_agent`. This field is authoritative for delegation and approval summaries.
    - If a legacy phase omits `executor_agent`, do not infer silently. Route the plan back through `REPLAN` to Planner and stop the implementation batch until the phase is reissued with an explicit executor.
+   - **Model Resolution:** Before delegating execution, load `governance/model-routing.json` and resolve the dispatch model from the plan's `complexity_tier`.
+     1. Read the resolved executor name from `phase.executor_agent` and look up its role via the top-level `agent_role_index` map.
+     2. Read `roles[role].by_tier[complexity_tier]`. If the tier entry is `{ "inherit_from": "default" }`, inherit the role's default `primary` model and default `fallbacks`; otherwise use the tier-specific `primary` and tier-specific `fallbacks` when present.
+     3. Pass the resolved `primary` model string as the `model` parameter to `agent/runSubagent`.
+     4. Phase 1 confirmed call-time `model` override precedence, but it did not confirm fallback-list API support. Only pass a fallback list if/when `agent/runSubagent` explicitly supports one; otherwise pass only the resolved primary model string.
    - Delegate execution to the declared executor agent.
    - Verification Build Gate: after the implementation subagent reports completion, verify build success. Either confirm the execution report includes `build.state: PASS`, or if build evidence is absent or ambiguous, run the project's build command directly. If the build fails, route through Failure Classification Handling before proceeding.
    - Delegate to CodeReviewer-subagent for phase code review. Code review is mandatory for all complexity tiers — see `governance/runtime-policy.json → review_pipeline_by_tier.code_review`. Pass the changed files list, phase scope, and executor agent execution report.

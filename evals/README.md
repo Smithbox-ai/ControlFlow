@@ -169,6 +169,20 @@ npm test
 | `tests/notes-md-drift.test.mjs` | NOTES.md style anti-pattern detection. |
 | `tests/archive-script.test.mjs` | Task-episodic archive script behavior against isolated fixture trees. |
 | `tests/fingerprint.test.mjs` | Structural fingerprint invalidation for nested scenario fixtures. |
+| `tests/report-health.test.mjs` | Operator health report helpers and smoke generation against isolated fixture trees. |
+
+### Operator Health Report
+
+`npm run health` runs `report-health.mjs`, an offline read-only CLI that prints a concise project status report covering:
+
+- the canonical validation command (`cd evals && npm test`)
+- current `git status --porcelain` grouped by repository surface (agents, schemas, governance, evals, docs, skills, plans/artifacts, plans, other)
+- `NOTES.md` active objective, blockers, pending lines, and line count
+- plan files grouped by `**Status:**` value plus a count of plan files without an explicit status
+- the latest `plans/session-outcomes.md` entry summary
+- artifact directory count plus a warning when the active-objective plan slug has no matching `plans/artifacts/<slug>` directory
+
+The CLI uses Node stdlib only, performs no network calls, executes no live agents, and writes nothing.
 
 ### Exit codes
 

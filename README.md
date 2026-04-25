@@ -61,6 +61,8 @@ cd evals && npm install && npm test
 ```
 
 > **First task?** Type `@Planner "Add OAuth login with Google"` — the system handles the rest.
+>
+> **Quick project status?** Run `cd evals && npm run health` for an offline, read-only operator report (git status by surface, NOTES.md state, plans by status, latest session outcome, artifact coverage).
 
 ---
 
@@ -219,7 +221,7 @@ graph TB
 | **TechnicalWriter** | `TechnicalWriter-subagent.agent.md` | Documentation, diagrams, code-doc parity |
 | **BrowserTester** | `BrowserTester-subagent.agent.md` | Runs provided E2E/accessibility scripts or harnesses; abstains when no executable harness is supplied |
 
-Models are resolved at runtime via `governance/model-routing.json` — see [docs/agent-engineering/MODEL-ROUTING.md](docs/agent-engineering/MODEL-ROUTING.md).
+VS Code Copilot defaults to reading the literal `model:` value from each agent frontmatter. However, for internal orchestrated dispatch (via `agent/runSubagent`), **ControlFlow actively resolves `governance/model-routing.json` at call time** (routing dynamically based on task complexity) — see [docs/agent-engineering/MODEL-ROUTING.md](docs/agent-engineering/MODEL-ROUTING.md).
 
 ---
 

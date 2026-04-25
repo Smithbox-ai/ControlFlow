@@ -33,7 +33,11 @@
           "properties": {
             "scope_description": { "type": "string", "minLength": 5 },
             "focus_areas": { "type": "array", "items": { "type": "string" } },
-            "conventions_requested": { "type": "boolean" }
+            "conventions_requested": { "type": "boolean" },
+            "model": {
+              "type": "string",
+              "description": "Runtime-resolved model string from governance/model-routing.json. Orchestrator sets this when dispatching to override the agent's literal frontmatter model."
+            }
           }
         },
         "Researcher-subagent": {
@@ -43,7 +47,11 @@
           "properties": {
             "research_query": { "type": "string", "minLength": 5 },
             "focus_areas": { "type": "array", "items": { "type": "string" } },
-            "complexity": { "type": "string", "enum": ["simple", "medium", "complex"] }
+            "complexity": { "type": "string", "enum": ["simple", "medium", "complex"] },
+            "model": {
+              "type": "string",
+              "description": "Runtime-resolved model string from governance/model-routing.json. Orchestrator sets this when dispatching to override the agent's literal frontmatter model."
+            }
           }
         },
         "Planner": {
@@ -53,7 +61,11 @@
           "properties": {
             "task_description": { "type": "string", "minLength": 10 },
             "constraints": { "type": "array", "items": { "type": "string" } },
-            "context_refs": { "type": "array", "items": { "type": "string" } }
+            "context_refs": { "type": "array", "items": { "type": "string" } },
+            "model": {
+              "type": "string",
+              "description": "Runtime-resolved model string from governance/model-routing.json. Orchestrator sets this when dispatching to override the agent's literal frontmatter model."
+            }
           }
         },
         "CoreImplementer-subagent": {
@@ -64,7 +76,11 @@
             "task_id": { "type": "string" },
             "phase_id": { "type": "integer", "minimum": 1 },
             "task_definition": { "type": "string", "minLength": 10 },
-            "context_files": { "type": "array", "items": { "type": "string" } }
+            "context_files": { "type": "array", "items": { "type": "string" } },
+            "model": {
+              "type": "string",
+              "description": "Runtime-resolved model string from governance/model-routing.json. Orchestrator sets this when dispatching to override the agent's literal frontmatter model."
+            }
           }
         },
         "UIImplementer-subagent": {
@@ -75,7 +91,11 @@
             "task_id": { "type": "string" },
             "phase_id": { "type": "integer", "minimum": 1 },
             "task_definition": { "type": "string", "minLength": 10 },
-            "design_refs": { "type": "array", "items": { "type": "string" } }
+            "design_refs": { "type": "array", "items": { "type": "string" } },
+            "model": {
+              "type": "string",
+              "description": "Runtime-resolved model string from governance/model-routing.json. Orchestrator sets this when dispatching to override the agent's literal frontmatter model."
+            }
           }
         },
         "PlatformEngineer-subagent": {
@@ -88,7 +108,11 @@
             "task_definition": { "type": "string" },
             "environment": { "type": "string", "enum": ["development", "staging", "production"] },
             "requires_approval": { "type": "boolean" },
-            "security_sensitive": { "type": "boolean" }
+            "security_sensitive": { "type": "boolean" },
+            "model": {
+              "type": "string",
+              "description": "Runtime-resolved model string from governance/model-routing.json. Orchestrator sets this when dispatching to override the agent's literal frontmatter model."
+            }
           }
         },
         "TechnicalWriter-subagent": {
@@ -100,7 +124,11 @@
             "phase_id": { "type": "integer", "minimum": 1 },
             "task_type": { "type": "string", "enum": ["documentation", "walkthrough", "update"] },
             "audience": { "type": "string", "enum": ["developers", "end_users", "stakeholders"] },
-            "coverage_matrix": { "type": "array", "items": { "type": "string" } }
+            "coverage_matrix": { "type": "array", "items": { "type": "string" } },
+            "model": {
+              "type": "string",
+              "description": "Runtime-resolved model string from governance/model-routing.json. Orchestrator sets this when dispatching to override the agent's literal frontmatter model."
+            }
           }
         },
         "BrowserTester-subagent": {
@@ -124,6 +152,10 @@
                   "expected_result": { "type": "string" }
                 }
               }
+            },
+            "model": {
+              "type": "string",
+              "description": "Runtime-resolved model string from governance/model-routing.json. Orchestrator sets this when dispatching to override the agent's literal frontmatter model."
             }
           }
         },
@@ -174,6 +206,10 @@
                   "validated_blocking_issues": { "type": "array", "items": { "type": "object" } }
                 }
               }
+            },
+            "model": {
+              "type": "string",
+              "description": "Runtime-resolved model string from governance/model-routing.json. Orchestrator sets this when dispatching to override the agent's literal frontmatter model."
             }
           }
         },
@@ -215,6 +251,10 @@
               "type": "integer",
               "minimum": 0,
               "description": "Retry attempt counter for exponential backoff signaling."
+            },
+            "model": {
+              "type": "string",
+              "description": "Runtime-resolved model string from governance/model-routing.json. Orchestrator sets this when dispatching to override the agent's literal frontmatter model."
             }
           }
         },
@@ -247,6 +287,10 @@
               "type": "integer",
               "minimum": 0,
               "description": "Current iteration in the plan-review loop."
+            },
+            "model": {
+              "type": "string",
+              "description": "Runtime-resolved model string from governance/model-routing.json. Orchestrator sets this when dispatching to override the agent's literal frontmatter model."
             }
           }
         },
@@ -278,6 +322,10 @@
             "project_file_tree": {
               "type": "string",
               "description": "Optional project directory tree for context."
+            },
+            "model": {
+              "type": "string",
+              "description": "Runtime-resolved model string from governance/model-routing.json. Orchestrator sets this when dispatching to override the agent's literal frontmatter model."
             }
           }
         }

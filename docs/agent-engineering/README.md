@@ -20,7 +20,7 @@ Index of governance and engineering policy documents. Each agent loads the relev
 
 ## Runtime capabilities (shipped in the ControlFlow revision program)
 
-- [`MODEL-ROUTING.md`](MODEL-ROUTING.md) — Logical model-role indirection backed by `governance/model-routing.json`; currently shipped as logical index only (runtime opt-in deferred).
+- [`MODEL-ROUTING.md`](MODEL-ROUTING.md) — Logical model-role indirection backed by `governance/model-routing.json`; actively resolved at runtime by Orchestrator and Planner via `agent/runSubagent`.
 - [`OBSERVABILITY.md`](OBSERVABILITY.md) — UUIDv4 `trace_id` propagation across delegation and report schemas; NDJSON event sink convention under `plans/artifacts/observability/` (one file per task).
 - [`MEMORY-ARCHITECTURE.md`](MEMORY-ARCHITECTURE.md) — Three-layer memory model: session (volatile) / task-episodic (`plans/artifacts/<task-slug>/`) / repo-persistent (`NOTES.md`).
 - [`AGENT-AS-TOOL.md`](AGENT-AS-TOOL.md) — MCP forward-compatible subagent input contract (`scope`, `context_refs`, `trace_id`, `iteration_index`) for future native tool surfacing.

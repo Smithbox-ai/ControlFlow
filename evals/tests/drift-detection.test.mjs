@@ -20,6 +20,7 @@ import addFormats from 'ajv-formats';
 import {
   MODEL_ROLE_CHECK_ENABLED,
   validateModelRole,
+  validateAgentRoleIndex,
   parseRosterFromProjectContext,
   compareRosterEnum,
   parseResourcesSchemaPaths,
@@ -335,6 +336,78 @@ console.log('\n=== Check #4 — Cross-plan file-overlap parser + anchor-map disc
   );
 
   try { rmSync(tmpRoot, { recursive: true, force: true }); } catch { /* best-effort */ }
+}
+
+// ──────────────────────────────────────────────
+// Check #5 — agent_role_index consistency (validateAgentRoleIndex)
+// ──────────────────────────────────────────────
+console.log('\n=== Check #5 — agent_role_index consistency ===');
+{
+  const validRouting = {
+    roles: {
+      alpha: { consumers: ['Alpha.agent.md'] },
+      beta: { consumers: ['Beta.agent.md'] },
+    },
+    agent_role_index: {
+      Alpha: 'alpha',
+      Beta: 'beta',
+    },
+  };
+
+  const pos = validateAgentRoleIndex(validRouting);
+  check(
+    'P5-1: valid agent_role_index matches consumers bidirectionally → ok=true',
+    pos.ok === true && pos.errors.length === 0,
+    `ok=${pos.ok}, errors=${JSON.stringify(pos.errors)}`
+  );
+
+  const missingIndex = validateAgentRoleIndex({
+    roles: validRouting.roles,
+  });
+  check(
+    'N5-1a: missing top-level agent_role_index object → ok=false',
+    missingIndex.ok === false && missingIndex.errors.some(e => e.includes('agent_role_index key missing or not an object')),
+    `ok=${missingIndex.ok}, errors=${JSON.stringify(missingIndex.errors)}`
+  );
+
+  const missingAgent = validateAgentRoleIndex({
+    roles: validRouting.roles,
+    agent_role_index: {
+      Alpha: 'alpha',
+    },
+  });
+  check(
+    'N5-1: consumers agent missing from agent_role_index → ok=false',
+    missingAgent.ok === false && missingAgent.errors.some(e => e.includes('Beta') && e.includes('missing')),
+    `ok=${missingAgent.ok}, errors=${JSON.stringify(missingAgent.errors)}`
+  );
+
+  const wrongRole = validateAgentRoleIndex({
+    roles: validRouting.roles,
+    agent_role_index: {
+      Alpha: 'beta',
+      Beta: 'beta',
+    },
+  });
+  check(
+    'N5-2: agent_role_index wrong role mapping against consumers → ok=false',
+    wrongRole.ok === false && wrongRole.errors.some(e => e.includes('Alpha') && e.includes('beta')),
+    `ok=${wrongRole.ok}, errors=${JSON.stringify(wrongRole.errors)}`
+  );
+
+  const extraAgent = validateAgentRoleIndex({
+    roles: validRouting.roles,
+    agent_role_index: {
+      Alpha: 'alpha',
+      Beta: 'beta',
+      Ghost: 'alpha',
+    },
+  });
+  check(
+    'N5-3: extra agent_role_index entry not present in consumers → ok=false',
+    extraAgent.ok === false && extraAgent.errors.some(e => e.includes('Ghost') && e.includes('consumers')),
+    `ok=${extraAgent.ok}, errors=${JSON.stringify(extraAgent.errors)}`
+  );
 }
 
 // ──────────────────────────────────────────────

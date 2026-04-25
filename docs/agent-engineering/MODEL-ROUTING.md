@@ -31,21 +31,23 @@ The 10 roles are:
 | `capable-implementer` | CoreImplementer, PlatformEngineer |
 | `ui-implementer` | UIImplementer |
 | `documentation` | TechnicalWriter |
-| `capable-reviewer` | CodeReviewer, PlanAuditor |
-| `review-readonly` | AssumptionVerifier, ExecutabilityVerifier |
+| `capable-reviewer` | CodeReviewer, PlanAuditor, AssumptionVerifier |
+| `review-readonly` | ExecutabilityVerifier |
 | `browser-testing` | BrowserTester |
 | `fast-readonly` | CodeMapper |
 | `research-capable` | Researcher |
 
-### review-readonly: Sonnet demotion trade-off
+### Control-Plane Premium Pinning
 
-`AssumptionVerifier` was previously pinned to `Claude Opus 4.7 (copilot)` in its `model:` frontmatter while its declared `model_role` was `review-readonly`, whose `primary` in `governance/model-routing.json` is `Claude Sonnet 4.6 (copilot)`. The frontmatter has been corrected to match the role primary. Three trade-offs are noted:
+While internal subagent dispatch resolves models dynamically, top-level user entry points (handling the initial chat request) execute using the literal `model:` frontmatter value. The operating mode ensures premium requests are spent on agents that decide quality at the control plane:
 
-**(a) Reduced mirage-detection depth.** The 17-pattern + 5-dimension analysis performed by AssumptionVerifier benefits from Opus-class reasoning capacity. Demotion to Sonnet may reduce detection depth for subtle assumption-fact confusions, particularly in deeply nested or context-dependent mirage patterns.
+- `Planner` is pinned to `GPT-5.5` so plan quality, decomposition, and risk framing use the strongest available planning model.
+- `CodeReviewer`, `PlanAuditor`, and `AssumptionVerifier` rely on premium adversarial reviewers (`Claude Opus 4.7`).
+- `ExecutabilityVerifier`, `Orchestrator`, and the implementation agents typically resolve to cheaper defaults (`Claude Sonnet 4.6`, `GPT-5.4`, `GPT-5.4 mini`, `Gemini 3.1 Pro`) to contain premium usage.
 
-**(b) Role-band cost coupling with ExecutabilityVerifier.** Both AssumptionVerifier and ExecutabilityVerifier consume `review-readonly`. A role-level promotion to Opus would elevate both agents simultaneously, coupling cost across two verification subagents regardless of per-task need.
-
-**(c) Demotion is the only role-coherent option.** The role-coherent resolution is to align the `model:` field with the role's declared `primary`. The alternative — silently elevating the `review-readonly` role itself to Opus — would bypass the established tiering rationale and implicitly affect ExecutabilityVerifier without a deliberate role redesign.
+This yields a pragmatic split:
+- Premium tokens are spent on planning and on finding flaws.
+- Routine orchestration and implementation stay cheaper, managed through dynamic subagent dispatch logic.
 
 
 
@@ -64,15 +66,19 @@ Both lines coexist. The `model:` line is what VS Code Copilot currently consumes
 
 ## Resolution at runtime
 
-VS Code Copilot today reads the literal `model:` value from frontmatter. The `model_role:` key is **not** runtime-enforced. It serves three purposes during this phase:
+VS Code Copilot defaults to reading the literal `model:` value from frontmatter. However, within ControlFlow, **prompt-driven runtime resolution is active** for subagent dispatch. 
 
-1. **Logical index.** Documents the intended role classification per agent.
-2. **Eval-validated drift detection.** A future eval scenario (`evals/scenarios/model-routing-alignment.json`, gated on the Phase 4 spike verdict) asserts every declared `model_role` resolves to an entry in `governance/model-routing.json` and that its `primary` matches the literal `model:` line.
-3. **Migration scaffold.** When VS Code Copilot (or a future runtime shim) gains the ability to resolve logical roles, agents will already be tagged. Full runtime enforcement is a future step gated on (a) the Phase 4 spike result and (b) VS Code Copilot support for the indirection.
+When Orchestrator or Planner dispatch a subagent via `agent/runSubagent`, they actively execute model resolution:
+1. They load `governance/model-routing.json`.
+2. They look up the target agent in `agent_role_index`.
+3. They apply the `by_tier` complexity rule to determine the required model string.
+4. They pass the resolved `primary` model explicitly as the `model` parameter to `agent/runSubagent`, overriding the agent's frontmatter at call time.
 
-## Matrix shape (Stage C)
+While global VS Code Copilot execution (e.g., triggering an agent directly from chat) still relies on the frontmatter fallback, all internal orchestrated pipeline dispatches strictly enforce the logical routing graph dynamically.
 
-The `by_tier` object describes model overrides based on the complexity tier of the task (`TRIVIAL`, `SMALL`, `MEDIUM`, `LARGE`). 
+## Matrix shape (Stage C/D)
+
+The `by_tier` object describes model overrides based on the complexity tier of the task (`TRIVIAL`, `SMALL`, `MEDIUM`, `LARGE`). Because internal control plane logic resolves this matrix dynamically during subagent dispatch, this is an **active runtime switch** for Orchestrator and Planner.
 
 Each key corresponds to a complexity tier, and its value is either a full override (`{primary, fallbacks, cost_tier, latency_tier}`) or `{inherit_from: "default"}`.
 
@@ -101,12 +107,11 @@ At `LARGE` complexity, it inherits the default (which might be Opus).
 
 ## Stage D (forward pointer)
 
-Stage D is OUT OF SCOPE for the current plan.
+The prompt-driven runtime resolution module (Orchestrator/Planner dynamic lookup) is complete.
 
-Prerequisites for Stage D:
+Remaining prerequisites for Stage D (auto-tuning observability):
 - (a) accumulate ≥50 task telemetry entries via the NDJSON sink at `plans/artifacts/observability/`
-- (b) a new runtime resolver module (not yet designed)
-- (c) expand `governance/model-routing.json` schema with `inherit_from` targets beyond `"default"` (e.g., other roles or tier mixes)
+- (b) expand `governance/model-routing.json` schema with `inherit_from` targets beyond `"default"` (e.g., other roles or tier mixes)
 
 ### Stage C Cross-references
 - Phase 1 spike artifact: `plans/artifacts/model-routing-stage-c/phase-1-spike-result.md`
@@ -166,4 +171,4 @@ The field lives at the **per-role** level, as a sibling of `primary`, `fallbacks
 - Repository agent-engineering index: `docs/agent-engineering/README.md` (authored in Phase 10).
 - Drift detection: `evals/validate.mjs` and the upcoming `evals/scenarios/model-routing-alignment.json`.
 - Plan: `plans/controlflow-comprehensive-revision-plan.md` Phase 4.
-- Spike record: `plans/artifacts/controlflow-revision/phase-4-spike-result.md`.
+- Spike record: `plans/artifacts/model-resolver/phase-1-spike.md`.

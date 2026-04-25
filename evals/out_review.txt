@@ -1,4 +1,8 @@
 ﻿
+> controlflow-evals@1.0.0 test:structural
+> node validate.mjs
+
+
 === Pass 1: Schema Validity ===
   тЬЕ Schema compiles: assumption-verifier.plan-audit.schema.json
   тЬЕ Schema compiles: browser-tester.execution-report.schema.json
@@ -285,44 +289,44 @@
   тЬЕ Agent Resources schemas: all 23 curated references resolve across 13 agents
 
 === Pass 10: Drift Detection тАФ Cross-Plan File-Overlap ===
-node :   тЭМ Cross-plan overlap without shared anchor-map: "README.md" appears 
-in plans/controlflow-comprehensive-revision-plan.md AND plans/repo-health-trace
-ability-plan.md
+node.exe :   тЭМ Cross-plan overlap without shared anchor-map: "governance/mode
+l-routing.json" appears in plans/controlflow-comprehensive-revision-plan.md AND
+ plans/runtime-model-resolver-plan-revised-v2.md
 строка:1 знак:1
-+ node validate.mjs 2>&1 | Out-File -Encoding utf8 ..\test-output.txt ; ...
-+ ~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (  тЭМ Cross-pla...ability-plan.md 
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (  тЭМ Cross-pla...n-revised-v2.md 
    :String) [], RemoteException
     + FullyQualifiedErrorId : NativeCommandError
  
-  тЭМ Cross-plan overlap without shared anchor-map: "evals/README.md" appears i
-n plans/controlflow-comprehensive-revision-plan.md AND plans/repo-health-tracea
-bility-plan-v2.md
-  тЭМ Cross-plan overlap without shared anchor-map: "evals/README.md" appears i
-n plans/controlflow-comprehensive-revision-plan.md AND plans/repo-health-tracea
-bility-plan.md
-  тЭМ Cross-plan overlap without shared anchor-map: "evals/README.md" appears i
-n plans/performance-optimization-plan.md AND plans/repo-health-traceability-pla
-n-v2.md
-  тЭМ Cross-plan overlap without shared anchor-map: "evals/README.md" appears i
-n plans/performance-optimization-plan.md AND plans/repo-health-traceability-pla
-n.md
-  тЭМ Cross-plan overlap without shared anchor-map: "evals/README.md" appears i
-n plans/repo-health-traceability-plan-v2.md AND plans/repo-health-traceability-
-plan.md
-  тЭМ Cross-plan overlap without shared anchor-map: "evals/package.json" appear
-s in plans/memory-cleanup-enforcement-plan.md AND plans/repo-health-traceabilit
-y-plan-v2.md
-  тЭМ Cross-plan overlap without shared anchor-map: "evals/report-health.mjs" a
-ppears in plans/repo-health-traceability-plan-v2.md AND plans/repo-health-trace
-ability-plan.md
-  тЭМ Cross-plan overlap without shared anchor-map: "evals/tests/report-health.
-test.mjs" appears in plans/repo-health-traceability-plan-v2.md AND plans/repo-h
-ealth-traceability-plan.md
-  тЭМ Cross-plan overlap without shared anchor-map: "traceability-index.yaml" a
-ppears in plans/repo-health-traceability-plan-v2.md AND plans/repo-health-trace
-ability-plan.md
-  тЭМ Cross-plan overlap: 2 additional unresolved pair(s) suppressed
+  тЭМ Cross-plan overlap without shared anchor-map: "governance/model-routing.j
+son" appears in plans/controlflow-comprehensive-revision-plan.md AND plans/runt
+ime-model-resolver-plan-revised.md
+  тЭМ Cross-plan overlap without shared anchor-map: "governance/model-routing.j
+son" appears in plans/controlflow-reliability-hardening-plan.md AND plans/runti
+me-model-resolver-plan-revised-v2.md
+  тЭМ Cross-plan overlap without shared anchor-map: "governance/model-routing.j
+son" appears in plans/controlflow-reliability-hardening-plan.md AND plans/runti
+me-model-resolver-plan-revised.md
+  тЭМ Cross-plan overlap without shared anchor-map: "governance/model-routing.j
+son" appears in plans/model-routing-stage-c-plan.md AND plans/runtime-model-res
+olver-plan-revised-v2.md
+  тЭМ Cross-plan overlap without shared anchor-map: "governance/model-routing.j
+son" appears in plans/model-routing-stage-c-plan.md AND plans/runtime-model-res
+olver-plan-revised.md
+  тЭМ Cross-plan overlap without shared anchor-map: "governance/model-routing.j
+son" appears in plans/runtime-model-resolver-plan-revised-v2.md AND plans/runti
+me-model-resolver-plan-revised.md
+  тЭМ Cross-plan overlap without shared anchor-map: "governance/model-routing.j
+son" appears in plans/runtime-model-resolver-plan-revised-v2.md AND plans/runti
+me-model-resolver-plan.md
+  тЭМ Cross-plan overlap without shared anchor-map: "governance/model-routing.j
+son" appears in plans/runtime-model-resolver-plan-revised.md AND plans/runtime-
+model-resolver-plan.md
+  тЭМ Cross-plan overlap without shared anchor-map: "docs/agent-engineering/MOD
+EL-ROUTING.md" appears in plans/controlflow-comprehensive-revision-plan.md AND 
+plans/runtime-model-resolver-plan-revised-v2.md
+  тЭМ Cross-plan overlap: 63 additional unresolved pair(s) suppressed
 
 === Pass 12: Governance Policy Assertions ===
   тЬЕ Pass 12 A: tool_output_policy structure and values correct

@@ -2,7 +2,7 @@
 description: 'Autonomous planner that writes comprehensive implementation plans and feeds them to Orchestrator'
 tools: [read/readFile, agent/runSubagent, edit/createFile, search/codebase, search/fileSearch, search/listDirectory, search/textSearch, search/usages, web/fetch, web/githubRepo, vscode/askQuestions, vscode/getProjectSetupInfo, io.github.upstash/context7/get-library-docs, io.github.upstash/context7/resolve-library-id]
 agents: ["CodeMapper-subagent", "Researcher-subagent"]
-model: Claude Opus 4.7 (copilot)
+model: GPT-5.5 (copilot)
 model_role: capable-planner
 handoffs:
   - label: Start implementation with Orchestrator
@@ -49,6 +49,7 @@ For all other scopes, record applicability, impact, evidence source, and disposi
   4. Include selected skill file paths in each applicable phase's `skill_references` array.
   Implementation agents load referenced skills before executing phase tasks.
 6. Research (delegate CodeMapper-subagent/Researcher-subagent when scope is large).
+  - **Model Resolution:** For every `agent/runSubagent` dispatch to `CodeMapper-subagent` or `Researcher-subagent`, load `governance/model-routing.json`, resolve the subagent role via the top-level `agent_role_index`, then apply `roles[role].by_tier[complexity_tier]`. If the tier entry is `{ "inherit_from": "default" }`, inherit the role's default `primary` model and default `fallbacks`; otherwise use the tier-specific `primary` and tier-specific `fallbacks` when present. Pass the resolved `primary` as the `model` parameter. Only pass a fallback list if/when `agent/runSubagent` explicitly supports one; otherwise pass only the resolved primary model string.
 7. Design (structured design decisions and diagram selection):
    - **Design Decisions Checklist** — Before proceeding to Planning (Step 8), explicitly address four dimensions:
      1. **Boundary changes** — Does the task change system boundaries, add new actors, or modify integration points? If no boundary changes, state "No boundary changes."

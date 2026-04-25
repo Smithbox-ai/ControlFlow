@@ -55,6 +55,89 @@ export function validateModelRole(agentFrontmatter, routingJson) {
   return { ok: true, errors };
 }
 
+function consumerToAgentStem(consumer) {
+  return consumer.endsWith('.agent.md')
+    ? consumer.slice(0, -'.agent.md'.length)
+    : consumer;
+}
+
+/**
+ * Validate that governance/model-routing.json keeps agent_role_index in
+ * bidirectional sync with roles[*].consumers.
+ * @param {object} routingJson - Parsed governance/model-routing.json
+ * @returns {{ ok: boolean, errors: string[] }}
+ */
+export function validateAgentRoleIndex(routingJson) {
+  const errors = [];
+  const roles = routingJson?.roles;
+  const agentRoleIndex = routingJson?.agent_role_index;
+
+  if (!roles || typeof roles !== 'object' || Array.isArray(roles)) {
+    errors.push('roles key missing or not an object');
+    return { ok: false, errors };
+  }
+
+  if (!agentRoleIndex || typeof agentRoleIndex !== 'object' || Array.isArray(agentRoleIndex)) {
+    errors.push('agent_role_index key missing or not an object');
+    return { ok: false, errors };
+  }
+
+  const consumersByAgent = new Map();
+
+  for (const [roleName, role] of Object.entries(roles)) {
+    const consumers = role?.consumers;
+    if (!Array.isArray(consumers)) {
+      errors.push(`role "${roleName}": consumers must be an array`);
+      continue;
+    }
+
+    for (const consumer of consumers) {
+      if (typeof consumer !== 'string' || consumer.length === 0) {
+        errors.push(`role "${roleName}": consumers must contain non-empty strings`);
+        continue;
+      }
+      if (!consumer.endsWith('.agent.md')) {
+        errors.push(`role "${roleName}": consumer "${consumer}" must end with ".agent.md"`);
+        continue;
+      }
+
+      const agentStem = consumerToAgentStem(consumer);
+      const priorRole = consumersByAgent.get(agentStem);
+      if (priorRole && priorRole !== roleName) {
+        errors.push(`agent "${agentStem}" appears in consumers for both "${priorRole}" and "${roleName}"`);
+        continue;
+      }
+      consumersByAgent.set(agentStem, roleName);
+    }
+  }
+
+  for (const [agentStem, roleName] of Object.entries(agentRoleIndex)) {
+    if (!Object.hasOwn(roles, roleName)) {
+      errors.push(`agent_role_index maps "${agentStem}" to unknown role "${roleName}"`);
+      continue;
+    }
+
+    const consumerFile = `${agentStem}.agent.md`;
+    const consumers = Array.isArray(roles[roleName]?.consumers) ? roles[roleName].consumers : [];
+    if (!consumers.includes(consumerFile)) {
+      errors.push(`agent_role_index maps "${agentStem}" to role "${roleName}" but roles["${roleName}"].consumers does not include "${consumerFile}"`);
+    }
+  }
+
+  for (const [agentStem, roleName] of consumersByAgent.entries()) {
+    if (!Object.hasOwn(agentRoleIndex, agentStem)) {
+      errors.push(`roles["${roleName}"].consumers includes "${agentStem}.agent.md" but agent_role_index is missing "${agentStem}"`);
+      continue;
+    }
+
+    if (agentRoleIndex[agentStem] !== roleName) {
+      errors.push(`roles["${roleName}"].consumers includes "${agentStem}.agent.md" but agent_role_index maps "${agentStem}" to "${agentRoleIndex[agentStem]}"`);
+    }
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+
 // ── Check #2: Roster ↔ enum bidirectional alignment ──────────────────────────
 export function parseRosterFromProjectContext(content) {
   const lines = content.split('\n');

@@ -1,0 +1,42 @@
+{
+  "id": "orchestrator-model-resolution",
+  "target_agent": "Orchestrator",
+  "category": "structural",
+  "goal": "Structural reference fixture: documents example model resolution outcomes for Orchestrator dispatches at selected complexity tiers. Offline evals do not execute live runSubagent calls and cannot observe live model parameters, so this scenario is reference-only rather than a behavioral runtime assertion.",
+  "input": {
+    "routing_source": "governance/model-routing.json",
+    "resolution_rule_source": "docs/agent-engineering/MODEL-ROUTING.md",
+    "offline_eval_limitation": "No live agent/runSubagent invocation occurs during offline evals, so the harness cannot verify which model parameter is passed at runtime.",
+    "reference_cases": [
+      {
+        "case_id": "capable-implementer-trivial-override",
+        "executor_agent": "CoreImplementer-subagent",
+        "complexity_tier": "TRIVIAL",
+        "role": "capable-implementer",
+        "resolution_mode": "by_tier override",
+        "reference_expectation": {
+          "resolved_primary_model": "GPT-5.4 mini (copilot)",
+          "live_runtime_assertion": false
+        }
+      },
+      {
+        "case_id": "capable-reviewer-large-inherit-default",
+        "executor_agent": "CodeReviewer-subagent",
+        "complexity_tier": "LARGE",
+        "role": "capable-reviewer",
+        "resolution_mode": "inherit_from default",
+        "reference_expectation": {
+          "resolved_primary_model": "Claude Opus 4.7 (copilot)",
+          "live_runtime_assertion": false
+        }
+      }
+    ]
+  },
+  "expected": {
+    "fixture_type": "structural-reference-only",
+    "offline_harness_observes_live_runSubagent_model_parameters": false,
+    "live_runtime_behavior_out_of_scope": true,
+    "behavioral_runtime_assertions_present": false,
+    "reference_cases_documented": 2
+  }
+}
