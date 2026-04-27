@@ -159,6 +159,16 @@ Reference: `docs/agent-engineering/TOOL-ROUTING.md`
 
 ## Execution Protocol
 
+### Universal Model Resolution Rule (Mandatory — All Dispatches)
+Before every `agent/runSubagent` call, regardless of dispatch context, apply this rule:
+1. Load `governance/model-routing.json`.
+2. Look up the target agent name in the top-level `agent_role_index` map to get its role.
+3. Read `roles[role].by_tier[complexity_tier]`. If the entry is `{ "inherit_from": "default" }`, use the role's top-level `primary` model; otherwise use the tier-specific `primary`.
+4. Pass the resolved `primary` model string as the `model` parameter to `agent/runSubagent`. Never omit `model`.
+5. For initial planning dispatches before any plan `complexity_tier` exists, use the target role's top-level `primary` model. For replan/planning dispatches after a plan exists, use the active plan's `complexity_tier`. Never omit `model` because tier context is missing.
+
+This rule covers all dispatch paths without exception: Plan Review Gate reviewers (PlanAuditor, AssumptionVerifier, ExecutabilityVerifier), phase CodeReviewer dispatch, final CodeReviewer dispatch, needs_replan Planner dispatch, and Implementation Loop executor dispatch.
+
 1. **Research Gate**
    - Delegate exploration/research as needed.
    - Confirm scope boundaries.
@@ -188,10 +198,10 @@ Reference: `docs/agent-engineering/TOOL-ROUTING.md`
      - Selective rerun changes loop work only; it never changes trigger conditions, tier routing, or override semantics, and it never bypasses ExecutabilityVerifier when the current tier or risk override keeps it in scope.
    - **Iterative Review Loop (up to max_iterations):**
      1. Generate `trace_id` (UUID v4) at loop start if not already set. Include in all gate events and delegation payloads.
-     2. Dispatch agents per complexity tier (see above). Pass `plan_path`, `iteration_index`, and `trace_id`.
+     2. Dispatch agents per complexity tier (see above). Apply Universal Model Resolution Rule for each dispatched agent. Pass `plan_path`, `iteration_index`, and `trace_id`.
      3. Wait for all dispatched agents to return.
      4. If PlanAuditor `APPROVED` AND (AssumptionVerifier not dispatched OR zero BLOCKING mirages):
-        - If ExecutabilityVerifier is in scope for the current tier or HIGH-risk override: dispatch ExecutabilityVerifier-subagent with `plan_path`.
+        - If ExecutabilityVerifier is in scope for the current tier or HIGH-risk override: dispatch ExecutabilityVerifier-subagent (apply Universal Model Resolution Rule) with `plan_path`.
         - If ExecutabilityVerifier `PASS` or not in scope → plan APPROVED, exit loop.
         - If ExecutabilityVerifier `FAIL`/`WARN` → route findings to Planner, increment `iteration_index`.
      5. If PlanAuditor `NEEDS_REVISION` or AssumptionVerifier has BLOCKING mirages → route combined findings to Planner, increment `iteration_index`.
@@ -206,14 +216,10 @@ Reference: `docs/agent-engineering/TOOL-ROUTING.md`
    - Run PreFlect gate.
    - Resolve the phase owner from `phase.executor_agent`. This field is authoritative for delegation and approval summaries.
    - If a legacy phase omits `executor_agent`, do not infer silently. Route the plan back through `REPLAN` to Planner and stop the implementation batch until the phase is reissued with an explicit executor.
-   - **Model Resolution:** Before delegating execution, load `governance/model-routing.json` and resolve the dispatch model from the plan's `complexity_tier`.
-     1. Read the resolved executor name from `phase.executor_agent` and look up its role via the top-level `agent_role_index` map.
-     2. Read `roles[role].by_tier[complexity_tier]`. If the tier entry is `{ "inherit_from": "default" }`, inherit the role's default `primary` model and default `fallbacks`; otherwise use the tier-specific `primary` and tier-specific `fallbacks` when present.
-     3. Pass the resolved `primary` model string as the `model` parameter to `agent/runSubagent`.
-     4. Phase 1 confirmed call-time `model` override precedence, but it did not confirm fallback-list API support. Only pass a fallback list if/when `agent/runSubagent` explicitly supports one; otherwise pass only the resolved primary model string.
+   - **Model Resolution:** Apply the Universal Model Resolution Rule (see Execution Protocol preamble above) before delegating execution: look up `phase.executor_agent` in `agent_role_index`, resolve `roles[role].by_tier[complexity_tier]`, and pass the resolved primary model as the `model` parameter. If the tier entry is `{ "inherit_from": "default" }`, use the role's default `primary`. Only pass a fallback list if `agent/runSubagent` explicitly supports one.
    - Delegate execution to the declared executor agent.
    - Verification Build Gate: after the implementation subagent reports completion, verify build success. Either confirm the execution report includes `build.state: PASS`, or if build evidence is absent or ambiguous, run the project's build command directly. If the build fails, route through Failure Classification Handling before proceeding.
-   - Delegate to CodeReviewer-subagent for phase code review. Code review is mandatory for all complexity tiers — see `governance/runtime-policy.json → review_pipeline_by_tier.code_review`. Pass the changed files list, phase scope, and executor agent execution report.
+   - Delegate to CodeReviewer-subagent for phase code review (apply Universal Model Resolution Rule). Code review is mandatory for all complexity tiers — see `governance/runtime-policy.json → review_pipeline_by_tier.code_review`. Pass the changed files list, phase scope, and executor agent execution report.
    - Block only on `validated_blocking_issues` from CodeReviewer-subagent verdict — not on raw unvalidated CRITICAL/MAJOR findings. If `validated_blocking_issues` is empty, the phase may proceed even if unvalidated issues exist.
    - If CodeReviewer-subagent review status is not `APPROVED`, loop with targeted revision context.
    - Mark the completed phase's todo item as completed using the `#todos` tool.
@@ -227,7 +233,7 @@ Reference: `docs/agent-engineering/TOOL-ROUTING.md`
        1. **Normalize changed_files[]**: Aggregate all files modified/created across every completed phase from executor reports. Mapping: `CoreImplementer → changes[].file`, `UIImplementer → ui_changes[].file`, `TechnicalWriter → docs_created[].path + docs_updated[].path`, `PlatformEngineer → changes[].file`. Deduplicate.
        2. **Build plan_phases_snapshot[]**: Extract `[{phase_id, files[]}]` from the Planner plan artifact. Omit `executor_agent` (not needed in snapshot; resolved from plan_path if fix-cycle is needed).
        3. **Collect prior_phase_findings[]**: Gather the CodeReviewer verdict from each completed phase code review (those dispatched with `review_scope: "phase"` or `"wave"`). For each, capture `{ phase_id, review_scope, status, issues, validated_blocking_issues }`. This enables novelty filtering in the final review without requiring CodeReviewer to self-source from `plans/artifacts/`.
-       4. **Dispatch CodeReviewer-subagent** with `review_scope: "final"`, `phase_id: 0` (sentinel), `changed_files[]`, `plan_phases_snapshot[]`, and `prior_phase_findings[]`.
+       4. **Dispatch CodeReviewer-subagent** (apply Universal Model Resolution Rule) with `review_scope: "final"`, `phase_id: 0` (sentinel), `changed_files[]`, `plan_phases_snapshot[]`, and `prior_phase_findings[]`.
        5. **Route findings:**
           - If `validated_blocking_issues` contains CRITICAL or MAJOR entries: resolve the fix executor for each issue by inspecting plan phases — highest phase_id wins: the phase with the highest `phase_id` whose `files[]` contains the affected file is the executor owner. Dispatch that executor with targeted fix scope. Re-run CodeReviewer with `review_scope: "final"` (max `max_fix_cycles` = 1 per `final_review_gate.max_fix_cycles`). If still blocked after the fix cycle → escalate to user via `WAITING_APPROVAL`. CodeReviewer **NEVER** owns the fix cycle.
           - If `validated_blocking_issues` is empty: log a final-review advisory to `plans/artifacts/<task>/final_review.md` and continue.
@@ -283,7 +289,7 @@ When a subagent returns a `failure_classification`, Orchestrator routes automati
 | `escalate` | STOP — transition to `WAITING_APPROVAL`, present to user | 0 |
 | `model_unavailable` | Retry the same agent up to `retry_budgets.model_unavailable_max` times; on exhaustion, escalate to user via `WAITING_APPROVAL` | retry_budgets.model_unavailable_max |
 
-If retry limit is exhausted, escalate to user with accumulated failure evidence.
+If retry limit is exhausted, escalate to user with accumulated failure evidence. For all dispatch actions in this table (retry or replan), apply the Universal Model Resolution Rule to resolve the `model` parameter — including needs_replan Planner dispatch.
 
 ### Retry Reliability Policy
 To prevent silent failures and hung pipelines during parallel execution:
@@ -357,3 +363,4 @@ Templates are externalized to reduce context overhead. Load on demand:
 - No batching of todo completions across phases. Each completion is a separate `#todos` call, made at the moment of phase verification — not aggregated for later flushing.
 - No phase work may resume after a context compaction or session restart without first reconciling the `#todos` state against actual plan-artifact reality.
 - If uncertain and cannot verify safely: `ABSTAIN`.
+- No `agent/runSubagent` dispatch may omit the `model` parameter. Every dispatch must apply the Universal Model Resolution Rule from Execution Protocol.

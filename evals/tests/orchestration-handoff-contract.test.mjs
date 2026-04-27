@@ -513,6 +513,49 @@ check(
 );
 
 // ──────────────────────────────────────────────
+// Universal Model Resolution Rule (all dispatch paths)
+// ──────────────────────────────────────────────
+console.log('\n=== Orchestrator — Universal Model Resolution Rule ===');
+
+check(
+  'Model resolution: universal rule section defined in Execution Protocol',
+  /Universal Model Resolution Rule/i.test(orch)
+);
+check(
+  'Model resolution: rule explicitly covers Plan Review Gate reviewer dispatches (PlanAuditor, AssumptionVerifier, ExecutabilityVerifier)',
+  /Universal Model Resolution Rule[\s\S]{0,800}PlanAuditor|This rule covers all dispatch paths[\s\S]{0,400}PlanAuditor/i.test(orch)
+);
+check(
+  'Model resolution: rule explicitly covers ExecutabilityVerifier follow-up dispatch',
+  /ExecutabilityVerifier[\s\S]{0,60}apply Universal Model Resolution Rule|apply Universal Model Resolution Rule[\s\S]{0,60}ExecutabilityVerifier/i.test(orch)
+);
+check(
+  'Model resolution: rule explicitly covers phase CodeReviewer dispatch',
+  /CodeReviewer-subagent for phase code review[\s\S]{0,60}apply Universal Model Resolution Rule|apply Universal Model Resolution Rule[\s\S]{0,60}CodeReviewer-subagent for phase code review/i.test(orch)
+);
+check(
+  'Model resolution: rule explicitly covers final CodeReviewer dispatch',
+  /Dispatch CodeReviewer-subagent[\s\S]{0,60}apply Universal Model Resolution Rule|apply Universal Model Resolution Rule[\s\S]{0,60}Dispatch CodeReviewer-subagent/i.test(orch)
+);
+check(
+  'Model resolution: rule explicitly covers needs_replan Planner dispatch',
+  /needs_replan[\s\S]{0,300}Universal Model Resolution Rule|Universal Model Resolution Rule[\s\S]{0,300}needs_replan/i.test(orch)
+);
+check(
+  'Model resolution: Implementation Loop references shared universal rule (not standalone)',
+  /Apply the Universal Model Resolution Rule.*before delegating execution/i.test(orch)
+);
+check(
+  'Model resolution: non-negotiable rule prohibits omitting model parameter on any dispatch',
+  /No.*agent.*runSubagent.*omit.*model|every dispatch must apply the Universal Model Resolution Rule/i.test(orch)
+);
+check(
+  'Model resolution: missing pre-plan complexity_tier falls back to top-level primary model without omitting model',
+  /initial planning dispatches before any plan `complexity_tier` exists.*top-level `primary` model/i.test(orch) &&
+  /Never omit `model` because tier context is missing/i.test(orch)
+);
+
+// ──────────────────────────────────────────────
 // Summary
 // ──────────────────────────────────────────────
 console.log(`\n${'═'.repeat(50)}`);
