@@ -1,6 +1,6 @@
 ---
 description: 'Execute implementation tasks delegated by the CONDUCTOR agent.'
-tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'agent']
+tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo']
 model: Claude Sonnet 4.6 (copilot)
 model_role: capable-implementer
 ---
@@ -78,7 +78,6 @@ Agent-specific fields:
 ### Allowed
 - `edit`, `search`, `usages`, `changes` for scoped implementation.
 - `problems`, `runCommands`, `runTasks`, `testFailure` for verification.
-- `agent` for focused context discovery when blocked.
 
 ### Disallowed
 - No destructive operations outside assigned scope.

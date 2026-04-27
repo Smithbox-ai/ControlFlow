@@ -1,0 +1,76 @@
+{
+  "_target_schema": "orchestrator.delegation-protocol.schema.json",
+  "_fixture_type": "schema",
+  "_expected_validation": "fail",
+
+  "schema_version": "1.0.0",
+  "agents": {
+    "CodeMapper-subagent": {
+      "scope_description": "Discover all authentication-related source files"
+    },
+    "Researcher-subagent": {
+      "research_query": "JWT authentication implementation best practices",
+      "model": "gpt-4o"
+    },
+    "Planner": {
+      "task_description": "Design and implement JWT authentication system",
+      "model": "gpt-4o"
+    },
+    "CoreImplementer-subagent": {
+      "task_id": "auth-impl-1",
+      "phase_id": 1,
+      "task_definition": "Implement JWT authentication endpoint",
+      "model": "gpt-4o"
+    },
+    "UIImplementer-subagent": {
+      "task_id": "auth-ui-1",
+      "phase_id": 2,
+      "task_definition": "Create login and token-refresh UI components",
+      "model": "gpt-4o"
+    },
+    "PlatformEngineer-subagent": {
+      "task_id": "auth-infra-1",
+      "phase_id": 3,
+      "environment": "staging",
+      "model": "gpt-4o"
+    },
+    "TechnicalWriter-subagent": {
+      "task_id": "auth-docs-1",
+      "phase_id": 4,
+      "task_type": "documentation",
+      "model": "gpt-4o"
+    },
+    "BrowserTester-subagent": {
+      "task_id": "auth-test-1",
+      "phase_id": 5,
+      "model": "gpt-4o"
+    },
+    "CodeReviewer-subagent": {
+      "phase_id": 1,
+      "changed_files": ["src/auth/jwt.ts"],
+      "model": "gpt-4o"
+    },
+    "PlanAuditor-subagent": {
+      "task_id": "audit-auth-plan",
+      "plan_path": "plans/auth-plan.md",
+      "plan_summary": "Plan to implement JWT authentication with endpoints and tests.",
+      "trace_id": "550e8400-e29b-41d4-a716-446655440000",
+      "iteration_index": 0,
+      "model": "gpt-4o"
+    },
+    "AssumptionVerifier-subagent": {
+      "plan_path": "plans/auth-plan.md",
+      "plan_summary": "Plan to implement JWT authentication with endpoints and tests.",
+      "trace_id": "550e8400-e29b-41d4-a716-446655440001",
+      "iteration_index": 0,
+      "model": "gpt-4o"
+    },
+    "ExecutabilityVerifier-subagent": {
+      "plan_path": "plans/auth-plan.md",
+      "plan_summary": "Plan to implement JWT authentication with endpoints and tests.",
+      "trace_id": "550e8400-e29b-41d4-a716-446655440002",
+      "iteration_index": 0,
+      "model": "gpt-4o"
+    }
+  }
+}

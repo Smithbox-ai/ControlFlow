@@ -732,13 +732,7 @@ export function computeStructuralFingerprint() {
       if (f.endsWith('.schema.json')) hashFile(join(CF_SCHEMAS_DIR, f));
     }
   } catch { /* cold */ }
-  // scenarios — top-level
-  try {
-    for (const f of readdirSync(CF_SCENARIOS_DIR).sort()) {
-      if (f.endsWith('.json')) hashFile(join(CF_SCENARIOS_DIR, f));
-    }
-  } catch { /* cold */ }
-  // nested scenario subdirectories (runtime-policy, tutorial-parity) — full recursive walk
+  // scenarios — full recursive walk of all JSON files under evals/scenarios/
   function walkJson(dir) {
     let entries;
     try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return; }
@@ -748,9 +742,7 @@ export function computeStructuralFingerprint() {
       else if (ent.isFile() && ent.name.endsWith('.json')) hashFile(full);
     }
   }
-  for (const subdir of ['runtime-policy', 'tutorial-parity', 'planner', 'assumption-verifier', 'executability-verifier']) {
-    walkJson(join(CF_SCENARIOS_DIR, subdir));
-  }
+  walkJson(CF_SCENARIOS_DIR);
   // root agent prompt files
   try {
     for (const f of readdirSync(CF_REPO_ROOT).sort()) {

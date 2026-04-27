@@ -40,6 +40,8 @@ Delegation to external or third-party agents is strictly prohibited.
 - **Orchestrator** — Conductor (conductor, not a phase executor)
 - **Planner** — Plan Producer (produces plans, not a phase executor)
 - **PlanAuditor-subagent** — Review-only auditor (dispatched during PLAN_REVIEW, not via `executor_agent`)
+- **AssumptionVerifier-subagent** — Review-only mirage detection (dispatched during PLAN_REVIEW, not via `executor_agent`)
+- **ExecutabilityVerifier-subagent** — Review-only executability verification (dispatched during PLAN_REVIEW, not via `executor_agent`)
 
 ## Complexity Tier Definitions
 
@@ -47,7 +49,7 @@ Delegation to external or third-party agents is strictly prohibited.
 | --- | --- | --- | --- |
 | TRIVIAL | ≤2 files | Single concern, isolated change | Skip PLAN_REVIEW entirely |
 | SMALL | 3-5 files | Single domain, clear boundaries | PlanAuditor only (lite review) |
-| MEDIUM | 6-15 files | Cross-domain, multiple concerns | PlanAuditor + AssumptionVerifier |
+| MEDIUM | 6-14 files | Cross-domain, multiple concerns | PlanAuditor + AssumptionVerifier |
 | LARGE | 15+ files | Cross-cutting, system-wide impact | Full pipeline (PlanAuditor + AssumptionVerifier + ExecutabilityVerifier) |
 
 **Override Rule:** Any plan with `risk_review` containing `applicability: applicable` AND `impact: HIGH` AND `disposition` not `resolved` → force LARGE-tier pipeline regardless of file count.
@@ -84,11 +86,11 @@ When a semantic risk entry triggers PlanAuditor review, Orchestrator maps the ri
 | --- | --- | --- | --- |
 | CodeMapper-subagent | code-mapper.discovery.schema.json | Read-only (5 tools) | Orchestrator, Researcher, Planner |
 | Researcher-subagent | researcher.research-findings.schema.json | Read + fetch (6 tools) | Orchestrator, Planner |
-| CoreImplementer-subagent | core-implementer.execution-report.schema.json | Full implementation (11 tools) | Orchestrator |
+| CoreImplementer-subagent | core-implementer.execution-report.schema.json | Full implementation (10 tools) | Orchestrator |
 | UIImplementer-subagent | ui-implementer.execution-report.schema.json | Full implementation (10 tools) | Orchestrator |
 | PlatformEngineer-subagent | platform-engineer.execution-report.schema.json | Full implementation (10 tools) | Orchestrator |
-| TechnicalWriter-subagent | technical-writer.execution-report.schema.json | Edit + search (6 tools) | Orchestrator |
-| BrowserTester-subagent | browser-tester.execution-report.schema.json | Search + edit evidence (6 tools) | Orchestrator |
+| TechnicalWriter-subagent | technical-writer.execution-report.schema.json | Edit + search (7 tools) | Orchestrator |
+| BrowserTester-subagent | browser-tester.execution-report.schema.json | Search + edit evidence (8 tools) | Orchestrator |
 | CodeReviewer-subagent | code-reviewer.verdict.schema.json | Search + run (6 tools) | Orchestrator |
 | PlanAuditor-subagent | plan-auditor.plan-audit.schema.json | Read-only (7 tools) | Orchestrator |
 | AssumptionVerifier-subagent | assumption-verifier.plan-audit.schema.json | Read-only (6 tools) | Orchestrator |

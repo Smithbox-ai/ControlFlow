@@ -64,6 +64,11 @@
         ],
         "properties": {
           "phase_id": { "type": "integer", "minimum": 1 },
+          "phase_type": {
+            "type": "string",
+            "enum": ["modifying", "read_only"],
+            "description": "Optional phase execution type. read_only phases are discovery, review, or verification work that do not produce changed_files for CodeReviewer dispatch."
+          },
           "title": { "type": "string", "minLength": 3 },
           "objective": { "type": "string", "minLength": 5 },
           "wave": {
@@ -237,7 +242,7 @@
     "success_criteria": { "type": "array", "items": { "type": "string" } },
     "diagrams": {
       "type": "array",
-      "description": "Mermaid architecture diagrams. Required when phases array has 3 or more items.",
+      "description": "Mermaid architecture diagrams. Required for LARGE-tier plans; optional for lower tiers unless prompt or review guidance requires them.",
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -258,7 +263,7 @@
       "additionalProperties": false,
       "required": ["target_agent", "prompt"],
       "properties": {
-        "target_agent": { "type": "string" },
+        "target_agent": { "type": "string", "const": "Orchestrator" },
         "prompt": { "type": "string" }
       }
     },
@@ -278,5 +283,45 @@
       "type": "string",
       "description": "Path of the prior plan artifact this plan supersedes. Set on REPLAN-with-new-plan-path events so the new plan is traceable to its predecessor. Optional — iter-1 plans omit this field."
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "complexity_tier": { "const": "LARGE" }
+        },
+        "required": ["complexity_tier"]
+      },
+      "then": {
+        "required": ["diagrams"],
+        "properties": {
+          "diagrams": {
+            "minItems": 2,
+            "allOf": [
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "type": { "const": "flowchart" }
+                  },
+                  "required": ["type"]
+                },
+                "minContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "type": { "const": "sequenceDiagram" }
+                  },
+                  "required": ["type"]
+                },
+                "minContains": 1
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
 }

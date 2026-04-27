@@ -1,0 +1,92 @@
+{
+  "_target_schema": "planner.plan.schema.json",
+  "_fixture_type": "schema",
+  "_expected_validation": "pass",
+
+  "schema_version": "1.2.0",
+  "agent": "Planner",
+  "status": "READY_FOR_EXECUTION",
+  "task_title": "Build distributed event sourcing platform",
+  "summary": "Design and implement a distributed event sourcing platform with CQRS, multi-region replication, and real-time analytics pipeline requiring parallel execution across multiple specialised agents.",
+  "confidence": 0.82,
+  "complexity_tier": "LARGE",
+  "abstain": { "is_abstaining": false, "reasons": [] },
+  "phases": [
+    {
+      "phase_id": 1,
+      "title": "Core event store implementation",
+      "objective": "Implement the append-only event store with partition routing.",
+      "wave": 1,
+      "executor_agent": "CoreImplementer-subagent",
+      "files": [
+        { "path": "src/event-store/store.ts", "action": "create", "reason": "Core event store module" }
+      ],
+      "tests": ["npm test -- --testPathPattern=event-store"],
+      "steps": [
+        "Write failing unit tests for the event store",
+        "Implement append-only store with partition key routing",
+        "Run full test suite"
+      ],
+      "acceptance_criteria": ["Event store appends events with monotonic sequence numbers"],
+      "quality_gates": ["tests_pass", "lint_clean", "schema_valid"]
+    },
+    {
+      "phase_id": 2,
+      "title": "CQRS read-model projections",
+      "objective": "Build projection engine consuming events to maintain read models.",
+      "wave": 2,
+      "executor_agent": "CoreImplementer-subagent",
+      "files": [
+        { "path": "src/projections/engine.ts", "action": "create", "reason": "Projection engine module" }
+      ],
+      "tests": ["npm test -- --testPathPattern=projections"],
+      "steps": [
+        "Implement projection engine subscribing to event store",
+        "Write read model update handlers"
+      ],
+      "acceptance_criteria": ["Projection engine converges within 100 ms of event write"],
+      "quality_gates": ["tests_pass", "lint_clean"]
+    }
+  ],
+  "open_questions": [
+    {
+      "question": "Should cross-region replication use eventual or strong consistency?",
+      "options": ["eventual consistency with conflict resolution", "strong consistency via Paxos"],
+      "recommendation": "Eventual consistency with vector-clock conflict resolution to reduce latency"
+    }
+  ],
+  "risks": [
+    { "risk": "Event ordering not guaranteed under network partition", "mitigation": "Use logical clocks and idempotent projections" }
+  ],
+  "risk_review": [
+    { "category": "data_volume", "applicability": "applicable", "impact": "HIGH", "evidence_source": "PRD.yaml — estimated 50 M events/day", "disposition": "research_phase_added" },
+    { "category": "performance", "applicability": "applicable", "impact": "HIGH", "evidence_source": "PRD.yaml — 99th-percentile latency target < 50 ms", "disposition": "open_question" },
+    { "category": "concurrency", "applicability": "applicable", "impact": "MEDIUM", "evidence_source": "Event store partition design docs", "disposition": "resolved" },
+    { "category": "access_control", "applicability": "applicable", "impact": "MEDIUM", "evidence_source": "SECURITY.md access-control requirements", "disposition": "resolved" },
+    { "category": "migration_rollback", "applicability": "applicable", "impact": "HIGH", "evidence_source": "Append-only store requires snapshot restore for rollback", "disposition": "open_question" },
+    { "category": "dependency", "applicability": "applicable", "impact": "MEDIUM", "evidence_source": "External Kafka dependency for replication pipeline", "disposition": "research_phase_added" },
+    { "category": "operability", "applicability": "applicable", "impact": "HIGH", "evidence_source": "Multi-region deployment requires distributed tracing", "disposition": "open_question" }
+  ],
+  "success_criteria": [
+    "Event store sustains 50 000 writes/s under load test",
+    "CQRS projections converge within SLA",
+    "All unit and integration tests pass"
+  ],
+  "diagrams": [
+    {
+      "type": "flowchart",
+      "title": "Phase dependency DAG",
+      "mermaid_source": "flowchart TD\n  P1[Phase 1: Event Store] --> P2[Phase 2: CQRS Projections]"
+    },
+    {
+      "type": "sequenceDiagram",
+      "title": "Event write and projection update flow",
+      "mermaid_source": "sequenceDiagram\n  Client->>EventStore: append(event)\n  EventStore->>ProjectionEngine: notify(event)\n  ProjectionEngine->>ReadModel: update()"
+    }
+  ],
+  "handoff": {
+    "target_agent": "Orchestrator",
+    "prompt": "LARGE-tier plan ready. Dispatch Phase 1 to CoreImplementer-subagent. Run PlanAuditor and ExecutabilityVerifier before execution."
+  },
+  "iteration_budget": 3
+}

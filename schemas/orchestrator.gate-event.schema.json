@@ -68,8 +68,8 @@
     },
     "executability_verifier_status": {
       "type": "string",
-      "enum": ["PASS", "FAIL", "WARN", "NOT_RUN"],
-      "description": "Status of ExecutabilityVerifier executability check for this gate."
+      "enum": ["PASS", "FAIL", "WARN", "ABSTAIN", "NOT_RUN"],
+      "description": "Status of ExecutabilityVerifier executability check for this gate. ABSTAIN is treated as a blocking review outcome requiring Orchestrator follow-up."
     },
     "trace_id": {
       "type": "string",

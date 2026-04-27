@@ -29,7 +29,7 @@
         "CodeMapper-subagent": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["scope_description"],
+          "required": ["scope_description", "model"],
           "properties": {
             "scope_description": { "type": "string", "minLength": 5 },
             "focus_areas": { "type": "array", "items": { "type": "string" } },
@@ -43,7 +43,7 @@
         "Researcher-subagent": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["research_query"],
+          "required": ["research_query", "model"],
           "properties": {
             "research_query": { "type": "string", "minLength": 5 },
             "focus_areas": { "type": "array", "items": { "type": "string" } },
@@ -57,7 +57,7 @@
         "Planner": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["task_description"],
+          "required": ["task_description", "model"],
           "properties": {
             "task_description": { "type": "string", "minLength": 10 },
             "constraints": { "type": "array", "items": { "type": "string" } },
@@ -71,10 +71,15 @@
         "CoreImplementer-subagent": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["task_id", "phase_id", "task_definition"],
+          "required": ["task_id", "phase_id", "task_definition", "model"],
           "properties": {
             "task_id": { "type": "string" },
             "phase_id": { "type": "integer", "minimum": 1 },
+            "phase_type": {
+              "type": "string",
+              "enum": ["modifying", "read_only"],
+              "description": "Phase execution type from the Planner plan."
+            },
             "task_definition": { "type": "string", "minLength": 10 },
             "context_files": { "type": "array", "items": { "type": "string" } },
             "model": {
@@ -86,10 +91,15 @@
         "UIImplementer-subagent": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["task_id", "phase_id", "task_definition"],
+          "required": ["task_id", "phase_id", "task_definition", "model"],
           "properties": {
             "task_id": { "type": "string" },
             "phase_id": { "type": "integer", "minimum": 1 },
+            "phase_type": {
+              "type": "string",
+              "enum": ["modifying", "read_only"],
+              "description": "Phase execution type from the Planner plan."
+            },
             "task_definition": { "type": "string", "minLength": 10 },
             "design_refs": { "type": "array", "items": { "type": "string" } },
             "model": {
@@ -101,10 +111,15 @@
         "PlatformEngineer-subagent": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["task_id", "phase_id", "environment"],
+          "required": ["task_id", "phase_id", "environment", "model"],
           "properties": {
             "task_id": { "type": "string" },
             "phase_id": { "type": "integer", "minimum": 1 },
+            "phase_type": {
+              "type": "string",
+              "enum": ["modifying", "read_only"],
+              "description": "Phase execution type from the Planner plan."
+            },
             "task_definition": { "type": "string" },
             "environment": { "type": "string", "enum": ["development", "staging", "production"] },
             "requires_approval": { "type": "boolean" },
@@ -118,10 +133,15 @@
         "TechnicalWriter-subagent": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["task_id", "phase_id", "task_type"],
+          "required": ["task_id", "phase_id", "task_type", "model"],
           "properties": {
             "task_id": { "type": "string" },
             "phase_id": { "type": "integer", "minimum": 1 },
+            "phase_type": {
+              "type": "string",
+              "enum": ["modifying", "read_only"],
+              "description": "Phase execution type from the Planner plan."
+            },
             "task_type": { "type": "string", "enum": ["documentation", "walkthrough", "update"] },
             "audience": { "type": "string", "enum": ["developers", "end_users", "stakeholders"] },
             "coverage_matrix": { "type": "array", "items": { "type": "string" } },
@@ -134,10 +154,15 @@
         "BrowserTester-subagent": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["task_id", "phase_id"],
+          "required": ["task_id", "phase_id", "model"],
           "properties": {
             "task_id": { "type": "string" },
             "phase_id": { "type": "integer", "minimum": 1 },
+            "phase_type": {
+              "type": "string",
+              "enum": ["modifying", "read_only"],
+              "description": "Phase execution type from the Planner plan."
+            },
             "target_url": { "type": "string" },
             "health_endpoint": { "type": "string" },
             "validation_matrix": {
@@ -162,9 +187,14 @@
         "CodeReviewer-subagent": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["phase_id", "changed_files"],
+          "required": ["phase_id", "changed_files", "model"],
           "properties": {
             "phase_id": { "type": "integer", "minimum": 0 },
+            "phase_type": {
+              "type": "string",
+              "enum": ["modifying", "read_only"],
+              "description": "Phase execution type from the Planner plan. Orchestrator skips CodeReviewer dispatch for read_only phases instead of sending an empty changed_files array."
+            },
             "changed_files": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
             "review_depth": { "type": "string", "enum": ["full", "standard", "lightweight"] },
             "security_sensitive": { "type": "boolean" },
@@ -207,6 +237,18 @@
                 }
               }
             },
+            "phase_scope": {
+              "description": "Optional. Describes the scope of the phase being reviewed (e.g., phase name, objectives, or relevant context).",
+              "oneOf": [
+                { "type": "string" },
+                { "type": "object" }
+              ]
+            },
+            "executor_report": {
+              "type": "object",
+              "description": "Optional. The execution report from the implementing agent for the phase being reviewed.",
+              "additionalProperties": true
+            },
             "model": {
               "type": "string",
               "description": "Runtime-resolved model string from governance/model-routing.json. Orchestrator sets this when dispatching to override the agent's literal frontmatter model."
@@ -216,7 +258,7 @@
         "PlanAuditor-subagent": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["task_id", "plan_path", "plan_summary", "trace_id", "iteration_index"],
+          "required": ["task_id", "plan_path", "plan_summary", "trace_id", "iteration_index", "model"],
           "properties": {
             "task_id": { "type": "string" },
             "trace_id": {
@@ -261,7 +303,7 @@
         "AssumptionVerifier-subagent": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["plan_path", "plan_summary", "trace_id", "iteration_index"],
+          "required": ["plan_path", "plan_summary", "trace_id", "iteration_index", "model"],
           "properties": {
             "trace_id": {
               "type": "string",
@@ -297,7 +339,7 @@
         "ExecutabilityVerifier-subagent": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["plan_path", "plan_summary", "trace_id", "iteration_index"],
+          "required": ["plan_path", "plan_summary", "trace_id", "iteration_index", "model"],
           "properties": {
             "trace_id": {
               "type": "string",

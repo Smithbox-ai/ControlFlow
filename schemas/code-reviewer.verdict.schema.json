@@ -64,7 +64,31 @@
             "type": "string",
             "description": "Required when validation_status is 'rejected'. Explains why the finding is inaccurate, enabling Planner to improve plan specificity and reviewers to calibrate future audits. Every rejected finding MUST include this field per the False Positive Audit Trail requirement."
           }
-        }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "severity": { "enum": ["CRITICAL", "MAJOR"] }
+              },
+              "required": ["severity"]
+            },
+            "then": {
+              "required": ["validation_status"]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "validation_status": { "const": "rejected" }
+              },
+              "required": ["validation_status"]
+            },
+            "then": {
+              "required": ["rejection_reason"]
+            }
+          }
+        ]
       }
     },
     "validated_blocking_issues": {
@@ -209,15 +233,59 @@
       "type": "string",
       "enum": ["transient", "fixable", "needs_replan", "escalate", "model_unavailable"],
       "description": "Required when status is NEEDS_REVISION or FAILED. Classifies the failure type for Orchestrator routing."
+    },
+    "plan_phases_snapshot": {
+      "type": "array",
+      "description": "Required when review_scope=final. Maps phase_id to its planned files for out-of-scope detection.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["phase_id", "files"],
+        "properties": {
+          "phase_id": { "type": "integer", "minimum": 1 },
+          "files": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "prior_phase_findings": {
+      "type": "array",
+      "description": "Required when review_scope=final. Each entry is the CodeReviewer verdict from a prior phase review, enabling novelty filtering.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["phase_id", "review_scope", "status"],
+        "properties": {
+          "phase_id": { "type": "integer", "minimum": 1 },
+          "review_scope": { "type": "string", "enum": ["phase", "wave"] },
+          "status": { "type": "string", "enum": ["APPROVED", "NEEDS_REVISION", "FAILED", "ABSTAIN"] },
+          "issues": { "type": "array", "items": { "type": "object" } },
+          "validated_blocking_issues": { "type": "array", "items": { "type": "object" } }
+        }
+      }
     }
   },
-  "if": {
-    "properties": {
-      "status": { "enum": ["NEEDS_REVISION", "FAILED"] }
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": { "enum": ["NEEDS_REVISION", "FAILED"] }
+        },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["failure_classification"]
+      }
     },
-    "required": ["status"]
-  },
-  "then": {
-    "required": ["failure_classification"]
-  }
+    {
+      "if": {
+        "properties": {
+          "review_scope": { "const": "final" }
+        },
+        "required": ["review_scope"]
+      },
+      "then": {
+        "required": ["plan_phases_snapshot", "prior_phase_findings", "final_review_summary", "changed_files_analysis"]
+      }
+    }
+  ]
 }

@@ -168,6 +168,22 @@ function collectSchemaRefs(scenarioObj) {
   return refs;
 }
 
+/**
+ * Recursively walk a directory and return absolute paths of all .json files,
+ * sorted for deterministic ordering.
+ */
+function collectAllScenarioJsonFiles(dir) {
+  const results = [];
+  let entries;
+  try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return results; }
+  for (const ent of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+    const full = join(dir, ent.name);
+    if (ent.isDirectory()) results.push(...collectAllScenarioJsonFiles(full));
+    else if (ent.isFile() && ent.name.endsWith('.json')) results.push(full);
+  }
+  return results;
+}
+
 // ─── Warm Cache (Structural Passes) ──────────────────────────────────────────
 // computeStructuralFingerprint is exported from drift-checks.mjs so fingerprint
 // regression tests can import it without triggering validate.mjs side effects.
@@ -217,6 +233,70 @@ for (const file of schemaFiles) {
   }
 }
 
+// ── Generic _target_schema fixture handler ─────────────────────────────────
+// Processes all scenario JSON files with a top-level _target_schema key before
+// the hardcoded fixture branches run. Records processed paths in the Set so the
+// hardcoded branches can skip them (double-processing guard).
+const processedSchemaFixtures = new Set();
+
+{
+  const allScenarioFiles = collectAllScenarioJsonFiles(SCENARIOS_DIR);
+  const normalizedScenariosDir = SCENARIOS_DIR.replace(/\\/g, '/');
+  for (const fp of allScenarioFiles) {
+    let raw;
+    try {
+      raw = JSON.parse(readFileSync(fp, 'utf8'));
+    } catch (e) {
+      fail(`Generic schema fixture: JSON parse error — ${fp} — ${e.message}`);
+      continue;
+    }
+    if (!raw._target_schema) continue;
+
+    const normalizedFp = fp.replace(/\\/g, '/');
+    processedSchemaFixtures.add(normalizedFp);
+
+    const targetSchemaFile = raw._target_schema;
+    const expectedValidation = raw._expected_validation;
+    const relPath = normalizedFp.startsWith(normalizedScenariosDir + '/')
+      ? normalizedFp.slice(normalizedScenariosDir.length + 1)
+      : normalizedFp;
+
+    // Strip top-level underscore-prefixed keys to get the payload
+    const payload = {};
+    for (const [key, value] of Object.entries(raw)) {
+      if (!key.startsWith('_')) payload[key] = value;
+    }
+
+    const targetSchema = parsedSchemas[targetSchemaFile];
+    if (!targetSchema) {
+      fail(`Generic schema fixture: _target_schema "${targetSchemaFile}" not found in loaded schemas — ${relPath}`);
+      continue;
+    }
+    const validateFn = ajv.getSchema(targetSchema.$id);
+    if (!validateFn) {
+      fail(`Generic schema fixture: validator for "${targetSchemaFile}" not in ajv cache — ${relPath}`);
+      continue;
+    }
+
+    const valid = validateFn(payload);
+    if (expectedValidation === 'fail') {
+      if (!valid) {
+        pass(`Schema fixture (expected fail): ${relPath}`);
+      } else {
+        fail(`Schema fixture: ${relPath} expected to FAIL but passed unexpectedly`);
+      }
+    } else if (expectedValidation === 'pass') {
+      if (valid) {
+        pass(`Schema fixture (expected pass): ${relPath}`);
+      } else {
+        fail(`Schema fixture: ${relPath} expected to PASS but failed — ${ajv.errorsText(validateFn.errors)}`);
+      }
+    } else {
+      fail(`Schema fixture: ${relPath} has invalid or missing _expected_validation (got: ${JSON.stringify(expectedValidation)})`);
+    }
+  }
+}
+
 // ── Runtime-policy schema: validate live governance file + negative scenarios ─
 {
   const rpSchemaFile = 'runtime-policy.schema.json';
@@ -252,6 +332,7 @@ for (const file of schemaFiles) {
       ];
       for (const { file, shouldPass } of rpFixtures) {
         const fp = join(rpScenariosDir, file);
+        if (processedSchemaFixtures.has(fp.replace(/\\/g, '/'))) continue;
         if (!existsSync(fp)) {
           fail(`Runtime-policy scenario missing: evals/scenarios/runtime-policy/${file}`);
           continue;
@@ -297,6 +378,7 @@ for (const file of schemaFiles) {
       ];
       for (const { file, shouldPass } of plannerFixtures) {
         const fp = join(plannerFixturesDir, file);
+        if (processedSchemaFixtures.has(fp.replace(/\\/g, '/'))) continue;
         if (!existsSync(fp)) {
           fail(`Planner fixture missing: evals/scenarios/planner/${file}`);
           continue;
@@ -341,6 +423,7 @@ for (const file of schemaFiles) {
       ];
       for (const { file, shouldPass } of avFixtures) {
         const fp = join(avFixturesDir, file);
+        if (processedSchemaFixtures.has(fp.replace(/\\/g, '/'))) continue;
         if (!existsSync(fp)) {
           fail(`AssumptionVerifier fixture missing: evals/scenarios/assumption-verifier/${file}`);
           continue;
@@ -386,6 +469,7 @@ for (const file of schemaFiles) {
       ];
       for (const { file, shouldPass } of evFixtures) {
         const fp = join(evFixturesDir, file);
+        if (processedSchemaFixtures.has(fp.replace(/\\/g, '/'))) continue;
         if (!existsSync(fp)) {
           fail(`ExecutabilityVerifier fixture missing: evals/scenarios/executability-verifier/${file}`);
           continue;
@@ -433,6 +517,9 @@ for (const file of scenarioFiles) {
     fail(`${file}: JSON parse error — ${e.message}`);
     continue;
   }
+
+  // Skip schema fixtures — they are validated by the generic _target_schema handler
+  if (scenario._target_schema) continue;
 
   // Support both field conventions:
   //   legacy:  id / target_agent / goal

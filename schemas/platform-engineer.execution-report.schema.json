@@ -128,6 +128,10 @@
         }
       }
     },
+    "final_environment_state": {
+      "type": "string",
+      "description": "Required when status is FAILED. Describes the environment state after rollback or failure handling."
+    },
     "tests": {
       "type": "object",
       "additionalProperties": false,
@@ -193,6 +197,13 @@
         "required": ["status"]
       },
       "then": { "required": ["clarification_request"] }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "FAILED" } },
+        "required": ["status"]
+      },
+      "then": { "required": ["rollback_steps_taken", "final_environment_state"] }
     }
   ]
 }

@@ -568,3 +568,36 @@ eview_pipeline_by_tier |
 3. Scope discipline in compression phases — Phase 4 explicitly said "L289 only" but the executor performed broader consolidation (table → bullet list, items #2/#3 rewrite). CodeReviewer caught both as MAJOR, fix cycle restored verbatim HEAD wording for non-targeted regions while preserving the L289 fix. Lesson: in fix-cycle prompts, demand `git diff HEAD` line-count target as part of the verification gate, not just a verbal promise.
 
 ---
+
+## Entry
+
+**Plan ID:** `project-audit-remediation-plan-revised-v4`
+**Date:** 2026-04-26
+**Complexity Tier:** LARGE
+**Total Phases:** 6 / 6
+
+### Review Pipeline
+
+| Agent | Result | Notes |
+|---|---|---|
+| AssumptionVerifier-subagent | COMPLETE | 3 PLAN_REVIEW iterations (v1→v4); iter 3: 0 blocking mirages after wave-1 shared-file conflict, Phase 2 grant shape, MEDIUM diagram inexpressibility, and stale NOTES instruction resolved |
+| PlanAuditor-subagent | APPROVED | Final score: 0.95 (iter 3); all WARN items resolved in v4 revision |
+| ExecutabilityVerifier-subagent | PASS | LARGE tier; iter 3 WARNs: Phase 1 planner-schema exclusivity, Phase 2 exact tool IDs, Phase 3 LARGE-only diagram, Phase 5 double-processing guard — all addressed in v4 |
+| CodeReviewer-subagent | APPROVED | All 6 phases approved; Phase 4 required 1 Orchestrator-direct fix (Agent Role Matrix corruption); final gate approved 0 validated blocking issues |
+
+**Total review iterations:** 3 / 5
+**Convergence:** Converged
+
+### Outcome
+
+**Status:** SUCCESS
+**CodeReviewer false positive rate:** 0 / 0 (n/a — no CRITICAL/MAJOR raised across phases)
+
+Full 6-phase LARGE-tier remediation of HIGH/MEDIUM schema bugs, security grant overreach, docs inconsistencies, and eval coverage gaps. Phase 1 added ABSTAIN to executability_verifier gate-event, enforced validation_status on CRITICAL/MAJOR findings, required `model` on delegation payloads, added LARGE-only diagram enforcement and phase_type to planner schema. Phase 2 narrowed BrowserTester to edit/createFile, TechnicalWriter to edit/createFile+editFiles, removed CoreImplementer agent delegation. Phase 3 added final-review evidence conditionals, CodeReviewer dispatch context, PlatformEngineer rollback enforcement, removed TechnicalWriter test-suite ownership. Phase 4 corrected tier boundaries, non-executor list, and tool counts in project-context.md. Phase 5 added recursive scenario discovery, generic _target_schema handler, 6 new fixtures. Final suite: 399+ checks, all green.
+
+### Lessons Learned
+
+1. Cross-plan anchor maps must be created at plan-start whenever edited surfaces are shared with other active plans. The overlap is detectable from plan content alone; Orchestrator should create the anchor map at Wave 0 before any phase executes to avoid Pass 10 failures mid-session.
+2. TechnicalWriter executing broad doc edits may corrupt structured tables (Agent Role Matrix) when it edits rows without reading the full table first. Orchestrator should validate tabular data integrity in doc-only phases by checking row counts against known baseline before approving.
+3. ExecutabilityVerifier WARNs for wave-parallel shared-file writes are best resolved by assigning exclusive ownership to one phase at plan-revision time (Phase 1 owns planner schema), not by attempting file-level coordination within a wave.
+

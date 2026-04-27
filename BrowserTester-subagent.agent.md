@@ -1,6 +1,6 @@
 ---
 description: 'Runs E2E browser tests, verifies UI/UX, and checks accessibility compliance'
-tools: ['search', 'usages', 'problems', 'changes', 'edit', 'fetch', 'runCommands', 'runTasks']
+tools: ['search', 'usages', 'problems', 'changes', 'edit/createFile', 'fetch', 'runCommands', 'runTasks']
 model: GPT-5.4 mini (copilot)
 model_role: browser-testing
 ---
@@ -105,12 +105,13 @@ Agent-specific fields:
 
 ### Allowed
 - `search`, `usages`, `problems`, `changes` for test context discovery.
-- `edit` for evidence capture files ONLY — never for source code.
+- `edit/createFile` for browser-test evidence and artifact creation only under assigned evidence paths such as `plans/artifacts/<task-slug>/browser-testing/` or Orchestrator-provided evidence directories.
 - `fetch` for health checks and URL verification.
 - `runCommands`, `runTasks` for executing provided test scripts and harnesses.
 
 ### Disallowed
 - No source code modifications.
+- No test, schema, governance, or documentation edits.
 - No test authoring — execute provided scenarios only.
 - No infrastructure operations.
 - No claiming completion without health check evidence.

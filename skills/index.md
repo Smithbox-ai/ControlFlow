@@ -16,27 +16,27 @@ Reusable domain-specific patterns for agent consumption. Planner selects relevan
 
 | Domain | Skill File | Applicable Agents | Keywords |
 | -------- | ----------- | ------------------- | ---------- |
-| Testing | `skills/patterns/tdd-patterns.md` | CoreImplementer, UIImplementer, CodeReviewer | test, TDD, coverage, assertion, spec |
-| Error Handling | `skills/patterns/error-handling-patterns.md` | CoreImplementer, UIImplementer, PlatformEngineer | error, exception, retry, fallback, boundary |
-| Security | `skills/patterns/security-patterns.md` | CoreImplementer, UIImplementer, CodeReviewer, PlanAuditor | auth, input validation, injection, XSS, CSRF, secrets |
-| Performance | `skills/patterns/performance-patterns.md` | CoreImplementer, UIImplementer, CodeReviewer, PlanAuditor | query, N+1, pagination, cache, batch, index |
-| Completeness | `skills/patterns/completeness-traceability.md` | Planner, PlanAuditor, CodeReviewer | requirements, coverage, traceability, orphan, RTM, scope |
-| Integration | `skills/patterns/integration-validator.md` | Planner, PlanAuditor, CoreImplementer | dependency, contract, interface, collision, compatibility, wave |
-| Orchestration Audit | `skills/patterns/orchestration-audit-playbook.md` | Planner, Orchestrator, CodeMapper, Researcher, PlanAuditor, AssumptionVerifier, ExecutabilityVerifier, CodeReviewer, TechnicalWriter | orchestration, audit, traceability, schema, prompt, grants, hidden-defect, validation, approval, phase-boundary |
+| Testing | `skills/patterns/tdd-patterns.md` | CoreImplementer-subagent, UIImplementer-subagent, CodeReviewer-subagent | test, TDD, coverage, assertion, spec |
+| Error Handling | `skills/patterns/error-handling-patterns.md` | CoreImplementer-subagent, UIImplementer-subagent, PlatformEngineer-subagent | error, exception, retry, fallback, boundary |
+| Security | `skills/patterns/security-patterns.md` | CoreImplementer-subagent, UIImplementer-subagent, CodeReviewer-subagent, PlanAuditor-subagent | auth, input validation, injection, XSS, CSRF, secrets |
+| Performance | `skills/patterns/performance-patterns.md` | CoreImplementer-subagent, UIImplementer-subagent, CodeReviewer-subagent, PlanAuditor-subagent | query, N+1, pagination, cache, batch, index |
+| Completeness | `skills/patterns/completeness-traceability.md` | Planner, PlanAuditor-subagent, CodeReviewer-subagent | requirements, coverage, traceability, orphan, RTM, scope |
+| Integration | `skills/patterns/integration-validator.md` | Planner, PlanAuditor-subagent, CoreImplementer-subagent | dependency, contract, interface, collision, compatibility, wave |
+| Orchestration Audit | `skills/patterns/orchestration-audit-playbook.md` | Planner, Orchestrator, CodeMapper-subagent, Researcher-subagent, PlanAuditor-subagent, AssumptionVerifier-subagent, ExecutabilityVerifier-subagent, CodeReviewer-subagent, TechnicalWriter-subagent | orchestration, audit, traceability, schema, prompt, grants, hidden-defect, validation, approval, phase-boundary |
 | Idea-to-Prompt | `skills/patterns/idea-to-prompt.md` | Planner | idea, vague, abstract, brainstorm, concept, interview |
-| LLM Behavior | `skills/patterns/llm-behavior-guidelines.md` | CoreImplementer, UIImplementer, CodeReviewer, Planner, PlatformEngineer | overengineering, bloat, abstraction, assumption, surgical, scope drift, simplicity |
+| LLM Behavior | `skills/patterns/llm-behavior-guidelines.md` | CoreImplementer-subagent, UIImplementer-subagent, CodeReviewer-subagent, Planner, PlatformEngineer-subagent | overengineering, bloat, abstraction, assumption, surgical, scope drift, simplicity |
 | PreFlect | `skills/patterns/preflect-core.md` | All agents | preflect, pre-action, gate, risk class, scope drift, schema drift, missing evidence, safety |
-| Reflection Loop | `skills/patterns/reflection-loop.md` | Orchestrator, CoreImplementer, UIImplementer, PlatformEngineer | reflection, pre-retry, fix hint, root cause, failure analysis |
-| Budget Tracking | `skills/patterns/budget-tracking.md` | Orchestrator, Planner, CoreImplementer, UIImplementer, PlatformEngineer | budget, token cap, wall-clock, cost, early stop, resource cap |
+| Reflection Loop | `skills/patterns/reflection-loop.md` | Orchestrator, CoreImplementer-subagent, UIImplementer-subagent, PlatformEngineer-subagent | reflection, pre-retry, fix hint, root cause, failure analysis |
+| Budget Tracking | `skills/patterns/budget-tracking.md` | Orchestrator, Planner, CoreImplementer-subagent, UIImplementer-subagent, PlatformEngineer-subagent | budget, token cap, wall-clock, cost, early stop, resource cap |
 | Memory Hygiene | `skills/patterns/repo-memory-hygiene.md` | Orchestrator, Planner, PlanAuditor-subagent, CodeReviewer-subagent | memory, pollution, dedup, NOTES.md, archive, repo-memory |
 | Memory Promotion | `skills/patterns/memory-promotion-candidates.md` | Orchestrator, Planner | memory, candidate, promotion, transcript, classification |
 | Security Review Discipline | `skills/patterns/security-review-discipline.md` | CodeReviewer-subagent | security, vulnerability, confidence, exclusion, false-positive |
 
 ## Loading Protocol
 
-- **Planning phase:** Planner includes `skill_references: ["skills/patterns/<domain>.md"]` in phase definition.
+- **Planning/Review phase:** Planner, PlanAuditor-subagent, and CodeReviewer-subagent load referenced planning/review skills when performing planning or review-scoped work. Planner includes `skill_references: ["skills/patterns/<domain>.md"]` in phase definition.
 - **Execution phase:** Implementation agent reads each referenced skill file via `read/readFile` before starting work.
-- **Review phase:** CodeReviewer and PlanAuditor reference applicable skills when evaluating implementation quality.
+- **Review phase:** CodeReviewer-subagent and PlanAuditor-subagent reference applicable skills when evaluating implementation quality.
 
 ## Adding New Skills
 
