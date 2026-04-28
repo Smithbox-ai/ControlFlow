@@ -23,6 +23,7 @@ import {
   validateAgentRoleIndex,
   parseRosterFromProjectContext,
   compareRosterEnum,
+  parseResourcesRepoPaths,
   parseResourcesSchemaPaths,
   parsePlanFilesSection,
   buildPlanFileMap,
@@ -210,6 +211,38 @@ console.log('\n=== Check #3 — Agent Resources schema path parser ===');
   check(
     'negative: nonexistent schema ref surfaces for existence check to catch',
     brokenPaths.length === 1 && brokenPaths[0].endsWith('xyzzy.schema.json')
+  );
+
+  const repoResourceMd = [
+    '## Prompt',
+    '',
+    '`governance/outside-resources.json` should NOT be picked up.',
+    '',
+    '## Resources',
+    '',
+    '- `docs/agent-engineering/PART-SPEC.md`',
+    '- `governance/runtime-policy.json`',
+    '- `plans/`',
+    '- `plans/artifacts/<task>/final_review.md`',
+    '',
+    '## Tools',
+    '',
+    '- `governance/ignored-after-resources.json`',
+  ].join('\n');
+
+  const resourcePaths = parseResourcesRepoPaths(repoResourceMd);
+  check(
+    'positive: repo resource parser keeps static docs/governance/directory paths inside Resources',
+    resourcePaths.length === 3 &&
+    resourcePaths.includes('docs/agent-engineering/PART-SPEC.md') &&
+    resourcePaths.includes('governance/runtime-policy.json') &&
+    resourcePaths.includes('plans/')
+  );
+  check(
+    'negative: repo resource parser ignores outside-Resources and placeholder paths',
+    !resourcePaths.includes('governance/outside-resources.json') &&
+    !resourcePaths.includes('governance/ignored-after-resources.json') &&
+    !resourcePaths.includes('plans/artifacts/<task>/final_review.md')
   );
 }
 

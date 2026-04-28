@@ -105,6 +105,8 @@ Agent-specific additions:
 
 - `docs/agent-engineering/PART-SPEC.md`
 - `docs/agent-engineering/RELIABILITY-GATES.md`
+- `governance/runtime-policy.json`
+- `governance/model-routing.json`
 - `schemas/planner.plan.schema.json`
 - `schemas/researcher.research-findings.schema.json`
 - `schemas/code-mapper.discovery.schema.json`
@@ -140,6 +142,7 @@ Approval gates: delegated to Orchestrator. Planner is a planning-only agent and 
 3. Delegate deep discovery early when >10 files are implicated.
 4. Run parallel research on independent subsystems.
 5. MANDATORY: Call `vscode/askQuestions` when the request matches a mandatory clarification class (see Clarification Policy above). This is a blocking prerequisite for plan output.
+6. Resolve repo-relative resource paths against the current workspace. If a first read fails, use search/list tools to locate the referenced file in the workspace before treating it as missing.
 
 ### Context7/MCP Routing (Mandatory)
 Reference: `docs/agent-engineering/TOOL-ROUTING.md`

@@ -46,6 +46,7 @@ import {
   validateByTierShape,
   parseRosterFromProjectContext,
   compareRosterEnum,
+  parseResourcesRepoPaths,
   parseResourcesSchemaPaths,
   buildPlanFileMap,
   findSharedAnchorMaps,
@@ -1375,6 +1376,25 @@ header('Pass 9: Drift Detection — Agent Resources Schema Existence');
   }
   if (brokenRefs === 0) {
     pass(`Agent Resources schemas: all ${totalResourceRefs} curated references resolve across ${agentFiles.length} agents`);
+  }
+
+  const requiredGovernanceResources = {
+    'Planner.agent.md': ['governance/runtime-policy.json', 'governance/model-routing.json'],
+    'Orchestrator.agent.md': ['governance/runtime-policy.json', 'governance/model-routing.json'],
+  };
+  let missingGovernanceRefs = 0;
+  for (const [agentFile, requiredPaths] of Object.entries(requiredGovernanceResources)) {
+    const content = readFileSync(join(ROOT, agentFile), 'utf8');
+    const resourcePaths = new Set(parseResourcesRepoPaths(content));
+    for (const rel of requiredPaths) {
+      if (!resourcePaths.has(rel)) {
+        fail(`${agentFile}: Resources section missing required governance reference → ${rel}`);
+        missingGovernanceRefs++;
+      }
+    }
+  }
+  if (missingGovernanceRefs === 0) {
+    pass('Planner/Orchestrator governance resources: required runtime governance references are present');
   }
 }
 

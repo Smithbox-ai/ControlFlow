@@ -172,7 +172,7 @@ export function compareRosterEnum(rosterAgents, enumValues) {
 }
 
 // ── Check #3: Agent Resources ↔ schemas existence ────────────────────────────
-export function parseResourcesSchemaPaths(agentContent) {
+export function parseResourcesRepoPaths(agentContent) {
   const lines = agentContent.split('\n');
   const startIdx = lines.findIndex(l => l.trim() === '## Resources');
   if (startIdx === -1) return [];
@@ -180,11 +180,30 @@ export function parseResourcesSchemaPaths(agentContent) {
   for (let i = startIdx + 1; i < lines.length; i++) {
     const line = lines[i];
     if (/^##\s/.test(line)) break;
-    for (const m of line.matchAll(/`(schemas\/[^`]+\.json)`/g)) {
-      paths.push(m[1]);
+    for (const m of line.matchAll(/`([^`]+)`/g)) {
+      const raw = m[1].trim();
+      if (!raw || /\s/.test(raw)) continue;
+      if (/[<>]/.test(raw)) continue;
+      if (/^(https?:|file:|vscode:)/i.test(raw)) continue;
+      if (raw.includes('*')) continue;
+      if (
+        raw.startsWith('.github/') ||
+        raw.startsWith('docs/') ||
+        raw.startsWith('governance/') ||
+        raw.startsWith('plans/') ||
+        raw.startsWith('schemas/') ||
+        raw.startsWith('skills/') ||
+        /^[A-Za-z0-9._-]+\.agent\.md$/.test(raw)
+      ) {
+        paths.push(raw);
+      }
     }
   }
   return paths;
+}
+
+export function parseResourcesSchemaPaths(agentContent) {
+  return parseResourcesRepoPaths(agentContent).filter(p => /^schemas\/[^`]+\.json$/.test(p));
 }
 
 // ── Check #4: Cross-plan file-overlap ────────────────────────────────────────

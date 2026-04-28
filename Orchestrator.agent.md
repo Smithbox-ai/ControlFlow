@@ -130,6 +130,7 @@ When emitting gate events, optionally also append one NDJSON line per event to `
 - `schemas/assumption-verifier.plan-audit.schema.json`
 - `schemas/executability-verifier.execution-report.schema.json`
 - `governance/runtime-policy.json` (Orchestrator operational knobs: approval actions, review routing, max iterations, retry budgets, stagnation thresholds)
+- `governance/model-routing.json` (dispatch model resolver used by the Universal Model Resolution Rule)
 - `plans/templates/session-outcome-template.md` (fill and append to `plans/session-outcomes.md` at Completion Gate)
 - Plan artifacts directory: `plans/` (default location for all plan and completion files)
 
@@ -150,6 +151,7 @@ When emitting gate events, optionally also append one NDJSON line per event to `
 1. Prefer read-only discovery first.
 2. Prefer subagent delegation for heavy exploration/implementation.
 3. Use just-in-time retrieval; avoid loading unrelated files.
+4. Resolve repo-relative resource paths against the current workspace. If a first read fails, use search/list tools to locate the referenced file in the workspace before treating it as missing.
 
 ### External Tool Routing
 Reference: `docs/agent-engineering/TOOL-ROUTING.md`
