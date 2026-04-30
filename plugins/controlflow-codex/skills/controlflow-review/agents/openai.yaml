@@ -1,0 +1,4 @@
+interface:
+  display_name: "ControlFlow Review"
+  short_description: "Run evidence-backed code and phase reviews"
+  default_prompt: "Use $controlflow-review to review this diff for bugs, regressions, and missing validation."

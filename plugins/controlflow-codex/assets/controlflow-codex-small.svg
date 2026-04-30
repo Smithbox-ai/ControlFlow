@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="ControlFlow for Codex icon">
+  <rect width="64" height="64" rx="14" fill="#0F766E"/>
+  <path d="M18 20h18c5.523 0 10 4.477 10 10s-4.477 10-10 10H28" fill="none" stroke="#F0FDFA" stroke-width="6" stroke-linecap="round"/>
+  <path d="M28 40h-7c-4.418 0-8 3.582-8 8" fill="none" stroke="#99F6E4" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="20" cy="48" r="4" fill="#99F6E4"/>
+</svg>

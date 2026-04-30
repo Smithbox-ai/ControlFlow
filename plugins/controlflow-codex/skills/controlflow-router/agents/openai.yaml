@@ -1,0 +1,4 @@
+interface:
+  display_name: "ControlFlow Router"
+  short_description: "Choose the right ControlFlow-Codex skill first"
+  default_prompt: "Use $controlflow-router to choose the right ControlFlow-Codex skill for this task."

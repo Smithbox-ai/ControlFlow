@@ -1,0 +1,47 @@
+{
+  "name": "controlflow-codex",
+  "version": "0.1.0",
+  "description": "Portable planning, orchestration, review, and memory workflows adapted from ControlFlow for Codex.",
+  "author": {
+    "name": "Local Workspace",
+    "email": "local@example.invalid",
+    "url": "https://github.com/Smithbox-ai/ControlFlow"
+  },
+  "homepage": "https://github.com/Smithbox-ai/ControlFlow",
+  "repository": "https://github.com/Smithbox-ai/ControlFlow",
+  "license": "MIT",
+  "keywords": [
+    "controlflow",
+    "codex",
+    "planning",
+    "router",
+    "review",
+    "orchestration",
+    "memory"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "ControlFlow for Codex",
+    "shortDescription": "Planning, review, orchestration, and memory skills for Codex",
+    "longDescription": "Bring the portable parts of ControlFlow into Codex: phased planning, complexity-aware execution discipline, evidence-backed review, semantic risk checks, failure taxonomy, and memory hygiene.",
+    "developerName": "Local Workspace",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/Smithbox-ai/ControlFlow",
+    "privacyPolicyURL": "https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement",
+    "termsOfServiceURL": "https://docs.github.com/en/site-policy/github-terms/github-terms-of-service",
+    "defaultPrompt": [
+      "Use ControlFlow for Codex to plan this repository change.",
+      "Apply ControlFlow review discipline to this diff.",
+      "Help me execute this task in phases with explicit gates."
+    ],
+    "brandColor": "#0F766E",
+    "composerIcon": "./assets/controlflow-codex-small.svg",
+    "logo": "./assets/controlflow-codex-logo.svg",
+    "screenshots": []
+  }
+}

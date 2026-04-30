@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 160" role="img" aria-label="ControlFlow for Codex logo">
+  <rect width="320" height="160" rx="24" fill="#042F2E"/>
+  <rect x="24" y="24" width="112" height="112" rx="24" fill="#0F766E"/>
+  <path d="M50 58h34c13.255 0 24 10.745 24 24S97.255 106 84 106H66" fill="none" stroke="#F0FDFA" stroke-width="12" stroke-linecap="round"/>
+  <path d="M66 106H54c-8.837 0-16 7.163-16 16" fill="none" stroke="#99F6E4" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="48" cy="122" r="8" fill="#99F6E4"/>
+  <text x="156" y="74" fill="#F0FDFA" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="700">ControlFlow</text>
+  <text x="156" y="108" fill="#99F6E4" font-family="Segoe UI, Arial, sans-serif" font-size="24">for Codex</text>
+</svg>
