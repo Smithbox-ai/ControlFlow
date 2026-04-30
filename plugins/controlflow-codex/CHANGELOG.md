@@ -6,6 +6,8 @@ All notable changes to the `controlflow-codex` plugin are documented here. Forma
 
 ### Added
 
+- `scripts/uninstall-home-local.ps1` — reversible removal of the home-local plugin copy and marketplace registration.
+- README and USAGE guidance for when to use native Codex directly instead of invoking ControlFlow-Codex, plus artifact lifecycle cleanup notes.
 - `controlflow-executability-verifier/references/executability-checklist.md` — extracted the 8-point cold-start checklist, TDD walk-through, and blocker classification table from `SKILL.md` into a proper reference document.
 - `controlflow-planning/references/llm-behavior-guidelines.md` — Codex-adapted port of the main project's behavioral guardrails (Think Before Coding, Simplicity First, Surgical Changes, Goal-Driven Execution).
 - `controlflow-orchestration/references/tdd-patterns.md` — port of the main project's RED -> GREEN -> REFACTOR discipline and test quality signals.
@@ -15,6 +17,8 @@ All notable changes to the `controlflow-codex` plugin are documented here. Forma
 
 ### Changed
 
+- Plugin manifest wording now emphasizes on-demand use for non-trivial Codex tasks instead of implying that every Codex task needs strict workflow overhead.
+- `controlflow-router` now includes a fast-path warning for `TRIVIAL` work.
 - `controlflow-executability-verifier/SKILL.md` — workflow steps now point to `references/executability-checklist.md` instead of inlining the checklist.
 - Plugin manifest version bumped from `0.2.0` to `0.3.0`.
 

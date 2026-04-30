@@ -1,7 +1,7 @@
 {
   "name": "controlflow-codex",
   "version": "0.3.0",
-  "description": "Strict workflow, plan, audit, executability, orchestration, review, and memory workflows adapted from ControlFlow for Codex.",
+  "description": "On-demand ControlFlow workflow skills for non-trivial Codex tasks: planning, plan review, orchestration, review, and memory hygiene.",
   "author": {
     "name": "Local Workspace",
     "email": "local@example.invalid",
@@ -26,8 +26,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "ControlFlow for Codex",
-    "shortDescription": "Strict workflow, plan review, orchestration, and memory skills",
-    "longDescription": "Bring the portable and practical parts of ControlFlow into Codex: a strict workflow entry point, Planner-style Markdown artifacts, plan-audit, assumption-verifier, and executability-verifier passes, complexity-aware orchestration, evidence-backed review, semantic risk checks, failure taxonomy, and memory hygiene.",
+    "shortDescription": "On-demand workflow skills for non-trivial Codex tasks",
+    "longDescription": "Bring the portable and practical parts of ControlFlow into Codex when extra discipline is worth the overhead: a strict workflow entry point, Planner-style Markdown artifacts, plan-audit, assumption-verifier, and executability-verifier passes, complexity-aware orchestration, evidence-backed review, semantic risk checks, failure taxonomy, and memory hygiene.",
     "developerName": "Local Workspace",
     "category": "Coding",
     "capabilities": [

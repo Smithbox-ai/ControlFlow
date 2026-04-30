@@ -9,6 +9,17 @@ description: "Use when a task broadly matches ControlFlow for Codex and you need
 
 Route work to the right ControlFlow-Codex skill instead of loading all of them by default. Use this as the entry point when the user wants "ControlFlow discipline" but has not said which mode is needed first.
 
+## When to Skip the Router
+
+Do not use this router for `TRIVIAL` work where a direct Codex response is enough:
+
+- single-line fixes or obvious corrections
+- single-file edits with no architectural impact
+- exploratory prototypes or throwaway scripts
+- cases where the user already named the exact skill, such as `$controlflow-review`
+
+For simple work, prompt Codex directly or invoke only the one specific `$controlflow-*` skill that applies.
+
 ## Routing Rules
 
 Start with `controlflow-planning` when:

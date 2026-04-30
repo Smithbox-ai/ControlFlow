@@ -17,7 +17,9 @@ plans/templates/*
 !plans/templates/gate-event-template.md
 !plans/templates/phase-completion-template.md
 !plans/templates/plan-document-template.md
+!plans/templates/session-notes-template.md
 !plans/templates/session-outcome-template.md
+!plans/templates/traceability-index-template.yaml
 !plans/templates/verified-items-template.md
 
 # ── Tutorial docs ────────────────────────────────────────

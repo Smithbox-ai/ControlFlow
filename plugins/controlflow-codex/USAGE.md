@@ -12,6 +12,8 @@
 
 `router -> planning -> plan-audit -> assumption-verifier -> executability-verifier -> orchestration -> review`
 
+Для простой правки используйте обычный Codex без плагина: ControlFlow-Codex полезен, когда стоимость плана, review artifacts и gate-процесса окупается снижением риска.
+
 В зависимости от сложности часть шагов может пропускаться:
 
 - `TRIVIAL`: обычно без полного review pipeline
@@ -64,6 +66,24 @@ Review artifacts:
 - `plans/artifacts/<task-slug>/plan-audit.md`
 - `plans/artifacts/<task-slug>/assumption-verifier.md`
 - `plans/artifacts/<task-slug>/executability-verifier.md`
+
+## Жизненный цикл артефактов
+
+- Пока задача активна, держите план и review artifacts рядом с работой.
+- После успешного завершения перенесите план и артефакты в `plans/archive/` или удалите их, если они были временными.
+- Если план отменён до реализации, удалите черновик и связанные `plans/artifacts/<task-slug>/`.
+- Для длинных задач используйте `$controlflow-memory-hygiene`, чтобы не продвигать временные заметки в постоянную память проекта.
+
+Пример архивации завершённой задачи:
+
+```powershell
+$month = Get-Date -Format "yyyy-MM"
+New-Item -ItemType Directory -Path "plans/archive/$month" -Force | Out-Null
+Move-Item "plans/my-task-plan.md" "plans/archive/$month/"
+Move-Item "plans/artifacts/my-task" "plans/archive/$month/my-task-artifacts"
+```
+
+Для одноразовых задач безопаснее удалить временные артефакты сразу после проверки результата.
 
 ## Validator
 

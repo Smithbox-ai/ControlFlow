@@ -1,0 +1,27 @@
+# Usage: Copy this template to plans/artifacts/<plan-slug>/traceability-index.yaml to track implementation of required items.
+# Traceability index template
+# trace_id: <optional-uuid>
+# plan: plans/<plan-slug>-plan.md
+# status: <current-status of plan execution>
+# scope: <brief description of what this index covers>
+
+shared_anchor_map: false
+version: 1
+
+# Optional pointers to upstream source issues/ledgers and final reviews
+# source_findings: plans/artifacts/<plan-slug>/findings.md
+# final_review: plans/artifacts/<plan-slug>/final_review.md
+
+findings:
+
+  - id: sample-finding-1
+    summary: |
+      A concise description of the finding or required item.
+    phase: <phase-number>
+    primary_files:
+      - <path/to/modified/file>
+    validation:
+      - <validation-command-e.g.-cd evals && npm run test:structural>
+    review_evidence:
+      - <pointer-to-review-or-artifact>
+    status: <planned|in_progress|resolved|completed>

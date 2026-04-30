@@ -33,6 +33,27 @@ See also: [ControlFlow for Codex section in the main README](../../README.md#con
 | `controlflow-review` | `$controlflow-review` | CodeReviewer |
 | `controlflow-memory-hygiene` | `$controlflow-memory-hygiene` | Memory hygiene |
 
+## When to Use This Plugin
+
+ControlFlow-Codex is intentionally opt-in. It should add structure when Codex would otherwise be asked to manage a multi-step repository change from loose chat context alone.
+
+Use ControlFlow-Codex when:
+
+- the task is `SMALL` or larger
+- the change spans multiple files, phases, or ownership boundaries
+- planning, review gates, rollback notes, or durable artifacts would reduce risk
+- migrations, refactors, semantic-risk checks, or execution handoffs matter
+- you want a reproducible audit trail under `plans/` and `plans/artifacts/`
+
+Skip ControlFlow-Codex and prompt Codex directly when:
+
+- the task is truly `TRIVIAL` (single-file, obvious, low-risk)
+- a direct edit is faster than creating plan artifacts
+- you are prototyping throwaway code or exploring an idea casually
+- you already know the exact one-off skill you need, such as `$controlflow-review`
+
+The plugin does not install global hooks or replace Codex defaults. Its skills are namespaced as `$controlflow-*` and should be invoked only when that extra workflow discipline is useful.
+
 ## Strict Mode
 
 The current version supports a stricter ControlFlow-style path for non-trivial work:
@@ -65,9 +86,22 @@ powershell -ExecutionPolicy Bypass -File plugins/controlflow-codex/scripts/insta
 
 The installer copies the plugin to `~/plugins/controlflow-codex/` and registers it in `~/.agents/plugins/marketplace.json`.
 
+## Uninstalling
+
+```powershell
+# From the repository root
+powershell -ExecutionPolicy Bypass -File plugins/controlflow-codex/scripts/uninstall-home-local.ps1
+
+# Remove without prompting
+powershell -ExecutionPolicy Bypass -File plugins/controlflow-codex/scripts/uninstall-home-local.ps1 -Force
+```
+
+The uninstaller removes `~/plugins/controlflow-codex/` and removes the `controlflow-codex` marketplace entry from `~/.agents/plugins/marketplace.json`. After uninstalling, `$controlflow-*` skills are no longer available in Codex.
+
 ## Notes
 
 - The manifest metadata is usable as-is, but author/contact branding is intentionally generic and can be customized later.
 - The workflow references are written for Codex, but the strict planner and plan-review flow now intentionally track the original ControlFlow structure much more closely.
 - To install into your personal Codex home, run `scripts/install-home-local.ps1` from this plugin directory.
+- Keep using native Codex for trivial changes; the plugin is meant for work where structured plans and review gates pay for themselves.
 - For a practical prompt catalog in Russian, read `USAGE.md`.
