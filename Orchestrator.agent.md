@@ -171,6 +171,26 @@ Before every `agent/runSubagent` call, regardless of dispatch context, apply thi
 
 This rule covers all dispatch paths without exception: Plan Review Gate reviewers (PlanAuditor, AssumptionVerifier, ExecutabilityVerifier), phase CodeReviewer dispatch, final CodeReviewer dispatch, needs_replan Planner dispatch, and Implementation Loop executor dispatch.
 
+### Initial Planner Dispatch Gate
+
+**Trigger:** When the user asks Orchestrator to plan or implement a task, and Orchestrator has no existing `plan_path`, no active plan artifact, and no approved in-memory plan to continue.
+
+**Non-trigger conditions:** Informational questions, status requests, or any request that already includes a `plan_path` or references an active plan. Do not trigger this gate when plan context is already available.
+
+**Dispatch:**
+- Apply the Universal Model Resolution Rule. Before a plan `complexity_tier` exists (no `plan_path` yet), use Planner's top-level `primary` model — never omit `model` because tier context is missing.
+- Dispatch Planner as an **entry-point delegate, not a phase executor**, with:
+  - The original user request.
+  - The current `trace_id` and known constraints.
+  - Any evidence already gathered.
+- Planner must save a plan artifact and return a `plan_path`. If Planner returns without a saved plan artifact or `plan_path`, route as `NEEDS_REVISION`/`ABSTAIN` — do not hand-author a substitute plan.
+
+**Downstream handoff:**
+- The `plan_path` returned by Planner enters the existing **Planning Gate**, user approval pause, and PLAN_REVIEW trigger evaluation — identical to any other plan artifact. It is not implementation approval.
+- Planner remains the plan-authorship agent. Planner must never appear as `executor_agent` in any plan phase.
+
+**Boundary with needs_replan:** `needs_replan` is scoped to active failed phases. Initial planning (no existing plan) and failed-phase replanning are distinct and must not be conflated.
+
 1. **Research Gate**
    - Delegate exploration/research as needed.
    - Confirm scope boundaries.

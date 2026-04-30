@@ -556,6 +556,60 @@ check(
 );
 
 // ──────────────────────────────────────────────
+// Initial Planner Dispatch Gate
+// ──────────────────────────────────────────────
+console.log('\n=== Orchestrator — Initial Planner Dispatch Gate ===');
+
+check(
+  'Initial dispatch gate: explicit "Initial Planner Dispatch Gate" section exists in Execution Protocol',
+  /Initial Planner Dispatch Gate/i.test(orch)
+);
+check(
+  'Initial dispatch gate: triggers when no plan_path or active plan exists and user requests planning or implementation',
+  /Initial Planner Dispatch Gate[\s\S]{0,600}no.*plan_path.*active plan|Initial Planner Dispatch Gate[\s\S]{0,600}plan_path.*does not exist/i.test(orch)
+);
+check(
+  'Initial dispatch gate: dispatches Planner with original user request and applies Universal Model Resolution Rule',
+  /Initial Planner Dispatch Gate[\s\S]{0,800}dispatch.*Planner[\s\S]{0,200}Universal Model Resolution Rule|Initial Planner Dispatch Gate[\s\S]{0,800}Universal Model Resolution Rule[\s\S]{0,200}Planner/i.test(orch)
+);
+check(
+  'Initial dispatch gate: Planner\'s returned plan_path enters Planning Gate / PLAN_REVIEW evaluation (not treated as implementation approval)',
+  /Initial Planner Dispatch Gate[\s\S]{0,800}plan_path[\s\S]{0,200}Planning Gate|plan_path.*returned.*Planner.*enters.*Planning Gate/i.test(orch)
+);
+check(
+  'Initial dispatch gate: Planner is entry-point delegate, not phase executor',
+  /entry.point.*delegate.*not.*executor|Planner.*entry.point.*delegate.*not.*executor/i.test(orch)
+);
+
+// Scenario fixture: initial Planner dispatch structural reference
+const initialDispatchScenario = JSON.parse(
+  readFileSync(join(ROOT, 'evals', 'scenarios', 'orchestrator-initial-planner-dispatch.json'), 'utf8')
+);
+check(
+  'Initial dispatch scenario: fixture exists with expected structural fields',
+  initialDispatchScenario.id === 'orchestrator-initial-planner-dispatch' &&
+  initialDispatchScenario.target_agent === 'Orchestrator' &&
+  initialDispatchScenario.expected !== undefined
+);
+check(
+  'Initial dispatch scenario: no-plan-path case expects Planner dispatch and plan_path re-entry',
+  initialDispatchScenario.inputs?.some(i =>
+    i.input?.plan_path === undefined &&
+    i.expected?.dispatches_planner === true &&
+    i.expected?.plan_path_re_enters_planning_gate === true
+  ) ?? false
+);
+check(
+  'Initial dispatch scenario: Planner is not listed as phase executor',
+  initialDispatchScenario.expected?.planner_is_phase_executor === false
+);
+check(
+  'Initial dispatch scenario: model resolution uses top-level primary when no complexity_tier exists',
+  initialDispatchScenario.expected?.model_resolution_before_tier !== undefined &&
+  initialDispatchScenario.expected?.model_resolution_before_tier === 'top_level_primary'
+);
+
+// ──────────────────────────────────────────────
 // Summary
 // ──────────────────────────────────────────────
 console.log(`\n${'═'.repeat(50)}`);

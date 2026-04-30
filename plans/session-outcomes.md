@@ -601,3 +601,36 @@ Full 6-phase LARGE-tier remediation of HIGH/MEDIUM schema bugs, security grant o
 2. TechnicalWriter executing broad doc edits may corrupt structured tables (Agent Role Matrix) when it edits rows without reading the full table first. Orchestrator should validate tabular data integrity in doc-only phases by checking row counts against known baseline before approving.
 3. ExecutabilityVerifier WARNs for wave-parallel shared-file writes are best resolved by assigning exclusive ownership to one phase at plan-revision time (Phase 1 owns planner schema), not by attempting file-level coordination within a wave.
 
+---
+
+## Entry
+
+**Plan ID:** `orchestrator-initial-planner-dispatch-plan`  
+**Date:** 2026-04-30  
+**Complexity Tier:** SMALL  
+**Total Phases:** 3 / 3  
+
+### Review Pipeline
+
+| Agent | Result | Notes |
+| --- | --- | --- |
+| AssumptionVerifier-subagent | N/A | SMALL tier; not dispatched |
+| PlanAuditor-subagent | APPROVED | Final score: 96%; advisory-only findings |
+| ExecutabilityVerifier-subagent | N/A | SMALL tier; not dispatched |
+| CodeReviewer-subagent | APPROVED | Validated blocking issues: 0 across phase and final reviews |
+
+**Total review iterations:** 1 / 2  
+**Convergence:** Converged  
+
+### Outcome
+
+**Status:** SUCCESS  
+**CodeReviewer false positive rate:** 0 / 0 (n/a - no CRITICAL/MAJOR raised)  
+**Final eval suite count:** Full `cd evals && npm test` passed; validate 270/270, behavior 99/99, orchestration handoff 90/90, drift 58/58, and remaining suites green.  
+
+### Lessons Learned
+
+1. Initial Orchestrator to Planner dispatch is compatible with the project model when Planner only returns a saved `plan_path` and Orchestrator still owns approval, PLAN_REVIEW, implementation dispatch, todo lifecycle, and completion.
+2. Regression tests should anchor new orchestration behavior to the named gate section plus trigger and handoff terms; this catches missing behavior without passing on unrelated Planner mentions.
+3. New plans that reference shared prompt/eval surfaces need a coordination-only anchor map up front, or Pass 10 will fail even when implementation behavior is correct.
+
