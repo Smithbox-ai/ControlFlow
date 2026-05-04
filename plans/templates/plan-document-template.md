@@ -172,6 +172,34 @@ Every plan must satisfy all 11 standards (apply judgment on TRIVIAL plans):
 10. **Executable** — Each phase MUST specify concrete file paths, input/output contracts, verification commands, test specifics, and the owning `executor_agent`.
 11. **Risk-reviewed** — Every plan MUST include a populated `risk_review` array for all 7 semantic risk categories. Any `HIGH`-impact `open_question` entry must trigger a research phase before implementation.
 
+## Living-Document and Restartability Guidance (Recommended)
+
+These practices are recommended for plans that span multiple sessions or require recovery from partial execution. They complement the 11 Plan Quality Standards above and are especially valuable for MEDIUM and LARGE plans.
+
+### Restartability Through Plan Sections
+
+A well-structured plan file acts as its own cold-start reference. A resuming agent reads the plan, identifies the next incomplete phase by its acceptance criteria and quality gates, and continues without requiring prior session state. To preserve this:
+
+- Write phase steps as prose instructions that remain accurate after earlier phases complete.
+- Keep acceptance criteria tied to observable outcomes, not in-session state.
+- Resolve or explicitly defer all open questions before `READY_FOR_EXECUTION` status is set.
+- Assign every phase a single `executor_agent` so dispatch does not require inference from memory.
+
+### Durable Evidence Under plans/artifacts/\<task-slug\>/
+
+Supporting evidence that does not belong in the plan document itself goes in `plans/artifacts/<task-slug>/`. This directory is the task-episodic layer for the plan and may contain:
+
+- Research summaries and source-provenance notes produced by research phases.
+- Intermediate validation outputs that downstream phases depend on.
+- Rollback notes when enforcement is downgraded or a decision is intentionally deferred.
+- Phase-specific context packets needed for cold-start dispatch when an executor requires injected evidence.
+
+This keeps the plan file concise and artifact-linkable while ensuring a resuming executor can reconstruct phase context without live session memory.
+
+### Scope of This Guidance
+
+These guidelines are recommended and are not enforced by the eval harness. Existing plans are not required to adopt this structure retroactively. The Codex plugin validator (`validate-strict-artifacts.ps1`) enforces a separate lifecycle section list for ControlFlow-Codex strict plans only; that enforcement does not apply to core VS Code Planner artifacts.
+
 ## Terminal Non-Ready Outcome Artifact
 
 Use this structure ONLY when `status` is `ABSTAIN` or `REPLAN_REQUIRED`. Do NOT apply to `READY_FOR_EXECUTION` plans — use the Phase structure above instead.

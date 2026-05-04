@@ -59,6 +59,31 @@ if ($planLeaf -notmatch '^(?<slug>.+)-plan\.md$') {
 $taskSlug = $Matches['slug']
 $artifactRoot = Join-Path $repoRootResolved "plans/artifacts/$taskSlug"
 
+# Lifecycle section enforcement for ControlFlow-Codex strict plans only.
+# Scope: Codex strict-plan artifacts validated by this script.
+# Does not apply to core VS Code Planner artifacts unless Phase 7 explicitly adds and tests that support.
+# The five required headings must match the plan template, valid fixture, invalid fixture, and test harness exactly.
+$lifecycleSections = @(
+    "## Progress",
+    "## Discoveries",
+    "## Decision Log",
+    "## Outcomes",
+    "## Idempotence & Recovery"
+)
+
+$missingLifecycle = @()
+foreach ($section in $lifecycleSections) {
+    if ($planContent -notmatch [regex]::Escape($section)) {
+        $missingLifecycle += $section
+    }
+}
+if ($missingLifecycle.Count -gt 0) {
+    foreach ($missing in $missingLifecycle) {
+        Write-Output "Missing required lifecycle section: '$missing'"
+    }
+    throw "ControlFlow-Codex strict plan is missing $($missingLifecycle.Count) required lifecycle section(s) in: $planResolved"
+}
+
 $artifactChecks = @()
 if ($RequirePlanAudit) {
     $artifactChecks += [pscustomobject]@{

@@ -101,6 +101,29 @@ Every plan must include all 7 categories exactly once.
 - Approval-sensitive steps.
 - Retry or replan hints by phase or wave.
 
+## Progress
+
+- Phase-by-phase progress notes updated during execution.
+- Record what was completed, what was skipped, and current phase status.
+
+## Discoveries
+
+- Unexpected findings, environment constraints, or scope changes discovered during execution.
+
+## Decision Log
+
+- Key decisions made during execution with rationale and alternatives considered.
+
+## Outcomes
+
+- Final outcomes: what was achieved, what was deferred, and any residual risks.
+
+## Idempotence & Recovery
+
+- Identify which phases are safe to re-run.
+- Recovery instructions for interrupted or failed execution.
+- Note any required clean-up before a restart.
+
 ## Architecture Visualization
 
 - Plans with 3+ phases should include a Mermaid `flowchart TD`.

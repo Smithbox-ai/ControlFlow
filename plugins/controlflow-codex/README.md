@@ -105,3 +105,17 @@ The uninstaller removes `~/plugins/controlflow-codex/` and removes the `controlf
 - To install into your personal Codex home, run `scripts/install-home-local.ps1` from this plugin directory.
 - Keep using native Codex for trivial changes; the plugin is meant for work where structured plans and review gates pay for themselves.
 - For a practical prompt catalog in Russian, read `USAGE.md`.
+
+## ExecPlan-Compatible Lifecycle Discipline
+
+Strict Codex plans in this plugin include five required lifecycle sections at the end of every non-trivial plan artifact:
+
+- **Progress** — phase-by-phase status updated during execution.
+- **Discoveries** — unexpected findings recorded as they surface.
+- **Decision Log** — key execution decisions with rationale.
+- **Outcomes** — final state: achieved, deferred, and residual risks.
+- **Idempotence & Recovery** — which phases are safe to re-run and how to restart after interruption.
+
+These sections are inspired by OpenAI ExecPlan living-document discipline but are a ControlFlow-native adaptation. They preserve ControlFlow artifact paths, no-fenced-code-block rules, strict plan dialect, and review-gated execution. This is not a literal import of OpenAI's `PLANS.md` format; the section names, validator enforcement, and plan template are defined and maintained within this plugin.
+
+The local validator at `scripts/validate-strict-artifacts.ps1` enforces these five headings for ControlFlow-Codex strict-plan artifacts. It does not validate core VS Code Planner artifacts unless Phase 7 of the adoption plan explicitly adds and tests that support.

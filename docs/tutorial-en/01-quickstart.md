@@ -23,6 +23,8 @@ ControlFlow/
 │   ├── session-outcomes.md ← Persistent session log
 │   ├── templates/          ← Plan and gate-event templates
 │   └── artifacts/          ← Per-task history
+├── plugins/
+│   └── controlflow-codex/  ← Portable Codex CLI plugin
 ├── docs/
 │   └── agent-engineering/  ← Engineering policy docs
 └── NOTES.md                ← Active objective state

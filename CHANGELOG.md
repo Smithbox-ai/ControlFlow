@@ -6,6 +6,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased] — Codex Plugin & Lifecycle Documentation Parity (Phases 4-8)
+
+### Added
+
+- **BrowserTester Evidence Discipline**: Added snapshot, wait, console/network, visual regression, and untrusted content protocols (`BrowserTester-subagent.agent.md`).
+- **Living-Document Guidance**: Added "Living-Document and Restartability Guidance" section to `plans/templates/plan-document-template.md`.
+
+### Changed
+
+- **Codex Plugin Lifecycle**: Introduced fixed lifecycle sections (`## Progress`, `## Discoveries`, `## Decision Log`, `## Outcomes`, `## Idempotence & Recovery`) in strict-plan dialect, enforced by `validate-strict-artifacts.ps1`.
+- **Plugin First-Class Status**: Upgraded `controlflow-codex` to a first-class plugin deliverable in `AGENTS.md` and `README.md`.
+
+---
+
 ## [Unreleased] — Model Routing Stage C Matrix
 
 ### Added

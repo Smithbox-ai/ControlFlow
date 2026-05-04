@@ -2,7 +2,7 @@
 
 ## Why this chapter
 
-Walk through **how the Planner turns an idea into a plan**: 9 sequential steps from first user interaction to handoff to the Orchestrator. This is the most "thinking-intensive" part of the system.
+Walk through **how the Planner turns an idea into a plan**: 10 sequential steps from first user interaction to handoff to the Orchestrator. This is the most "thinking-intensive" part of the system.
 
 ## Key Concepts
 
@@ -11,6 +11,7 @@ Walk through **how the Planner turns an idea into a plan**: 9 sequential steps f
 - **Semantic risk review** — mandatory assessment across 7 risk categories.
 - **Complexity gate** — classification into 4 tiers (TRIVIAL/SMALL/MEDIUM/LARGE).
 - **Skill selection** — choosing ≤3 skill patterns per phase.
+- **Living-Document guidance** — treating plan artifacts as restartable, continuously-updated documents.
 - **Handoff** — passing the finished plan to the Orchestrator via `target_agent` and `prompt`.
 
 ## Complete Planner Workflow
@@ -25,8 +26,9 @@ flowchart TD
     S5 --> S6[6. Research Delegation\nResearcher / CodeMapper]
     S6 --> S7[7. Design Decisions\n4 dimensions]
     S7 --> S8[8. Phase Decomposition\n3-10 phases, waves]
-    S8 --> S9[9. Handoff to Orchestrator]
-    S9 --> End([Plan saved to plans/])
+    S8 --> S9[9. Living-Document Setup\nrestartability guidance]
+    S9 --> S10[10. Handoff to Orchestrator]
+    S10 --> End([Plan saved to plans/])
 
     S2 -.->|clarification needed| AskUser[vscode/askQuestions]
     AskUser -.-> S2
@@ -157,7 +159,11 @@ Each phase contains:
 - MEDIUM with non-trivial orchestration → also `sequenceDiagram`.
 - LARGE → always both `sequenceDiagram` and DAG.
 
-## Step 9. Handoff
+## Step 9. Living-Document Setup
+
+The plan artifact receives the standard "Living-Document and Restartability Guidance" section. This establishes the contract that the plan is a continuously updated ledger, safe to restart from its recorded state if the session is interrupted.
+
+## Step 10. Handoff
 
 ```yaml
 target_agent: Orchestrator
@@ -204,7 +210,7 @@ The complete plan structure is defined by `schemas/planner.plan.schema.json`. Re
 
 ## Exercises
 
-1. **(beginner)** Open `Planner.agent.md` and find the 9 workflow steps. Compare with the diagram above.
+1. **(beginner)** Open `Planner.agent.md` and find the 10 workflow steps. Compare with the diagram above.
 2. **(beginner)** Open `schemas/planner.plan.schema.json` and list the 8 allowed values of `executor_agent`.
 3. **(intermediate)** Which workflow step can Planner skip if the task is already precisely stated?
 4. **(intermediate)** Open any plan in `plans/`. Find all 7 semantic risk categories and their `disposition` values.

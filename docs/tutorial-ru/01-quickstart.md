@@ -30,6 +30,8 @@ ControlFlow/
 │   ├── project-context.md           # реестр агентов и tiers
 │   ├── templates/                   # шаблоны плановых документов
 │   └── artifacts/                   # task-episodic память
+├── plugins/
+│   └── controlflow-codex/           # Портативный плагин для Codex CLI
 ├── README.md                        # верхнеуровневое описание
 ├── AGENTS.md                        # рабочие заметки для AI-агента
 ├── NOTES.md                         # repo-persistent состояние

@@ -85,6 +85,27 @@ Move-Item "plans/artifacts/my-task" "plans/archive/$month/my-task-artifacts"
 
 Для одноразовых задач безопаснее удалить временные артефакты сразу после проверки результата.
 
+## Живые планы и секции жизненного цикла
+
+Нетривиальные строгие планы (SMALL / MEDIUM / LARGE) содержат пять обязательных секций жизненного цикла в конце файла. Обновляйте их по ходу работы:
+
+- **Progress** — отмечайте завершённые фазы и текущий статус. Пример запроса:
+  `Update the ## Progress section of plans/my-task-plan.md to reflect Phase 3 completion.`
+
+- **Discoveries** — фиксируйте неожиданные находки, ограничения среды, изменения объёма. Пример:
+  `Add to ## Discoveries in plans/my-task-plan.md: found that the schema validator requires -NoProfile.`
+
+- **Decision Log** — записывайте ключевые решения и их обоснование. Пример:
+  `Log in ## Decision Log: chose additive lifecycle validation over strict replacement.`
+
+- **Outcomes** — итоговый результат после завершения. Пример:
+  `Fill ## Outcomes in plans/my-task-plan.md with what was achieved and what was deferred.`
+
+- **Idempotence & Recovery** — укажите, какие фазы безопасно перезапускать и как восстановиться после сбоя. Пример:
+  `Document in ## Idempotence & Recovery which phases are safe to re-run after an interrupted execution.`
+
+Эти секции — ControlFlow-нативная адаптация идей ExecPlan, а не буквальный импорт формата `PLANS.md` от OpenAI. Их порядок, имена и правила валидации определены внутри плагина. Локальный валидатор (`scripts/validate-strict-artifacts.ps1`) проверяет их наличие для строгих Codex-планов.
+
 ## Validator
 
 Проверка структуры артефактов:

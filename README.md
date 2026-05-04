@@ -5,7 +5,7 @@
 ![Eval](https://img.shields.io/badge/eval-offline-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-A multi-agent orchestration system for VS Code Copilot. ControlFlow coordinates 13 specialized agents under deterministic **P.A.R.T contracts** (Prompt → Archive → Resources → Tools), structured text outputs, and layered reliability gates.
+A multi-agent orchestration system for VS Code Copilot, plus a maintained Codex plugin. ControlFlow coordinates 13 specialized agents under deterministic **P.A.R.T contracts** (Prompt → Archive → Resources → Tools), structured text outputs, and layered reliability gates.
 
 ---
 
@@ -364,7 +364,7 @@ Use $controlflow-review to review the completed implementation.
 
 See [`plugins/controlflow-codex/USAGE.md`](plugins/controlflow-codex/USAGE.md) for the full prompt catalog and [`plugins/controlflow-codex/README.md`](plugins/controlflow-codex/README.md) for detailed documentation.
 
-### Validating Plan Artifacts
+### Validating Codex Strict-Plan Artifacts
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File plugins/controlflow-codex/scripts/validate-strict-artifacts.ps1 `
@@ -374,7 +374,11 @@ powershell -ExecutionPolicy Bypass -File plugins/controlflow-codex/scripts/valid
   -RequireAssumptionVerifier
 ```
 
+The `validate-strict-artifacts.ps1` script validates **Codex strict-plan artifacts only**. Do not use it for core VS Code plans. It enforces the mandatory lifecycle sections (`## Progress`, `## Discoveries`, `## Decision Log`, `## Outcomes`, `## Idempotence & Recovery`).
+
 ### Intentional Differences from the VS Code Version
+
+- Symphony daemon/runtime, Linear workflow, and Gem Team multi-plugin packaging were NOT imported.
 
 - No `@Agent` syntax or fixed subagent roster.
 - No `agent/runSubagent` dispatch or `governance/model-routing.json` — model selection is Codex's responsibility.
