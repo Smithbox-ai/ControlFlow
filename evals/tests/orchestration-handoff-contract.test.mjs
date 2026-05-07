@@ -58,10 +58,13 @@ const agentRoleIndex = {
 
 // Pre-resolved values used in assertions (derived from governance/model-routing.json)
 const _capableReviewer       = resolveRoleModel('capable-reviewer', 'MEDIUM');
-const capableReviewerPrimary  = _capableReviewer.primary;       // e.g. Claude Opus 4.7 (copilot)
-const capableReviewerFallback0 = _capableReviewer.fallbacks[0]; // e.g. GPT-5.5 (copilot)
+const capableReviewerPrimary  = _capableReviewer.primary;       // e.g. Claude Sonnet 4.6 (copilot) for MEDIUM
+const capableReviewerFallback0 = _capableReviewer.fallbacks[0]; // e.g. GPT-5.4 (copilot) for MEDIUM
 const orchestratorDefaultPrimary = resolveRoleModel('orchestration-capable', 'MEDIUM').primary; // e.g. Claude Sonnet 4.6 (copilot)
 const evPrimary = resolveRoleModel(agentRoleIndex['ExecutabilityVerifier-subagent'], 'LARGE').primary; // e.g. Claude Sonnet 4.6 (copilot)
+const _capableReviewerLarge    = resolveRoleModel('capable-reviewer', 'LARGE');
+const capableReviewerLargePrimary  = _capableReviewerLarge.primary;       // e.g. Claude Opus 4.7 (copilot)
+const capableReviewerLargeFallback0 = _capableReviewerLarge.fallbacks[0]; // e.g. GPT-5.5 (copilot)
 
 let passed = 0;
 let failed = 0;
@@ -687,36 +690,26 @@ check(
 );
 
 check(
-  // RED until Phase 2: capable-reviewer primary must be stated for CodeReviewer, PlanAuditor, AssumptionVerifier
-  // Derived from governance/model-routing.json roles.capable-reviewer.primary
-  `Review dispatch: capable-reviewer primary model ${capableReviewerPrimary} stated for CodeReviewer/PlanAuditor/AssumptionVerifier [RED — Phase 2 required]`,
-  new RegExp(escapeRegex(capableReviewerPrimary), 'i').test(orch)
+  // RED until Phase 2: capable-reviewer primary dispatch must be derived from
+  // governance/model-routing.json by effective review tier, not hardcoded by model name.
+  'Review dispatch: capable-reviewer primary resolves from governance/model-routing.json by effective review tier [RED — Phase 2 required]',
+  /capable.reviewer[\s\S]{0,500}Effective review tier[\s\S]{0,500}Primary dispatch[\s\S]{0,500}governance\/model-routing\.json|Primary dispatch[\s\S]{0,500}roles\.capable-reviewer\.by_tier\[<effective_review_tier>\]/i.test(orch)
 );
 
 check(
-  // RED until Phase 2: first model_unavailable retry for capable-reviewer uses fallbacks[0], not Sonnet
-  // Derived from governance/model-routing.json roles.capable-reviewer.fallbacks[0]
-  `Review dispatch: model_unavailable first retry for capable-reviewer uses ${capableReviewerFallback0} [RED — Phase 2 required]`,
-  new RegExp(
-    `model_unavailable[\\s\\S]{0,600}${escapeRegex(capableReviewerFallback0)}` +
-    `|${escapeRegex(capableReviewerFallback0)}[\\s\\S]{0,200}model_unavailable[\\s\\S]{0,200}capable.reviewer` +
-    `|capable.reviewer[\\s\\S]{0,300}model_unavailable[\\s\\S]{0,200}${escapeRegex(capableReviewerFallback0)}`,
-    'i'
-  ).test(orch)
+  // RED until Phase 2: first model_unavailable retry for capable-reviewer must use the configured
+  // fallbacks list from governance/model-routing.json for the effective tier in order.
+  // Derived from governance/model-routing.json roles.capable-reviewer.by_tier[effective_tier].fallbacks
+  'Review dispatch: model_unavailable retry for capable-reviewer uses configured fallbacks from governance/model-routing.json by effective tier in order [RED — Phase 2 required]',
+  /capable.reviewer[\s\S]{0,500}model_unavailable[\s\S]{0,400}configured.*fallbacks|model_unavailable[\s\S]{0,400}configured.*fallbacks.*list[\s\S]{0,200}effective.tier|fallbacks.*list[\s\S]{0,200}effective.tier[\s\S]{0,200}order/i.test(orch)
 );
 
 check(
-  // RED until Phase 2: Orchestrator must state that its frontmatter default must NOT
-  // be silently substituted for capable-reviewer dispatches or first fallback retries
-  // Derived from governance/model-routing.json roles.orchestration-capable.primary
-  `Review dispatch: ${orchestratorDefaultPrimary} must not be silent fallback for capable-reviewer agents [RED — Phase 2 required]`,
-  new RegExp(
-    `${escapeRegex(orchestratorDefaultPrimary)}[\\s\\S]{0,300}must not.*silent.*fallback` +
-    `|must not.*silent.*fallback[\\s\\S]{0,300}capable.reviewer` +
-    `|never.*silently.*use.*${escapeRegex(orchestratorDefaultPrimary)}[\\s\\S]{0,200}capable.reviewer` +
-    `|capable.reviewer[\\s\\S]{0,200}never.*silently.*use.*${escapeRegex(orchestratorDefaultPrimary)}`,
-    'i'
-  ).test(orch)
+  // RED until Phase 2: Orchestrator must not silently substitute any unconfigured model for
+  // capable-reviewer dispatches (e.g., its own frontmatter model), and must escalate to
+  // WAITING_APPROVAL when all configured models for the effective tier are exhausted.
+  'Review dispatch: Orchestrator must not use unconfigured models as silent fallback for capable-reviewer; escalate to WAITING_APPROVAL when all configured models exhausted [RED — Phase 2 required]',
+  /Do not silently substitute.*Orchestrator frontmatter model.*unconfigured model|unconfigured model.*permitted.*substitutes|escalate.*WAITING_APPROVAL.*all.*configured.*models.*unavailable|all.*configured.*models.*unavailable.*escalate.*WAITING_APPROVAL/i.test(orch)
 );
 
 check(
@@ -726,6 +719,20 @@ check(
   // If it fails, that is a regression from Phase 2 work, not a Phase 1 defect.
   'Review dispatch: ExecutabilityVerifier review-readonly Sonnet route preserved via Universal Model Resolution Rule [should remain GREEN]',
   /Universal Model Resolution Rule[\s\S]{0,800}ExecutabilityVerifier|This rule covers all dispatch paths[\s\S]{0,400}ExecutabilityVerifier/i.test(orch)
+);
+
+check(
+  // Effective review tier concept: high-risk override forces LARGE even when plan tier is lower
+  'Review dispatch: effective review tier defined — high-impact unresolved risk forces LARGE even if plan complexity_tier is lower [tier-aware routing]',
+  /effective review tier[\s\S]{0,400}complexity_tier|high.impact.*unresolved.*LARGE.*even if|LARGE.*even if.*plan.*complexity.*lower/i.test(orch)
+);
+
+check(
+  // LARGE premium routing preserved: when effective_review_tier = LARGE, capable-reviewer resolves
+  // to the role default (inherit_from: "default") which is the premium tier in governance/model-routing.json.
+  // Derived: capableReviewerLargePrimary = governance/model-routing.json roles.capable-reviewer primary
+  `Review dispatch: LARGE effective tier (high-risk override) routes capable-reviewer to role default (premium: ${capableReviewerLargePrimary}) via governance/model-routing.json [tier-aware routing]`,
+  /LARGE[\s\S]{0,400}role default|role default[\s\S]{0,200}LARGE|LARGE[\s\S]{0,400}inherit_from|inherit_from[\s\S]{0,200}LARGE|LARGE[\s\S]{0,400}governance\/model-routing\.json/i.test(orch)
 );
 
 // ──────────────────────────────────────────────
@@ -802,6 +809,28 @@ check(
 check(
   'Model resolution scenario: ExecutabilityVerifier live_runtime_assertion is false',
   evCase?.reference_expectation?.live_runtime_assertion === false
+);
+
+const largeHighRiskCase = allCases.find(c => c.case_id === 'capable-reviewer-large-high-risk-override');
+check(
+  'Model resolution scenario: capable-reviewer-large-high-risk-override case exists',
+  largeHighRiskCase !== undefined
+);
+check(
+  // Derived from governance/model-routing.json roles.capable-reviewer (LARGE = inherit_from default = role primary)
+  `Model resolution scenario: large-high-risk-override resolves to premium LARGE primary ${capableReviewerLargePrimary}`,
+  largeHighRiskCase?.reference_expectation?.resolved_primary_model === capableReviewerLargePrimary
+);
+check(
+  'Model resolution scenario: large-high-risk-override documents effective_review_tier=LARGE and override_reason containing high_risk',
+  largeHighRiskCase?.reference_expectation?.effective_review_tier === 'LARGE' &&
+  typeof largeHighRiskCase?.reference_expectation?.override_reason === 'string' &&
+  largeHighRiskCase?.reference_expectation?.override_reason?.includes('high_risk') === true
+);
+check(
+  // Derived from governance/model-routing.json roles.capable-reviewer.fallbacks[0]
+  `Model resolution scenario: large-high-risk-override first fallback remains premium fallback ${capableReviewerLargeFallback0}`,
+  largeHighRiskCase?.reference_expectation?.first_fallback_model === capableReviewerLargeFallback0
 );
 
 check(

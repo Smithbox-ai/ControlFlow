@@ -109,10 +109,25 @@
       ],
       "reasoning_effort_hint": "high",
       "by_tier": {
-        "TRIVIAL": { "inherit_from": "default" },
-        "SMALL":   { "inherit_from": "default" },
-        "MEDIUM":  { "inherit_from": "default" },
-        "LARGE":   { "inherit_from": "default" }
+        "TRIVIAL": {
+          "primary": "Claude Sonnet 4.6 (copilot)",
+          "fallbacks": ["GPT-5.4 (copilot)", "GPT-5.5 (copilot)"],
+          "cost_tier": "medium",
+          "latency_tier": "medium"
+        },
+        "SMALL": {
+          "primary": "Claude Sonnet 4.6 (copilot)",
+          "fallbacks": ["GPT-5.4 (copilot)", "GPT-5.5 (copilot)"],
+          "cost_tier": "medium",
+          "latency_tier": "medium"
+        },
+        "MEDIUM": {
+          "primary": "Claude Sonnet 4.6 (copilot)",
+          "fallbacks": ["GPT-5.4 (copilot)", "GPT-5.5 (copilot)"],
+          "cost_tier": "medium",
+          "latency_tier": "medium"
+        },
+        "LARGE": { "inherit_from": "default" }
       }
     },
     "review-readonly": {

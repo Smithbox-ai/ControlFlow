@@ -42,7 +42,7 @@ The 10 roles are:
 While internal subagent dispatch resolves models dynamically, top-level user entry points (handling the initial chat request) execute using the literal `model:` frontmatter value. The operating mode ensures premium requests are spent on agents that decide quality at the control plane:
 
 - `Planner` is pinned to `GPT-5.5` so plan quality, decomposition, and risk framing use the strongest available planning model.
-- `CodeReviewer`, `PlanAuditor`, and `AssumptionVerifier` rely on premium adversarial reviewers (`Claude Opus 4.7`).
+- `CodeReviewer`, `PlanAuditor`, and `AssumptionVerifier` rely on premium adversarial reviewers (`Claude Opus 4.7`) for direct invocation and for `LARGE` or high-risk orchestrated dispatch; ordinary `TRIVIAL`, `SMALL`, and `MEDIUM` orchestrated dispatch is tier-aware as described in [Fallback semantics](#fallback-semantics).
 - `ExecutabilityVerifier`, `Orchestrator`, and the implementation agents typically resolve to cheaper defaults (`Claude Sonnet 4.6`, `GPT-5.4`, `GPT-5.4 mini`, `Gemini 3.1 Pro`) to contain premium usage.
 
 This yields a pragmatic split:
@@ -134,9 +134,9 @@ These tiers are advisory and intended to inform future cost-aware routing (Phase
 - The first fallback is typically a **same-family** alternative (e.g., Claude Sonnet 4.6 → Claude Opus 4.7) preserving prompt compatibility.
 - The second is a **cross-family** alternative (e.g., Claude → GPT) accepting potentially larger behavior shifts in exchange for availability.
 
-For the `capable-reviewer` role (used by CodeReviewer, PlanAuditor, and AssumptionVerifier), the primary model is `Claude Opus 4.7` when available. If model unavailable, the first fallback retry uses `GPT-5.5`. The Orchestrator's frontmatter model (`Claude Sonnet 4.6`) MUST NOT be used as a silent fallback for these agents, to ensure premium rigorous review. However, `ExecutabilityVerifier-subagent` is preserved as an intentional `review-readonly` Sonnet route to run cheaper cold-start simulations.
+For the `capable-reviewer` role (used by CodeReviewer, PlanAuditor, and AssumptionVerifier), routing is **tier-aware**. For `TRIVIAL`, `SMALL`, and `MEDIUM` plans, the primary is `Claude Sonnet 4.6` with `GPT-5.4` and `GPT-5.5` as fallbacks (cost_tier: medium). For `LARGE` plans, or when a high-impact unresolved `risk_review` entry forces an effective review tier of `LARGE`, the role default applies: primary is `Claude Opus 4.7` with `GPT-5.5` as first fallback (cost_tier: high). The Orchestrator resolves primary and fallbacks from `governance/model-routing.json` `roles.capable-reviewer.by_tier[<effective_review_tier>]`; it must not use any unconfigured model as a silent substitute, and must escalate to `WAITING_APPROVAL` when all configured models for the effective tier are unavailable. `ExecutabilityVerifier-subagent` is an intentional exception: it uses the `review-readonly` role with `Claude Sonnet 4.6` as primary, regardless of tier.
 
-While the Orchestrator prompt contract now enforces this specific `capable-reviewer` first fallback retry to `GPT-5.5` on `model_unavailable`, generic fallback-list automation (passing an array of fallbacks for runtime execution) is **not** runtime-enforced today and remains future scope. The `fallbacks` list simply documents the intended chain so future routing logic can implement it deterministically without re-deriving safe substitutions. (Note: offline evals structurally validate these contracts but do not constitute live runtime proof of fallback execution.)
+The tier-aware `capable-reviewer` routing is enforced through the `by_tier` matrix in `governance/model-routing.json`. Generic fallback-list automation (passing an array of fallbacks for runtime execution) is **not** runtime-enforced today and remains future scope. The `fallbacks` list simply documents the intended chain so future routing logic can implement it deterministically without re-deriving safe substitutions. (Note: offline evals structurally validate these contracts but do not constitute live runtime proof of fallback execution.)
 
 ## Reasoning Effort Hint (Advisory)
 

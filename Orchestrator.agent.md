@@ -181,8 +181,9 @@ Every `agent/runSubagent` call must include these outer tool-call fields:
 #### Capable-Reviewer Model Routing
 
 For `CodeReviewer-subagent`, `PlanAuditor-subagent`, and `AssumptionVerifier-subagent` (role: `capable-reviewer`):
-- **Primary dispatch:** use `Claude Opus 4.7 (copilot)` when available.
-- **`model_unavailable` first retry:** use configured first fallback `GPT-5.5 (copilot)` for the same target agent and same tier. `Claude Sonnet 4.6 (copilot)` must not be used as a silent fallback for capable-reviewer agents or their first fallback retries.
+- **Effective review tier:** For normal plan/code review, use the plan `complexity_tier` as the effective review tier. If a high-impact applicable `risk_review` entry is unresolved and forces the full review pipeline, resolve review-agent models using `LARGE` even if the plan `complexity_tier` is lower.
+- **Primary dispatch:** Resolve the primary model from `governance/model-routing.json` `roles.capable-reviewer.by_tier[<effective_review_tier>]` (or the role default when `inherit_from: "default"`). Do not hardcode a model string; always derive the primary from the governance file by effective review tier.
+- **`model_unavailable` retry:** On `model_unavailable`, retry using the configured `fallbacks` list for the same effective tier in order, within `retry_budgets.model_unavailable_max`. Do not silently substitute the Orchestrator frontmatter model or any unconfigured model; only models in the configured `fallbacks` list for the effective tier are permitted as substitutes. If all configured models for the effective tier are unavailable, escalate to `WAITING_APPROVAL` rather than proceeding.
 - `ExecutabilityVerifier-subagent` is an intentional exception: it resolves through `review-readonly` to `Claude Sonnet 4.6 (copilot)` and is not subject to capable-reviewer fallback routing.
 
 ### Initial Planner Dispatch Gate
