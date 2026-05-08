@@ -1,10 +1,11 @@
 # ControlFlow for Codex
 
-**Version:** 0.3.0
+**Version:** 0.5.0
 
 This repo-local plugin ports the parts of ControlFlow that transfer cleanly into [OpenAI Codex CLI](https://github.com/openai/codex):
 
 - workflow-centric strict entry point
+- spec-before-plan capture
 - phased planning
 - strict plan artifacts
 - pre-execution plan review
@@ -22,8 +23,9 @@ See also: [ControlFlow for Codex section in the main README](../../README.md#con
 ## Included Skills
 
 | Skill | Codex invocation | Analogous ControlFlow role |
-|-------|-----------------|---------------------------|
+| ----- | ---------------- | ------------------------- |
 | `controlflow-router` | `$controlflow-router` | Entry-point dispatcher |
+| `controlflow-spec` | `$controlflow-spec` | Spec-before-plan capture |
 | `controlflow-strict-workflow` | `$controlflow-strict-workflow` | Orchestrator (full workflow) |
 | `controlflow-planning` | `$controlflow-planning` | Planner |
 | `controlflow-plan-audit` | `$controlflow-plan-audit` | PlanAuditor |
@@ -32,6 +34,19 @@ See also: [ControlFlow for Codex section in the main README](../../README.md#con
 | `controlflow-orchestration` | `$controlflow-orchestration` | Orchestrator (execution path) |
 | `controlflow-review` | `$controlflow-review` | CodeReviewer |
 | `controlflow-memory-hygiene` | `$controlflow-memory-hygiene` | Memory hygiene |
+
+## Slash-Alias Mapping
+
+These are aliases-as-mental-mappings for human readability, not executable slash commands.
+
+| Mental shortcut | Skill invocation |
+| --- | --- |
+| `/spec` | `$controlflow-spec` |
+| `/plan` | `$controlflow-planning` |
+| `/review` | `$controlflow-review` |
+| `/ship` | `$controlflow-strict-workflow` |
+
+These slash forms are documentation aliases for human readability. The plugin's actual invocation surface is the namespaced `$controlflow-*` skill names.
 
 ## When to Use This Plugin
 
@@ -59,6 +74,7 @@ The plugin does not install global hooks or replace Codex defaults. Its skills a
 The current version supports a stricter ControlFlow-style path for non-trivial work:
 
 - planning writes Markdown artifacts to `plans/<task-slug>-plan.md` by default
+- `controlflow-spec` captures requirements, scope, acceptance criteria, constraints, success metrics, and open questions before planning when those details are not yet stable
 - plan files use a ControlFlow-style section structure
 - `controlflow-plan-audit` reviews plans before execution for `SMALL+` work
 - `controlflow-assumption-verifier` checks for mirages and assumption-fact confusion before execution for `MEDIUM+` work and unresolved high-risk plans

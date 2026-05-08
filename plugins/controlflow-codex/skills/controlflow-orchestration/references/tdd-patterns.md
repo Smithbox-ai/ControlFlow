@@ -34,11 +34,33 @@ Ask: "Can I write `expect(fn(input)).toBe(output)` before writing `fn`?"
 ## Test Layer Matrix
 
 | Layer | Scope | Speed | When to Use |
-|-------|-------|-------|-------------|
+| ----- | ----- | ----- | ----------- |
 | Unit | Single function/class | <100ms | Always — default layer |
 | Integration | Module boundaries | <1s | Cross-module data flow |
 | Contract | API/schema compliance | <500ms | Schema validation, API response shapes |
 | E2E | Full user workflow | <30s | Critical user journeys only |
+
+## Prove-It Framing
+
+A test must prove a production behavior, not merely exercise code. It should fail when the behavior is absent, stubbed, wired to the wrong dependency, or returning the wrong observable result. If a gutted implementation could still pass the test, move the assertion to the public boundary, strengthen the expected output, or add the missing state/contract check.
+
+## Beyonce Rule
+
+If a behavior matters enough to change, it matters enough to protect with an automated signal. Bug fixes need regression coverage, new behavior needs a test or contract check, and newly discovered edge cases should become stable fixtures. When ordinary test coverage is impossible, record why and add the closest deterministic guard available.
+
+## DAMP Over DRY In Tests
+
+Tests should read like small examples of behavior. Prefer descriptive setup, meaningful literals, and explicit assertions over clever shared helpers that hide the scenario. Use helpers for noisy plumbing, not for the facts a reviewer needs in order to understand the case.
+
+## Test Size & Resource Model
+
+| Size | Target Share | Boundary | Best For | Cost |
+| ---- | ------------ | -------- | -------- | ---- |
+| Small | ~80% | Same process, no I/O or network | Pure logic, validators, transforms, local policy checks | Fastest and easiest to debug. |
+| Medium | ~15% | Local integration with filesystem, database, or service-like boundary | Schema fixtures, module handoffs, local persistence | More setup and moderate flake risk. |
+| Large | ~5% | Full workflow, browser, network, or external-like environment | Critical end-to-end journeys | Slowest and most expensive to maintain. |
+
+Default to the smallest test that can prove the behavior. Use larger tests only when the behavior exists at a real boundary that smaller tests cannot represent.
 
 ## Commit Granularity
 

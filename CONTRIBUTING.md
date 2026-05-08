@@ -4,12 +4,14 @@ Thank you for your interest in contributing! This guide covers the key contribut
 
 ## Table of Contents
 
-- [Running the eval suite](#running-the-eval-suite)
-- [Adding a new agent](#adding-a-new-agent)
-- [Editing an existing agent](#editing-an-existing-agent)
-- [Adding skills](#adding-skills)
-- [Proposing changes](#proposing-changes)
-- [Code of conduct](#code-of-conduct)
+- [Contributing to ControlFlow](#contributing-to-controlflow)
+  - [Table of Contents](#table-of-contents)
+  - [Running the eval suite](#running-the-eval-suite)
+  - [Adding a new agent](#adding-a-new-agent)
+  - [Editing an existing agent](#editing-an-existing-agent)
+  - [Adding skills](#adding-skills)
+  - [Proposing changes](#proposing-changes)
+  - [Code of conduct](#code-of-conduct)
 
 ---
 
@@ -98,6 +100,7 @@ For project-wide orchestration audits, prefer `skills/patterns/orchestration-aud
   - Every PR must pass `cd evals && npm test`.
   - Describe what you changed and why in the PR description.
   - Reference any related Issues.
+- **Architecture decisions:** For architecture-significant changes, follow `docs/agent-engineering/ADR-PROCESS.md`.
 - **Breaking changes:** Changes to shared governance files (`governance/`, `schemas/`, `.github/copilot-instructions.md`) affect all agents — test thoroughly and call this out explicitly in the PR description.
 
 ---

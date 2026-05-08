@@ -708,3 +708,35 @@ Full 6-phase LARGE-tier remediation of HIGH/MEDIUM schema bugs, security grant o
 2. Regression tests should anchor new orchestration behavior to the named gate section plus trigger and handoff terms; this catches missing behavior without passing on unrelated Planner mentions.
 3. New plans that reference shared prompt/eval surfaces need a coordination-only anchor map up front, or Pass 10 will fail even when implementation behavior is correct.
 
+
+## Entry
+
+**Plan ID:** `agent-skills-adoption-plan`
+**Date:** `2026-05-08`
+**Complexity Tier:** `LARGE`
+**Total Phases:** `8 / 8`
+
+### Review Pipeline
+
+| Agent | Result | Notes |
+| --- | --- | --- |
+| AssumptionVerifier-subagent | APPROVED | Mirages found: 2 MINOR (0 BLOCKING) |
+| PlanAuditor-subagent | APPROVED | Final score: 90% |
+| ExecutabilityVerifier-subagent | WARN -> resolved via 11 iter-2 patches | Blocked tasks: 0 |
+| CodeReviewer-subagent | APPROVED | Final review approved after Problems-gate cleanup; validated blocking issues: 0 |
+
+**Total review iterations:** `2` / `5`
+**Convergence:** `Converged`
+
+### Outcome
+
+**Status:** `SUCCESS`
+**CodeReviewer false positive rate:** `0 / 5` (`0%`)
+
+### Lessons Learned
+
+1. External-source adoption (MIT) is most valuable as paraphrased structural patterns, not wholesale persona/skill imports; Researcher-led gap analysis prevented duplicate-skill bloat.
+2. ExecutabilityVerifier WARN with no FAIL is best resolved by a single targeted Planner replan that consolidates all reviewer findings, rather than per-finding iteration.
+3. Pre-existing repo drift (allowlist vs disk) can block verification gates; a synchronization fix is sometimes a prerequisite to phase verification and should be flagged as a separate decision in the preflight report.
+
+---

@@ -14,6 +14,12 @@
 
 Для простой правки используйте обычный Codex без плагина: ControlFlow-Codex полезен, когда стоимость плана, review artifacts и gate-процесса окупается снижением риска.
 
+Если требования ещё не сформулированы достаточно чётко для плана, начните со спецификации:
+
+`Use $controlflow-spec to capture a spec artifact before planning this repository change.`
+
+После сохранения spec artifact переходите к `$controlflow-planning`, передав путь к спецификации и будущий `plan_path`.
+
 В зависимости от сложности часть шагов может пропускаться:
 
 - `TRIVIAL`: обычно без полного review pipeline
@@ -21,7 +27,24 @@
 - `MEDIUM`: `plan-audit` + `assumption-verifier`
 - `LARGE`: `plan-audit` + `assumption-verifier` + `executability-verifier`
 
+## Документационные alias-подсказки
+
+Эти сокращения помогают быстро вспомнить нужный skill, но не являются исполняемыми slash commands.
+
+| Mental shortcut | Skill invocation |
+| --- | --- |
+| `/spec` | `$controlflow-spec` |
+| `/plan` | `$controlflow-planning` |
+| `/review` | `$controlflow-review` |
+| `/ship` | `$controlflow-strict-workflow` |
+
+Эти slash-формы — документационные aliases для удобства чтения, а не исполняемые команды. Реальная поверхность вызова плагина — namespaced skill names вида `$controlflow-*`.
+
 ## Готовые запросы
+
+### 0. Спецификация перед планом
+
+`Use $controlflow-spec to write plans/artifacts/my-task/spec.md, then hand it off to $controlflow-planning with plan_path=plans/my-task-plan.md.`
 
 ### 1. Полный строгий workflow
 
@@ -63,6 +86,7 @@
 
 Review artifacts:
 
+- `plans/artifacts/<task-slug>/spec.md`
 - `plans/artifacts/<task-slug>/plan-audit.md`
 - `plans/artifacts/<task-slug>/assumption-verifier.md`
 - `plans/artifacts/<task-slug>/executability-verifier.md`

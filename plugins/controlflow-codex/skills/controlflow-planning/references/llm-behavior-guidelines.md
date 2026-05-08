@@ -7,7 +7,7 @@ Behavioral guardrails to prevent systematic LLM coding anti-patterns. Adapted fr
 ## When to Apply
 
 | Skill | Principles to Apply |
-|-------|---------------------|
+| ----- | ------------------- |
 | `controlflow-planning` | Think Before Coding, Goal-Driven Execution |
 | `controlflow-orchestration` | All 4 (during phase execution) |
 | `controlflow-review` | Simplicity First, Surgical Changes (audit focus) |
@@ -34,9 +34,9 @@ In the plan artifact, record assumptions in a separate section from verified fac
 
 The agent silently assumes JSON format, all records, no pagination, authenticated users only — and implements 200 lines without surfacing any of these decisions.
 
-### Correct behavior
+### Correct behavior — Clarification
 
-```
+```text
 Before implementing, I need to clarify:
 1. Format: JSON, CSV, or caller's choice? (affects schema)
 2. Scope: All records or filtered? (affects performance / data_volume risk)
@@ -69,7 +69,7 @@ class PreferenceManager:
         # 120 lines of pluggable infrastructure for a single column update
 ```
 
-### Correct behavior
+### Correct behavior — Minimal solution
 
 ```python
 def save_theme(user_id: int, theme: str) -> None:
@@ -104,7 +104,7 @@ When your changes create orphans (unused imports, variables, functions YOUR chan
 
 The agent fixes the null check **and** reformats 3 functions, renames a parameter, and removes an "obviously dead" helper — none of which were in scope.
 
-### Correct behavior
+### Correct behavior — Scoped fix
 
 Fix the null check. In the report note: "Observed potentially unused helper `formatOrderLegacy()` in the same file — recommend a cleanup task if confirmed dead."
 
@@ -117,7 +117,7 @@ Fix the null check. In the report note: "Observed potentially unused helper `for
 Transform imperative task descriptions into verifiable goals before starting work:
 
 | Instead of... | Transform to... |
-|--------------|-----------------|
+| ------------ | --------------- |
 | "Add validation" | "Write tests for invalid inputs, then make them pass" |
 | "Fix the bug" | "Write a test that reproduces it, then make it pass" |
 | "Refactor X" | "Ensure all existing tests pass before and after" |
@@ -125,7 +125,7 @@ Transform imperative task descriptions into verifiable goals before starting wor
 
 For multi-step phases, state a brief plan with explicit verification:
 
-```
+```text
 1. [Step] -> verify: [check]
 2. [Step] -> verify: [check]
 3. [Step] -> verify: [check]
@@ -147,10 +147,22 @@ No measurable criterion. The executor cannot determine when it is done, and revi
 
 ---
 
+## Anti-Rationalization Table
+
+| Pattern | Why It Fails | Required Action |
+| ------- | ------------ | --------------- |
+| Assume the missing requirement because the likely answer seems obvious | Hidden assumptions become design inputs that reviewers cannot audit. | Ask when the answer changes scope, behavior, or file set; otherwise record the assumption plainly. |
+| Add abstraction because a future task might need it | Untested flexibility makes the solution larger and harder to verify. | Build the requested behavior only and note future options separately. |
+| Clean up adjacent code while editing nearby lines | Extra changes blur responsibility and can create unrelated regressions. | Keep edits tied to the task and report unrelated observations without changing them. |
+| Skip verification because the change is prompt-only or documentation-only | Text changes still affect behavior, validation, routing, and review expectations. | Run the smallest relevant check plus any required suite for the workflow. |
+| Treat a local pass as complete evidence for broad claims | Narrow checks can miss schema drift, order dependence, or integration failures. | Match the verification command to the completion claim and state any remaining gap. |
+
+---
+
 ## Summary Decision Table
 
 | Situation | Action |
-|-----------|--------|
+| --------- | ------ |
 | Multiple valid task interpretations | Present options and ask the user before implementing |
 | Tempted to add untasked feature | Don't. Note it in the report instead |
 | Noticed adjacent code smell | Note it; don't touch it |

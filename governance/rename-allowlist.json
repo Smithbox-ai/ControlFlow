@@ -35,7 +35,6 @@
     "evals/scenarios/*.json",
     "README.md",
     ".github/copilot-instructions.md",
-    "plans/pipeline-comparison.md",
     "plans/project-context.md",
     "evals/README.md",
     "skills/index.md",

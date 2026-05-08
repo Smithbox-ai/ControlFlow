@@ -247,12 +247,12 @@ See [`evals/README.md`](evals/README.md) for pass descriptions and how to add sc
 │   ├── agent-engineering/         # Governance policies and reliability gates
 │   └── tutorial-ru/               # Full Russian-language tutorial (19 chapters)
 ├── governance/                    # Operational knobs and tool grants
-├── skills/                        # Reusable domain pattern library (15 patterns)
+├── skills/                        # Reusable domain pattern library (18 patterns)
 ├── evals/                         # Offline validation suite
 │   └── scenarios/                 # Eval scenario fixtures
 ├── plans/                         # Plan artifacts and templates
 ├── plugins/
-│   └── controlflow-codex/         # Codex CLI plugin (9 portable skills)
+│   └── controlflow-codex/         # Codex CLI plugin (10 portable skills)
 └── NOTES.md                       # Active objective state (repo-persistent)
 ```
 
@@ -308,8 +308,9 @@ The plugin brings the core ControlFlow disciplines — phased planning, pre-exec
 ### Included Skills
 
 | Skill | Analogous ControlFlow Role |
-|-------|---------------------------|
+| ----- | -------------------------- |
 | `$controlflow-router` | Entry-point dispatcher |
+| `$controlflow-spec` | Spec-before-plan capture |
 | `$controlflow-strict-workflow` | Orchestrator (full workflow entry point) |
 | `$controlflow-planning` | Planner — writes `plans/<task-slug>-plan.md` |
 | `$controlflow-plan-audit` | PlanAuditor |
@@ -321,7 +322,7 @@ The plugin brings the core ControlFlow disciplines — phased planning, pre-exec
 
 Complexity routing matches the main project: `TRIVIAL` → optional; `SMALL` → plan-audit; `MEDIUM` → plan-audit + assumption-verifier; `LARGE` → full pipeline.
 
-### Installation
+### Plugin Installation
 
 From the repository root:
 
@@ -339,13 +340,13 @@ After installation, the plugin is available in Codex as `$controlflow-*` skills.
 
 Recommended entry point for any non-trivial task:
 
-```
+```text
 Use $controlflow-strict-workflow to handle this repository task from plan through execution.
 ```
 
 For individual steps:
 
-```
+```text
 # Write a strict plan artifact
 Use $controlflow-planning to write a plan in plans/ for this task.
 

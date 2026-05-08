@@ -1,7 +1,7 @@
 {
   "name": "controlflow-codex",
-  "version": "0.3.0",
-  "description": "On-demand ControlFlow workflow skills for non-trivial Codex tasks: planning, plan review, orchestration, review, and memory hygiene.",
+  "version": "0.5.0",
+  "description": "On-demand ControlFlow workflow skills for non-trivial Codex tasks: spec capture, planning, plan review, orchestration, review, and memory hygiene.",
   "author": {
     "name": "Local Workspace",
     "email": "local@example.invalid",
@@ -14,6 +14,7 @@
     "controlflow",
     "codex",
     "workflow",
+    "spec",
     "planning",
     "plan-audit",
     "assumption-verifier",
@@ -27,7 +28,7 @@
   "interface": {
     "displayName": "ControlFlow for Codex",
     "shortDescription": "On-demand workflow skills for non-trivial Codex tasks",
-    "longDescription": "Bring the portable and practical parts of ControlFlow into Codex when extra discipline is worth the overhead: a strict workflow entry point, Planner-style Markdown artifacts, plan-audit, assumption-verifier, and executability-verifier passes, complexity-aware orchestration, evidence-backed review, semantic risk checks, failure taxonomy, and memory hygiene.",
+    "longDescription": "Bring the portable and practical parts of ControlFlow into Codex when extra discipline is worth the overhead: spec-before-plan capture, a strict workflow entry point, Planner-style Markdown artifacts, plan-audit, assumption-verifier, and executability-verifier passes, complexity-aware orchestration, evidence-backed review, semantic risk checks, failure taxonomy, and memory hygiene.",
     "developerName": "Local Workspace",
     "category": "Coding",
     "capabilities": [
@@ -40,6 +41,7 @@
     "termsOfServiceURL": "https://docs.github.com/en/site-policy/github-terms/github-terms-of-service",
     "defaultPrompt": [
       "Use ControlFlow for Codex strict workflow for this repository task.",
+      "Capture a spec before planning this ambiguous repository change.",
       "Run the full ControlFlow-Codex plan review chain on this saved plan.",
       "Help me execute this approved plan with explicit gates and reviews."
     ],

@@ -1,6 +1,19 @@
 # Changelog
 
+<!-- markdownlint-disable MD024 -->
+
 All notable changes to the `controlflow-codex` plugin are documented here. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.5.0] - 2026-05-08
+
+### Added
+
+- `controlflow-spec` skill: spec-before-plan capture surface for non-trivial Codex work where requirements, acceptance criteria, constraints, or success metrics are not yet stable.
+- README/USAGE: slash-alias mapping table for `/spec`, `/plan`, `/review`, and `/ship`, documented as human-readable aliases rather than executable commands.
+
+### Changed
+
+- Manifest version bumped 0.3.0 → 0.5.0 to close drift with the released 0.4.0 lifecycle work and to mark this feature addition.
 
 ## [0.4.0] - 2026-05-04
 

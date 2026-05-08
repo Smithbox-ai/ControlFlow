@@ -168,6 +168,34 @@ Use the review template below. The review MUST include these key fields that Orc
 
 Full contract reference: `schemas/code-reviewer.verdict.schema.json`.
 
+### Human-Readable Review Prose Axes
+
+Use these headings to organize narrative review prose when a review needs dimension-by-dimension commentary. They are presentation guidance only; they are not schema fields, severity values, status values, scoring dimension names, or issue-validation protocol steps.
+
+### Correctness & Functionality
+Summarize whether the implementation satisfies the requested behavior, handles edge cases, and preserves existing behavior.
+
+### Security
+Summarize security-sensitive observations, including input handling, data exposure, secrets, dependency risk, and policy concerns.
+
+### Architecture & Design
+Summarize fit with existing module boundaries, dependencies, abstractions, and integration contracts.
+
+### Maintainability & Style
+Summarize readability, naming, local conventions, complexity, dead code, and other long-term maintenance signals.
+
+### Test Quality & Coverage
+Summarize whether tests verify behavior, cover meaningful edge cases, and support the verification gates claimed in the verdict.
+
+### Soft Comment Labels
+
+Use soft labels only in prose for observations that do not block progression:
+- `Nit` — minor stylistic suggestion, never blocking.
+- `Optional` — improvement worth considering, never blocking.
+- `FYI` — informational note, never blocking.
+
+Soft labels are prose annotations only. They MUST NOT appear in `validated_blocking_issues[*].severity`. Schema severities remain schema-defined only: `validated_blocking_issues[*].severity` accepts `CRITICAL` or `MAJOR`, and `issues[*].severity` accepts `CRITICAL`, `MAJOR`, or `MINOR`.
+
 ### Review Document Template
 
 ```

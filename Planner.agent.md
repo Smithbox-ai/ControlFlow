@@ -46,6 +46,7 @@ For all other scopes, record applicability, impact, evidence source, and disposi
   1. Read `skills/index.md` to load the domain mapping table.
   2. Match task keywords and domain signals against the index.
   3. Select ≤3 most relevant skill files based on task context and complexity tier.
+  - For spec-bearing phases, consider `skills/patterns/spec-driven-development.md` when requirements, scope boundaries, acceptance criteria, or spec-before-plan discipline are central to safe planning.
   4. Include selected skill file paths in each applicable phase's `skill_references` array.
   Implementation agents load referenced skills before executing phase tasks.
 6. Research (delegate CodeMapper-subagent/Researcher-subagent when scope is large).

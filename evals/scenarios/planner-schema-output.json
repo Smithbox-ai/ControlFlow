@@ -25,6 +25,7 @@
   },
   "assertions": [
     "Planner keeps semantic-risk trigger heuristics anchored to plans/project-context.md rather than duplicating the taxonomy inline.",
-    "Planner handoff stays artifact-first: the saved plan file is authoritative and chat remains a concise summary for Orchestrator."
+    "Planner handoff stays artifact-first: the saved plan file is authoritative and chat remains a concise summary for Orchestrator.",
+    "Planner handoff returns plan_path or an equivalent saved plan path before any chat summary."
   ]
 }

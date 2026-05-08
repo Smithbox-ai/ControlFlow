@@ -22,6 +22,7 @@ Keep documentation parity, Mermaid rules, documentation-only constraints, and sc
 - Mermaid diagram generation for architecture/flow visualization.
 - Code-documentation parity verification for changed areas.
 - Walkthrough/completion summaries for finished work.
+- Authoring Architecture Decision Records (ADRs) when a plan or task introduces an architecture-significant decision per `docs/agent-engineering/ADR-PROCESS.md`.
 
 ### Scope OUT
 - No source code modifications — source code is read-only truth.
@@ -84,6 +85,8 @@ Agent-specific fields:
 - `docs/agent-engineering/RELIABILITY-GATES.md`
 - `docs/agent-engineering/CLARIFICATION-POLICY.md`
 - `docs/agent-engineering/TOOL-ROUTING.md`
+- `docs/agent-engineering/ADR-PROCESS.md`
+- `docs/agent-engineering/ADR-TEMPLATE.md`
 - `schemas/technical-writer.execution-report.schema.json`
 - `plans/project-context.md` (if present)
 
