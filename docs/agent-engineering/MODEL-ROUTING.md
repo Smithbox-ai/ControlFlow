@@ -41,15 +41,14 @@ The 10 roles are:
 
 While internal subagent dispatch resolves models dynamically, top-level user entry points (handling the initial chat request) execute using the literal `model:` frontmatter value. The operating mode ensures premium requests are spent on agents that decide quality at the control plane:
 
-- `Planner` is pinned to `GPT-5.5` so plan quality, decomposition, and risk framing use the strongest available planning model.
+- `Planner` is pinned to `GPT-5.5` so plan quality, decomposition, and risk framing use the strongest available planning model. The planner fallback ordering is governed by `governance/model-routing.json` via `roles.capable-planner` (primary: `GPT-5.5 (copilot)`, fallback 1: `Claude Opus 4.7 (copilot)`, fallback 2: `GPT-5.4 mini (copilot)`). This workflow preserves the scalar `model:` frontmatter in `Planner.agent.md` and does not imply list-valued frontmatter is required.
 - `CodeReviewer`, `PlanAuditor`, and `AssumptionVerifier` rely on premium adversarial reviewers (`Claude Opus 4.7`) for direct invocation and for `LARGE` or high-risk orchestrated dispatch; ordinary `TRIVIAL`, `SMALL`, and `MEDIUM` orchestrated dispatch is tier-aware as described in [Fallback semantics](#fallback-semantics).
 - `ExecutabilityVerifier`, `Orchestrator`, and the implementation agents typically resolve to cheaper defaults (`Claude Sonnet 4.6`, `GPT-5.4`, `GPT-5.4 mini`, `Gemini 3.1 Pro`) to contain premium usage.
 
 This yields a pragmatic split:
+
 - Premium tokens are spent on planning and on finding flaws.
 - Routine orchestration and implementation stay cheaper, managed through dynamic subagent dispatch logic.
-
-
 
 During the rollout window, agents add a `model_role:` line to their frontmatter **alongside** the existing `model:` line:
 
@@ -66,9 +65,10 @@ Both lines coexist. The `model:` line is what VS Code Copilot currently consumes
 
 ## Resolution at runtime
 
-VS Code Copilot defaults to reading the literal `model:` value from frontmatter. However, within ControlFlow, **prompt-driven runtime resolution is active** for subagent dispatch. 
+VS Code Copilot defaults to reading the literal `model:` value from frontmatter. However, within ControlFlow, **prompt-driven runtime resolution is active** for subagent dispatch.
 
 When Orchestrator or Planner dispatch a subagent via `agent/runSubagent`, they actively execute model resolution:
+
 1. They load `governance/model-routing.json`.
 2. They look up the target agent in `agent_role_index`.
 3. They apply the `by_tier` complexity rule to determine the required model string.
@@ -89,7 +89,8 @@ The resolution rule for a given role and tier is:
 
 ### Worked Example
 
-For example, `capable-planner` at `TRIVIAL` complexity might use a faster model like Sonnet:
+For example, a role with an explicit `TRIVIAL` override could use a faster model like Sonnet:
+
 ```json
 "by_tier": {
   "TRIVIAL": {
@@ -103,7 +104,10 @@ For example, `capable-planner` at `TRIVIAL` complexity might use a faster model 
   }
 }
 ```
-At `LARGE` complexity, it inherits the default (which might be Opus).
+
+At `LARGE` complexity, it inherits the role default. The current `capable-planner`
+configuration does not define a `TRIVIAL` override; it inherits the same ordered
+fallback chain at every complexity tier.
 
 ## Stage D (forward pointer)
 

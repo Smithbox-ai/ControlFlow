@@ -25,7 +25,7 @@
     },
     "capable-planner": {
       "primary": "GPT-5.5 (copilot)",
-      "fallbacks": ["Claude Opus 4.7 (copilot)", "Claude Sonnet 4.6 (copilot)"],
+      "fallbacks": ["Claude Opus 4.7 (copilot)", "GPT-5.4 mini (copilot)"],
       "cost_tier": "high",
       "latency_tier": "slow",
       "consumers": ["Planner.agent.md"],

@@ -66,6 +66,12 @@ const _capableReviewerLarge    = resolveRoleModel('capable-reviewer', 'LARGE');
 const capableReviewerLargePrimary  = _capableReviewerLarge.primary;       // e.g. Claude Opus 4.7 (copilot)
 const capableReviewerLargeFallback0 = _capableReviewerLarge.fallbacks[0]; // e.g. GPT-5.5 (copilot)
 
+// Pre-resolved planner role values (derived from governance/model-routing.json)
+const _capablePlanner         = resolveRoleModel('capable-planner', 'MEDIUM');
+const capablePlannerPrimary   = _capablePlanner.primary;        // GPT-5.5 (copilot)
+const capablePlannerFallback0 = _capablePlanner.fallbacks[0];   // Claude Opus 4.7 (copilot)
+const capablePlannerFallback1 = _capablePlanner.fallbacks[1];   // GPT-5.4 mini (copilot)
+
 let passed = 0;
 let failed = 0;
 
@@ -836,6 +842,48 @@ check(
 check(
   'Model resolution scenario: total reference_cases_documented matches array length',
   modelResScenario.expected?.reference_cases_documented === allCases.length
+);
+
+// ──────────────────────────────────────────────
+// Planner Role Fallback Chain Regression (Phase 3)
+// Locks the capable-planner ordered fallback contract so drift is immediately
+// visible: primary GPT-5.5 (copilot) → Claude Opus 4.7 (copilot) → GPT-5.4 mini (copilot)
+// ──────────────────────────────────────────────
+console.log('\n=== Model Routing — Planner Role Fallback Chain ===');
+
+check(
+  'Planner routing: capable-planner role present in governance/model-routing.json',
+  modelRouting.roles['capable-planner'] !== undefined
+);
+check(
+  `Planner routing: primary is GPT-5.5 (copilot) (resolved: ${capablePlannerPrimary})`,
+  capablePlannerPrimary === 'GPT-5.5 (copilot)'
+);
+check(
+  `Planner routing: fallback[0] is Claude Opus 4.7 (copilot) (resolved: ${capablePlannerFallback0})`,
+  capablePlannerFallback0 === 'Claude Opus 4.7 (copilot)'
+);
+check(
+  `Planner routing: fallback[1] is GPT-5.4 mini (copilot) (resolved: ${capablePlannerFallback1})`,
+  capablePlannerFallback1 === 'GPT-5.4 mini (copilot)'
+);
+check(
+  'Planner routing: fallback chain has exactly 2 entries',
+  (modelRouting.roles['capable-planner']?.fallbacks ?? []).length === 2
+);
+check(
+  'Planner routing: all tiers inherit_from default (no tier-specific planner override)',
+  Object.values(modelRouting.roles['capable-planner']?.by_tier ?? {})
+    .every(t => t.inherit_from === 'default')
+);
+check(
+  'Planner routing: primary and fallback order consistent across all complexity tiers',
+  ['TRIVIAL', 'SMALL', 'MEDIUM', 'LARGE'].every(tier => {
+    const r = resolveRoleModel('capable-planner', tier);
+    return r.primary === capablePlannerPrimary &&
+           r.fallbacks[0] === capablePlannerFallback0 &&
+           r.fallbacks[1] === capablePlannerFallback1;
+  })
 );
 
 // ──────────────────────────────────────────────
