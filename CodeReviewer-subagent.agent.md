@@ -41,10 +41,7 @@ Before setting `APPROVED`, complete these local pre-approval gates:
 If a mandatory gate fails, status cannot be `APPROVED`.
 
 ### Safety and Approval Signals
-Flag and escalate when changed scope includes:
-- destructive operations
-- sensitive data exposure risks
-- policy violations
+Flag and escalate destructive operations, sensitive data exposure risks, and policy violations.
 
 ### Issue Validation Requirement
 For every CRITICAL or MAJOR issue, execute this 4-step validation protocol:
@@ -117,7 +114,7 @@ See [docs/agent-engineering/MEMORY-ARCHITECTURE.md](docs/agent-engineering/MEMOR
 
 Agent-specific fields:
 - Record blocking issues and verdict rationale in task-episodic deliverables under `plans/artifacts/<task-slug>/`.
-- Promote recurring risk patterns or unresolved safety invariants to `/memories/repo/`.
+- Before promoting recurring risk patterns or unresolved safety invariants to `/memories/repo/`, load `skills/patterns/repo-memory-hygiene.md`.
 
 ### PreFlect (Mandatory Before Review)
 
@@ -170,22 +167,7 @@ Full contract reference: `schemas/code-reviewer.verdict.schema.json`.
 
 ### Human-Readable Review Prose Axes
 
-Use these headings to organize narrative review prose when a review needs dimension-by-dimension commentary. They are presentation guidance only; they are not schema fields, severity values, status values, scoring dimension names, or issue-validation protocol steps.
-
-### Correctness & Functionality
-Summarize whether the implementation satisfies the requested behavior, handles edge cases, and preserves existing behavior.
-
-### Security
-Summarize security-sensitive observations, including input handling, data exposure, secrets, dependency risk, and policy concerns.
-
-### Architecture & Design
-Summarize fit with existing module boundaries, dependencies, abstractions, and integration contracts.
-
-### Maintainability & Style
-Summarize readability, naming, local conventions, complexity, dead code, and other long-term maintenance signals.
-
-### Test Quality & Coverage
-Summarize whether tests verify behavior, cover meaningful edge cases, and support the verification gates claimed in the verdict.
+When dimension-by-dimension prose is useful, organize it under: Correctness & Functionality, Security, Architecture & Design, Maintainability & Style, and Test Quality & Coverage. These are presentation headings only, not schema fields, severity values, scoring dimensions, or issue-validation steps.
 
 ### Soft Comment Labels
 

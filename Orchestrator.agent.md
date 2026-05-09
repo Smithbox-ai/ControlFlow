@@ -88,11 +88,9 @@ When context budget approaches limit:
 See [docs/agent-engineering/MEMORY-ARCHITECTURE.md](docs/agent-engineering/MEMORY-ARCHITECTURE.md) for the three-layer memory model.
 
 Agent-specific fields:
-- Before running Checklist C at phase completion, load `skills/patterns/memory-promotion-candidates.md` to scan the phase transcript and produce a structured list of candidate facts; feed those candidates into the Checklist C classification step.
-- At each phase completion, run Checklist C of `skills/patterns/repo-memory-hygiene.md` to evaluate whether any facts captured during the phase should be promoted to repo-persistent memory.
-- Update `NOTES.md` at each phase boundary to reflect the active objective and current phase; promote phase-specific state to task-episodic deliverables.
-- Remove stale repo-persistent notes when superseded.
-- Before any `/memories/repo/` write or `NOTES.md` update at a phase boundary, load and follow `skills/patterns/repo-memory-hygiene.md` (dedup checklist + prune routine).
+- At phase completion, load `skills/patterns/memory-promotion-candidates.md` to identify candidate facts.
+- Then run Checklist C in `skills/patterns/repo-memory-hygiene.md` before promoting any fact to repo memory.
+- Update `NOTES.md` only at phase boundaries for active objective/current phase; prune stale notes using `skills/patterns/repo-memory-hygiene.md` before any `/memories/repo/` write or NOTES update.
 
 ### State Tracking
 Maintain awareness of current orchestration state at all times:
@@ -140,8 +138,7 @@ When emitting gate events, optionally also append one NDJSON line per event to `
 - Discovery: search/read tools.
 - Delegation: `agent`.
 - Coordination docs: create/edit markdown artifacts.
-- Validation signals: `read/problems`, `execute/testFailure`, and `execute/getTerminalOutput` when subagent evidence is incomplete or ambiguous.
-- Validation execution: `execute/runInTerminal`, `execute/createAndRunTask`, `execute/awaitTerminal`, and `execute/killTerminal` for independent build/test verification when Orchestrator must confirm results directly.
+- Validation: use `read/problems`, `execute/testFailure`, terminal/task tools, and terminal output only when subagent evidence is incomplete or Orchestrator must independently confirm build/test results.
 
 ### Disallowed
 - Do not use tools to bypass user approval for high-risk operations.
@@ -329,17 +326,7 @@ When a subagent returns a `failure_classification`, Orchestrator routes automati
 If retry limit is exhausted, escalate to user with accumulated failure evidence. For all dispatch actions in this table (retry or replan), apply the Universal Model Resolution Rule to resolve the `model` parameter — including needs_replan Planner dispatch.
 
 ### Retry Reliability Policy
-To prevent silent failures and hung pipelines during parallel execution:
-
-1. **Silent Failure Detection**: If a subagent call returns an empty response, a timeout, or a rate-limit error (HTTP 429), Orchestrator MUST NOT proceed to the next pipeline step. Log the failure and enter retry handling.
-
-2. **Retry Budget Per Phase**: Each phase has a cumulative retry budget of 5 attempts across all failure classifications. Once exhausted, escalate to user regardless of classification.
-
-3. **Per-Wave Throttling**: If 2 or more subagents in the same wave return `transient` failures, reduce parallelism for subsequent waves by 50% (rounded up). This prevents cascading rate-limit exhaustion.
-
-4. **Exponential Backoff Signaling**: When retrying after a `transient` failure, include `retry_attempt` count in the delegation payload so the subagent can adjust its tool call frequency.
-
-5. **Escalation Threshold:** When the same phase fails repeatedly with the same `failure_classification`, escalate to the user even if the individual classification would allow more retries. The threshold is governed by `stagnation_detection.same_phase_failure_escalation_threshold` in `governance/runtime-policy.json`; same-classification repeats are gated by `stagnation_detection.same_classification_repeat_escalation`.
+Use `governance/runtime-policy.json` as the source of truth for retry budgets, same-classification escalation, and transient wave throttling. Inline invariants: never proceed after empty response, timeout, or HTTP 429; include `retry_attempt` on transient retries; when the same `failure_classification` repeats to the configured threshold, escalate; if a phase fails 3 times with the same classification, escalate to the user.
 
 ### NEEDS_INPUT Routing (Mandatory)
 When a subagent returns `status: "NEEDS_INPUT"` with a `clarification_request` object:
@@ -382,12 +369,7 @@ Templates are externalized to reduce context overhead. Load on demand:
 - Verified items for regression tracking: `plans/templates/verified-items-template.md`
 
 ### Template Rules
-- NO code blocks inside plans — describe changes in prose.
-- NO manual testing steps — all verification must be automatable.
-- Each phase must be incremental and self-contained with TDD approach.
-- Phase count: 3–10 (decompose further if >10 phases needed).
-- Commit prefix must be one of: `fix`, `feat`, `chore`, `test`, `refactor`.
-- Do NOT reference plan names or phase numbers in commit messages.
+Use `plans/templates/plan-document-template.md` for full authoring rules. Inline invariants: no code blocks in plans, no manual test steps, phases stay incremental/TDD/self-contained, normal phase count is 3-10, and commit prefixes are limited to `fix`, `feat`, `chore`, `test`, `refactor` with no plan or phase names.
 
 ## Non-Negotiable Rules
 

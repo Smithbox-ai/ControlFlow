@@ -126,37 +126,25 @@ Reference: `docs/agent-engineering/TOOL-ROUTING.md`
 - Local-first: always search the codebase and existing config before using external sources.
 
 ## Definition of Done (Mandatory)
-- Infrastructure is in the target state.
-- All health checks pass.
-- No orphaned resources remain.
+- Infrastructure reaches target state; health checks pass; no orphaned resources remain.
 - Build/lint checks pass for modified config files.
-- Rollback was successful if operation failed.
-- All approval gates that were required have been passed.
-- New dependencies are explicitly listed.
+- Required approval gates passed; rollback succeeded if operation failed; new dependencies are explicitly listed.
 
 ## Output Requirements
 
 Return a structured text report. Do NOT output raw JSON to chat.
 
 Include these fields clearly labeled:
-- **Status** — COMPLETE, NEEDS_INPUT, FAILED, or ABSTAIN.
-- **Changes** — list of infrastructure operations performed.
-- **Rollback Steps** — steps taken or available for rollback.
-- **Idempotency** — evidence that operations are safe to re-run.
-- **Build/Deploy** — PASS or FAIL with details.
-- **Failure Classification** — when not COMPLETE: transient, fixable, needs_replan, or escalate.
-- **Summary** — concise description of what was done.
+- **Status**, **Changes**, **Rollback Steps**, **Idempotency**, **Build/Deploy**, and **Summary**.
+- **Failure Classification** when not COMPLETE: transient, fixable, needs_replan, or escalate.
 
 Full contract reference: `schemas/platform-engineer.execution-report.schema.json`.
 
 ## Non-Negotiable Rules
 
-- No production operations without explicit user approval.
-- No non-idempotent operations without gate checks.
-- No completion claims with unchecked Definition of Done items.
-- No fabrication of evidence.
-- If rollback fails, classify as `escalate` immediately.
-- If uncertain and cannot verify safely: `ABSTAIN`.
+- No production operations without approval; no ungated non-idempotent operations.
+- No unchecked completion claims or fabricated evidence.
+- If rollback fails, classify as `escalate`; if uncertain and cannot verify safely, `ABSTAIN`.
 
 ### Uncertainty Protocol
 Return `NEEDS_INPUT` with a structured `clarification_request` per `docs/agent-engineering/CLARIFICATION-POLICY.md`. Do not ask the user directly — all clarification is centralized in Orchestrator.

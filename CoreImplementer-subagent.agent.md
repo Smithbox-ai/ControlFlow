@@ -99,33 +99,23 @@ Reference: `docs/agent-engineering/TOOL-ROUTING.md`
 - Local-first: always search the codebase before using external sources.
 
 ## Definition of Done (Mandatory)
-- New/changed behavior has tests.
-- Individual and full-suite tests pass.
-- Build passes.
-- Lint/problems check passes.
-- No untracked TODO/FIXME without reference.
-- New dependencies are explicitly listed.
+- Tests cover changed behavior; targeted and full-suite gates pass.
+- Build and lint/problems checks pass.
+- No untracked TODO/FIXME without reference; new dependencies are explicitly listed.
 
 ## Output Requirements
 
 Return a structured text report. Do NOT output raw JSON to chat.
 
 Include these fields clearly labeled:
-- **Status** — COMPLETE, NEEDS_INPUT, FAILED, or ABSTAIN.
-- **Changes** — list of files created/modified with brief descriptions.
-- **Tests** — passed/failed/skipped counts and any failure details.
-- **Build** — PASS or FAIL with details.
-- **Lint** — clean or issue count.
-- **Failure Classification** — when not COMPLETE: transient, fixable, needs_replan, or escalate.
-- **Summary** — concise description of what was done.
+- **Status**, **Changes**, **Tests**, **Build**, **Lint**, and **Summary**.
+- **Failure Classification** when not COMPLETE: transient, fixable, needs_replan, or escalate.
 
 Full contract reference: `schemas/core-implementer.execution-report.schema.json`.
 
 ## Non-Negotiable Rules
 
-- No modification of out-of-scope files.
-- No completion claims with unchecked Definition of Done items.
-- No fabrication of evidence.
+- No out-of-scope edits, unchecked completion claims, or fabricated evidence.
 - If uncertain and cannot verify safely: `ABSTAIN`.
 
 ### Uncertainty Protocol

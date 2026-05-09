@@ -69,14 +69,9 @@ For all other scopes, record applicability, impact, evidence source, and disposi
 Reference: `docs/agent-engineering/CLARIFICATION-POLICY.md`. Step 2 above is the authoritative gate. All five mandatory classes and the `vscode/askQuestions` format are defined in the policy doc.
 
 ### Abstention Policy
-Return `ABSTAIN` only when:
-- Required files are inaccessible.
-- Clarification was attempted via `vscode/askQuestions` but the response did not resolve the ambiguity.
-- Evidence does not support stable decomposition even after research delegation.
+Return `ABSTAIN` only when required files are inaccessible, clarification via `vscode/askQuestions` did not resolve ambiguity, or evidence still cannot support stable decomposition after research.
 
-Return `REPLAN_REQUIRED` when:
-- Scope is understood and decomposable but the current plan design is invalidated (e.g., a dependency changed, a prior architecture decision was reversed, a referenced library is deprecated).
-- The plan artifact must capture: what was invalidated, the current scope, and a concrete recovery next step.
+Return `REPLAN_REQUIRED` when the scope is understood and decomposable but the plan design is invalidated. The plan artifact must capture what changed, current scope, and a concrete recovery next step.
 
 Do NOT return `ABSTAIN` for scope ambiguity without first attempting clarification.
 
@@ -148,13 +143,7 @@ Approval gates: delegated to Orchestrator. Planner is a planning-only agent and 
 ### Context7/MCP Routing (Mandatory)
 Reference: `docs/agent-engineering/TOOL-ROUTING.md`
 
-When the plan depends on third-party library behavior, framework APIs, or MCP integration semantics:
-1. Call `io.github.upstash/context7/resolve-library-id` to identify the library.
-2. If resolved, call `io.github.upstash/context7/get-library-docs` to fetch current documentation.
-3. Use fetched docs to validate plan assumptions before finalizing phases.
-4. If library ID does not resolve, fall back to `web/fetch` or `web/githubRepo`.
-
-Do NOT finalize a plan that depends on third-party behavior without consulting external documentation.
+When a plan depends on third-party library behavior, framework APIs, or MCP integration semantics, resolve the library with Context7, fetch current docs when resolved, and use `web/fetch` or `web/githubRepo` as fallback. Do not finalize third-party-dependent assumptions without external documentation evidence.
 
 ## Output Requirements
 
@@ -170,16 +159,16 @@ The plan file must remain consistent with `schemas/planner.plan.schema.json`.
 
 ### Plan Quality Standards
 
-See `plans/templates/plan-document-template.md` for the complete 11 quality standards. Every plan must satisfy: Incremental, TDD-driven, Specific, Testable, Practical (phase count 3–10), Parallelizable, Routable, Visualized, Failure-aware, Executable, and Risk-reviewed.
+See `plans/templates/plan-document-template.md` for the complete 11 quality standards: incremental, TDD-driven, specific, testable, practical, parallelizable, routable, visualized, failure-aware, executable, and risk-reviewed.
 
 **TRIVIAL exception:** A TRIVIAL-scope plan (≤2 files, single concern) may use as few as 1–3 phases (e.g., combined test/implementation/verification), provided: (a) all seven `risk_review` categories are emitted with `disposition: "not_applicable"`, and (b) the plan is schema-valid per `schemas/planner.plan.schema.json`. The 3–10 phase preference remains the target for all other tiers.
 
 ### Research Scaling
 
 Before planning, evaluate research needs:
-- **Small scope** (≤5 files, clear requirements): research inline, no delegation.
-- **Medium scope** (6–15 files or unclear boundaries): delegate to CodeMapper-subagent for file mapping.
-- **Large scope** (>15 files or cross-cutting concerns): delegate to both CodeMapper-subagent and Researcher-subagent; synthesize findings before planning.
+- **Small** (≤5 files, clear requirements): research inline.
+- **Medium** (6-15 files or unclear boundaries): delegate to CodeMapper-subagent.
+- **Large** (>15 files or cross-cutting concerns): delegate to CodeMapper-subagent and Researcher-subagent, then synthesize before planning.
 
 Default: when in doubt, delegate research early — under-researched plans fail at implementation.
 

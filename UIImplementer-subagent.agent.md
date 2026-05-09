@@ -102,49 +102,31 @@ Reference: `docs/agent-engineering/TOOL-ROUTING.md`
 - Local-first: always search the codebase and project design tokens before using external sources.
 
 ## Definition of Done (Mandatory)
-- Tests for changed UI behavior exist.
-- Individual and full-suite tests pass.
-- Build passes.
-- Lint/problems check passes.
-- Accessibility checks in changed scope pass.
-- Responsive checks in changed scope pass.
-- New dependencies explicitly listed.
+- Tests cover changed UI behavior; targeted and full-suite gates pass.
+- Build, lint/problems, accessibility, and responsive checks pass in changed scope.
+- New dependencies are explicitly listed.
 
 ## Output Requirements
 
 Return a structured text report. Do NOT output raw JSON to chat.
 
 Include these fields clearly labeled:
-- **Status** — COMPLETE, NEEDS_INPUT, FAILED, or ABSTAIN.
-- **Changes** — list of files created/modified with brief descriptions.
-- **Tests** — passed/failed/skipped counts and any failure details.
-- **Build** — PASS or FAIL with details.
-- **Accessibility** — WCAG compliance status for changed elements.
-- **Responsive** — breakpoint check results.
-- **Failure Classification** — when not COMPLETE: transient, fixable, needs_replan, or escalate.
-- **Summary** — concise description of what was done.
+- **Status**, **Changes**, **Tests**, **Build**, **Accessibility**, **Responsive**, and **Summary**.
+- **Failure Classification** when not COMPLETE: transient, fixable, needs_replan, or escalate.
 
 Full contract reference: `schemas/ui-implementer.execution-report.schema.json`.
 
 ### Frontend Best Practices Checklist
 Before marking any task `COMPLETE`, verify each applicable item:
 
-| Category | Check |
-|---|---|
-| Accessibility | WCAG 2.2 AA compliance for all changed elements; ARIA roles/labels present; keyboard navigable; color contrast ≥ 4.5:1. |
-| Responsive | Layout tested at mobile (≤480px), tablet (≤768px), and desktop (≥1024px) breakpoints; no horizontal overflow. |
-| Performance | No blocking scripts in critical path; images lazy-loaded; bundle size delta justified. |
-| State | Component state is local unless shared context is required; no prop drilling > 2 levels without context/store. |
-| Styling | Uses project design system tokens; no inline styles or `!important` overrides without explicit approval. |
-| Types | All props and state typed; no `any` without documented justification. |
-| Reusability | Generic components extracted when pattern repeats ≥ 2 times; no copy-paste duplication. |
-| Testing | Interaction and render tests cover changed behavior; snapshot tests updated if applicable. |
+- Accessibility: WCAG 2.2 AA, ARIA labels/roles, keyboard navigation, and color contrast at 4.5:1 or better.
+- Responsive: mobile <=480px, tablet <=768px, desktop >=1024px, with no horizontal overflow.
+- Performance/state/styling/types: no blocking scripts, justified bundle delta, local state unless sharing is required, design tokens only, typed props/state, and no undocumented `any`.
+- Reuse/testing: extract generic components when a pattern repeats at least twice; cover changed render and interaction behavior.
 
 ## Non-Negotiable Rules
 
-- No modification of out-of-scope files.
-- No bypass of accessibility/responsive checks.
-- No fabrication of evidence.
+- No out-of-scope edits, accessibility/responsive bypasses, or fabricated evidence.
 - If uncertain and cannot verify safely: `ABSTAIN` or `NEEDS_INPUT`.
 
 ### Uncertainty Protocol
