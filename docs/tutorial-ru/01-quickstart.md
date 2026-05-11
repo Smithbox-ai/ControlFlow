@@ -6,7 +6,7 @@
 
 ## Шаг 1. Карта репозитория за 60 секунд
 
-```
+```text
 ControlFlow/
 ├── *.agent.md                       # 13 агентов (промпты)
 ├── schemas/                         # 15 JSON-схем (контракты)
@@ -31,6 +31,7 @@ ControlFlow/
 │   ├── templates/                   # шаблоны плановых документов
 │   └── artifacts/                   # task-episodic память
 ├── plugins/
+│   ├── controlflow-claude-code/     # Портативный плагин для Claude Code
 │   └── controlflow-codex/           # Портативный плагин для Codex CLI
 ├── README.md                        # верхнеуровневое описание
 ├── AGENTS.md                        # рабочие заметки для AI-агента

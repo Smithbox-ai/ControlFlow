@@ -6,7 +6,7 @@ Get oriented in the repository within 30 minutes. After this chapter you can ope
 
 ## Step 1: Repository Map
 
-```
+```text
 ControlFlow/
 ├── *.agent.md              ← 13 agent prompt files (P.A.R.T. structure)
 ├── schemas/                ← 15 JSON schemas (inter-agent contracts)
@@ -24,7 +24,8 @@ ControlFlow/
 │   ├── templates/          ← Plan and gate-event templates
 │   └── artifacts/          ← Per-task history
 ├── plugins/
-│   └── controlflow-codex/  ← Portable Codex CLI plugin
+│   ├── controlflow-claude-code/  ← Portable Claude Code plugin
+│   └── controlflow-codex/        ← Portable Codex CLI plugin
 ├── docs/
 │   └── agent-engineering/  ← Engineering policy docs
 └── NOTES.md                ← Active objective state
@@ -41,6 +42,7 @@ cd evals && npm test
 This runs ~410 offline checks — schema validation, behavioral invariants, orchestration handoff contracts, and drift detection. No live agents, no network calls.
 
 Faster targeted runs:
+
 ```sh
 npm run test:structural   # schemas and P.A.R.T. structure only
 npm run test:behavior     # behavior + handoff + drift only
@@ -63,6 +65,7 @@ flowchart TD
 ```
 
 **Entry points:**
+
 - `@Planner` — for vague goals; runs an idea interview, produces a phased plan.
 - `@Orchestrator` — for a concrete task or an existing plan; dispatches subagents and manages gates.
 - `@Researcher` — for evidence-based investigation.
@@ -107,7 +110,7 @@ Here is a simplified walkthrough of what happens:
 ## Step 6: What to Read Next
 
 | Goal | Chapter |
-|------|---------|
+| --- | --- |
 | Understand the 13 agents | [Chapter 03](03-agent-roster.md) |
 | Understand orchestration states | [Chapter 05](05-orchestration.md) |
 | Understand plan structure | [Chapter 06](06-planning.md) |

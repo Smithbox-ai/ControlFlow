@@ -93,6 +93,36 @@ For project-wide orchestration audits, prefer `skills/patterns/orchestration-aud
 
 ---
 
+## Contributing to Plugins (Codex and Claude Code)
+
+Changes to files under `plugins/controlflow-codex/` and `plugins/controlflow-claude-code/` require their own validation in addition to the repository eval suite:
+
+**For ControlFlow for Codex (`plugins/controlflow-codex/`):**
+
+1. Run the strict artifact validator to ensure contract compliance:
+
+   ```bash
+   powershell -ExecutionPolicy Bypass -NoProfile -File plugins/controlflow-codex/scripts/validate-strict-artifacts.ps1 -RepoRoot . -PlanPath plugins/controlflow-codex/tests/fixtures/strict-plan-lifecycle-valid-plan.md
+   ```
+
+**For ControlFlow for Claude Code (`plugins/controlflow-claude-code/`):**
+
+1. Run the structural validator test harness:
+
+   ```bash
+   powershell -ExecutionPolicy Bypass -NoProfile -File plugins/controlflow-claude-code/tests/validate-claude-artifacts.test.ps1 -RepoRoot .
+   ```
+
+2. If the `claude` CLI is installed, validate the manifest:
+
+   ```bash
+   cd plugins/controlflow-claude-code && claude plugin validate
+   ```
+
+Always run `cd evals && npm test` after plugin edits to catch cross-repo drift.
+
+---
+
 ## Proposing changes
 
 - **Bug reports and feature requests:** Open a GitHub Issue describing the problem or proposal clearly.

@@ -1,0 +1,27 @@
+{
+  "name": "controlflow-claude-code",
+  "version": "0.1.0",
+  "description": "ControlFlow workflow skills and agents for Claude Code: spec capture, strict planning, plan audit, assumption verification, executability verification, orchestration discipline, evidence-backed review, and memory hygiene.",
+  "author": {
+    "name": "Local Workspace",
+    "email": "local@example.invalid",
+    "url": "https://github.com/Smithbox-ai/ControlFlow"
+  },
+  "homepage": "https://github.com/Smithbox-ai/ControlFlow",
+  "repository": "https://github.com/Smithbox-ai/ControlFlow",
+  "license": "MIT",
+  "keywords": [
+    "controlflow",
+    "claude-code",
+    "workflow",
+    "spec",
+    "planning",
+    "plan-audit",
+    "assumption-verifier",
+    "executability-verifier",
+    "router",
+    "review",
+    "orchestration",
+    "memory"
+  ]
+}

@@ -5,7 +5,7 @@
 ![Eval](https://img.shields.io/badge/eval-offline-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-A multi-agent orchestration system for VS Code Copilot, plus a maintained Codex plugin. ControlFlow coordinates 13 specialized agents under deterministic **P.A.R.T contracts** (Prompt → Archive → Resources → Tools), structured text outputs, and layered reliability gates.
+A multi-agent orchestration system for VS Code Copilot, plus maintained Codex and Claude Code plugins. ControlFlow coordinates 13 specialized agents under deterministic **P.A.R.T contracts** (Prompt → Archive → Resources → Tools), structured text outputs, and layered reliability gates.
 
 ---
 
@@ -23,6 +23,7 @@ A multi-agent orchestration system for VS Code Copilot, plus a maintained Codex 
 - [Documentation](#documentation)
 - [Installation](#installation)
 - [ControlFlow for Codex (Plugin)](#controlflow-for-codex-plugin)
+- [ControlFlow for Claude Code (Plugin)](#controlflow-for-claude-code-plugin)
 - [License](#license)
 
 ---
@@ -252,7 +253,8 @@ See [`evals/README.md`](evals/README.md) for pass descriptions and how to add sc
 │   └── scenarios/                 # Eval scenario fixtures
 ├── plans/                         # Plan artifacts and templates
 ├── plugins/
-│   └── controlflow-codex/         # Codex CLI plugin (10 portable skills)
+│   ├── controlflow-codex/         # Codex CLI plugin (10 portable skills)
+│   └── controlflow-claude-code/   # Claude Code plugin (10 portable skills, 6 agents)
 └── NOTES.md                       # Active objective state (repo-persistent)
 ```
 
@@ -320,7 +322,34 @@ The plugin brings the core ControlFlow disciplines — phased planning, pre-exec
 | `$controlflow-review` | CodeReviewer |
 | `$controlflow-memory-hygiene` | Memory hygiene |
 
+---
+
+## ControlFlow for Claude Code (Plugin)
+
+A portable adaptation of ControlFlow for [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code), located in [`plugins/controlflow-claude-code/`](plugins/controlflow-claude-code/).
+
+This plugin brings ControlFlow's planning, review, and orchestration discipline to Claude Code via namespaced skills and selected plugin agents. It provides a local development workflow, validation tools built for Claude Code's plugin marketplace, and preserves the strict artifact patterns that ControlFlow requires.
+
+### Local Development Usage
+
+```sh
+# Run Claude Code with the plugin directory loaded
+claude --plugin-dir ./plugins/controlflow-claude-code
+
+# Start a planning session natively
+/controlflow-claude-code:controlflow-planning
+```
+
+### Intentional Differences from VS Code
+
+- **Workflow Skills**: Planner and Orchestrator are implemented as skills (`/controlflow-claude-code:x`) rather than agents because they coordinate workflow logic instead of generating single analysis outputs.
+- **Isolated Review Agents**: Auditing and mapping roles that require safe, isolated execution (like `AssumptionVerifier` or `CodeMapper`) use native Claude Code plugin agents.
+
+See [`plugins/controlflow-claude-code/README.md`](plugins/controlflow-claude-code/README.md) for full documentation.
+
 Complexity routing matches the main project: `TRIVIAL` → optional; `SMALL` → plan-audit; `MEDIUM` → plan-audit + assumption-verifier; `LARGE` → full pipeline.
+
+## ControlFlow for Codex Usage and Validation
 
 ### Plugin Installation
 

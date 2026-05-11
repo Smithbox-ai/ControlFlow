@@ -6,14 +6,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased] — Claude Code Plugin (Phase 6)
+
+### Added - Claude Code Plugin
+
+- **Claude Code Plugin**: Shipped a first-class plugin adaptation for Anthropic's Claude Code at `plugins/controlflow-claude-code/`.
+  - Includes 10 ControlFlow workflow skills adapted for Claude native slash-invocation.
+  - Adds 6 native plugin agents for isolated review, research, mapping, and verification tasks.
+  - Ships local validation scripts and local development lifecycle documentation.
+  - Adds project-level references inside `README.md`, `CONTRIBUTING.md`, and quickstart docs.
+
+---
+
 ## [Unreleased] — Codex Plugin & Lifecycle Documentation Parity (Phases 4-8)
 
-### Added
+### Added - Codex Parity
 
 - **BrowserTester Evidence Discipline**: Added snapshot, wait, console/network, visual regression, and untrusted content protocols (`BrowserTester-subagent.agent.md`).
 - **Living-Document Guidance**: Added "Living-Document and Restartability Guidance" section to `plans/templates/plan-document-template.md`.
 
-### Changed
+### Changed - Codex Parity
 
 - **Codex Plugin Lifecycle**: Introduced fixed lifecycle sections (`## Progress`, `## Discoveries`, `## Decision Log`, `## Outcomes`, `## Idempotence & Recovery`) in strict-plan dialect, enforced by `validate-strict-artifacts.ps1`.
 - **Plugin First-Class Status**: Upgraded `controlflow-codex` to a first-class plugin deliverable in `AGENTS.md` and `README.md`.
@@ -22,7 +34,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased] — Model Routing Stage C Matrix
 
-### Added
+### Added - Model Routing
 
 - `feat: add optional final review gate via final_review_gate policy flag` — Adds opt-in Completion Gate sub-step that dispatches CodeReviewer with review_scope=final for holistic scope-drift detection. Auto-triggers for LARGE tier plans. Configured via governance/runtime-policy.json.
 - **Stage C Final (Consolidated)**: Model Routing Stage C has fully landed. Stage D is a forward pointer only.
@@ -34,7 +46,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Total eval suite: 358 → 370.
   - VS Code runtime tolerance PASS recorded in `plans/artifacts/model-routing-stage-c/phase-1-spike-result.md`.
 
-### Changed
+### Changed - Model Routing
 
 - **Eval suite (410 checks)** — 227 structural + 78 behavior + 63 orchestration-handoff + 42 drift-detection. Advertised counts in `README.md`, `.github/copilot-instructions.md`, `CONTRIBUTING.md`, `evals/README.md`, `SECURITY.md`, and `.github/PULL_REQUEST_TEMPLATE.md` reconciled to the measured value and enforced by drift Check #5.
 
@@ -44,7 +56,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Ten-phase revision and modernization program delivered per `plans/controlflow-comprehensive-revision-plan.md`.
 
-### Added
+### Added - Comprehensive Revision
 
 - **Phase 1 — Researcher validation + `plans_classification`.** Evidence-first confirmation of all 10 audit findings and per-plan classification artifact gating downstream archival decisions.
 - **Phase 2 — CodeMapper drift inventory.** Mechanical cross-reference of agent model pins, tool grants, schema references, skill registrations, executor-enum alignment, and PreFlect baseline line counts.
@@ -57,7 +69,7 @@ Ten-phase revision and modernization program delivered per `plans/controlflow-co
 - **Phase 9 — Additive drift-detection evals.** Four new drift checks (roster ↔ enum bidirectional alignment, agent `Resources` ↔ schemas existence, cross-plan file-overlap with anchor-map gate, multi-doc check-count consistency) in `evals/tests/drift-detection.test.mjs`; `model_role` resolution check staged but gated off until Phase 4 spike re-enables it.
 - **Phase 10 — README & engineering-docs refresh.** Measured-value badges, new Feature rows for the six shipped capabilities, and `docs/agent-engineering/README.md` index for the 11 engineering documents.
 
-### Changed
+### Changed - Comprehensive Revision
 
 - **Eval suite (358 checks)** — 212 structural + 74 behavior + 49 orchestration-handoff + 23 drift-detection. Advertised counts in `README.md`, `.github/copilot-instructions.md`, `CONTRIBUTING.md`, `evals/README.md`, `SECURITY.md`, and `.github/PULL_REQUEST_TEMPLATE.md` reconciled to the measured value and enforced by drift Check #5.
 - Phase Executor Agents table reduced to 8 rows aligned with the `executor_agent` enum; AssumptionVerifier and ExecutabilityVerifier reclassified as review-only roles outside the executor enum.
@@ -70,9 +82,9 @@ Ten-phase revision and modernization program delivered per `plans/controlflow-co
 
 ## [1.0.0] — 2026-04-15
 
-### Added
+### Added - 1.0.0
 
-**Agent system (13 agents)**
+#### Agent system (13 agents)
 
 - `Orchestrator` — conductor, gate controller, wave-based parallel dispatch, failure routing
 - `Planner` — structured planning with idea interview, phased plans, Mermaid diagrams, semantic risk discovery across 7 non-functional risk categories
@@ -88,7 +100,7 @@ Ten-phase revision and modernization program delivered per `plans/controlflow-co
 - `TechnicalWriter` — documentation, diagrams, code-doc parity enforcement
 - `BrowserTester` — E2E browser testing with health-first verification and accessibility audits
 
-**Architecture**
+#### Architecture
 
 - P.A.R.T contract architecture (Prompt → Archive → Resources → Tools) enforced across all agents
 - Structured text outputs replacing raw JSON to conserve context tokens in delegation chains
@@ -100,20 +112,20 @@ Ten-phase revision and modernization program delivered per `plans/controlflow-co
 - Batch approval per execution wave, per-phase approval for destructive operations
 - `NEEDS_INPUT` clarification routing from subagents through Orchestrator to user via `askQuestions`
 
-**Governance and contracts**
+#### Governance and contracts
 
 - JSON Schema contracts for all agent outputs in `schemas/`
 - Governance policies in `docs/agent-engineering/`: PART-SPEC, RELIABILITY-GATES, CLARIFICATION-POLICY, TOOL-ROUTING, SCORING-SPEC, MIGRATION-CORE-FIRST, PROMPT-BEHAVIOR-CONTRACT
 - Canonical tool grants in `governance/agent-grants.json`
 - Agent roster and complexity tier definitions in `plans/project-context.md`
 
-**Skill library**
+#### Skill library
 
 - 7 domain-specific skill patterns: Testing, Error Handling, Security, Performance, Completeness, Integration, Idea-to-Prompt
 - LLM Behavior Guidelines meta-skill derived from Karpathy's observations on LLM coding anti-patterns (scope drift, over-abstraction, silent assumptions, unverifiable tasks)
 - Skill index at `skills/index.md`
 
-**Eval suite (303 checks)**
+#### Eval suite (303 checks)
 
 - Pass 1: Schema validity (Ajv strict mode, JSON Schema 2020-12)
 - Pass 2–3: Scenario integrity and cross-scenario structural regression (180 structural checks)
@@ -126,6 +138,6 @@ Ten-phase revision and modernization program delivered per `plans/controlflow-co
 - F7/F8: Complexity tier and reference integrity enforcement
 - Warm cache for fast repeated structural runs
 
-**CI**
+#### CI
 
 - GitHub Actions workflow running the full eval suite on every push and pull request to `master`
