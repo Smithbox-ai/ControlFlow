@@ -71,6 +71,7 @@ const _capablePlanner         = resolveRoleModel('capable-planner', 'MEDIUM');
 const capablePlannerPrimary   = _capablePlanner.primary;        // GPT-5.5 (copilot)
 const capablePlannerFallback0 = _capablePlanner.fallbacks[0];   // Claude Opus 4.7 (copilot)
 const capablePlannerFallback1 = _capablePlanner.fallbacks[1];   // GPT-5.4 mini (copilot)
+const fastReadonlyPrimary = resolveRoleModel(modelRouting.agent_role_index['CodeMapper-subagent'], 'MEDIUM').primary;
 
 let passed = 0;
 let failed = 0;
@@ -815,6 +816,20 @@ check(
 check(
   'Model resolution scenario: ExecutabilityVerifier live_runtime_assertion is false',
   evCase?.reference_expectation?.live_runtime_assertion === false
+);
+
+const codeMapperCase = allCases.find(c => c.case_id === 'fast-readonly-codemapper-sonnet');
+check(
+  'Model resolution scenario: fast-readonly-codemapper-sonnet case exists',
+  codeMapperCase !== undefined
+);
+check(
+  `Model resolution scenario: CodeMapper resolves through fast-readonly to ${fastReadonlyPrimary}`,  // Claude Sonnet 4.6 (copilot)
+  codeMapperCase?.reference_expectation?.resolved_primary_model === fastReadonlyPrimary
+);
+check(
+  'Model resolution scenario: CodeMapper live_runtime_assertion is false',
+  codeMapperCase?.reference_expectation?.live_runtime_assertion === false
 );
 
 const largeHighRiskCase = allCases.find(c => c.case_id === 'capable-reviewer-large-high-risk-override');

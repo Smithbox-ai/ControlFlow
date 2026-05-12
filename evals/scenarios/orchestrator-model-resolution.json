@@ -82,6 +82,20 @@
         }
       },
       {
+        "case_id": "fast-readonly-codemapper-sonnet",
+        "research_agent": "CodeMapper-subagent",
+        "complexity_tier": "MEDIUM",
+        "role": "fast-readonly",
+        "resolution_mode": "inherit_from default",
+        "dispatch_context": "Planner or Orchestrator research delegation to CodeMapper resolves through governance/model-routing.json agent_role_index.CodeMapper-subagent -> roles.fast-readonly and must pass the resolved primary model explicitly to agent/runSubagent.",
+        "reference_expectation": {
+          "resolved_primary_model": "Claude Sonnet 4.6 (copilot)",
+          "resolution_source": "governance/model-routing.json roles.fast-readonly.primary",
+          "agentName_field_used": "agentName",
+          "live_runtime_assertion": false
+        }
+      },
+      {
         "case_id": "executability-verifier-review-readonly-sonnet",
         "executor_agent": "ExecutabilityVerifier-subagent",
         "complexity_tier": "LARGE",
@@ -102,6 +116,6 @@
     "offline_harness_observes_live_runSubagent_model_parameters": false,
     "live_runtime_behavior_out_of_scope": true,
     "behavioral_runtime_assertions_present": false,
-    "reference_cases_documented": 6
+    "reference_cases_documented": 7
   }
 }

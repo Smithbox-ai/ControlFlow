@@ -43,7 +43,7 @@ While internal subagent dispatch resolves models dynamically, top-level user ent
 
 - `Planner` is pinned to `GPT-5.5` so plan quality, decomposition, and risk framing use the strongest available planning model. The planner fallback ordering is governed by `governance/model-routing.json` via `roles.capable-planner` (primary: `GPT-5.5 (copilot)`, fallback 1: `Claude Opus 4.7 (copilot)`, fallback 2: `GPT-5.4 mini (copilot)`). This workflow preserves the scalar `model:` frontmatter in `Planner.agent.md` and does not imply list-valued frontmatter is required.
 - `CodeReviewer`, `PlanAuditor`, and `AssumptionVerifier` rely on premium adversarial reviewers (`Claude Opus 4.7`) for direct invocation and for `LARGE` or high-risk orchestrated dispatch; ordinary `TRIVIAL`, `SMALL`, and `MEDIUM` orchestrated dispatch is tier-aware as described in [Fallback semantics](#fallback-semantics).
-- `ExecutabilityVerifier`, `Orchestrator`, and the implementation agents typically resolve to cheaper defaults (`Claude Sonnet 4.6`, `GPT-5.4`, `GPT-5.4 mini`, `Gemini 3.1 Pro`) to contain premium usage.
+- `CodeMapper` is pinned to `Claude Sonnet 4.6` for capable, cost-effective codebase discovery (1× premium multiplier). `ExecutabilityVerifier`, `Orchestrator`, and the implementation agents typically resolve to contained defaults (`Claude Sonnet 4.6`, `GPT-5.4`, `GPT-5.4 mini`, `Gemini 3.1 Pro`) to balance capability and premium usage.
 
 This yields a pragmatic split:
 

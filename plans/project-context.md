@@ -6,7 +6,7 @@ The following agents are available for Orchestrator phase dispatch. The `executo
 
 | Agent | Role | Primary Use Case | Model Recommendation |
 | --- | --- | --- | --- |
-| CodeMapper-subagent | Read-only discovery | Codebase exploration, file mapping | Fast model (mini) |
+| CodeMapper-subagent | Read-only discovery | Codebase exploration, file mapping | Capable read-only model (Sonnet 4.6) |
 | Researcher-subagent | Research & evidence | Deep investigation, evidence extraction | Fast model (mini) |
 | CoreImplementer-subagent | Backend implementation | Code creation, modification, testing | Capable model (Sonnet) |
 | UIImplementer-subagent | UI implementation | Components, styling, accessibility | Capable model (Sonnet) |

@@ -504,12 +504,12 @@ console.log('\n=== Check #6 — by_tier matrix shape ===');
           SMALL:   { inherit_from: 'default' },
           MEDIUM: {
             primary: 'GPT-4o (copilot)',
-            fallbacks: ['Claude Sonnet 4.5 (copilot)'],
+            fallbacks: ['Claude Sonnet 4.6 (copilot)'],
             cost_tier: 'medium',
             latency_tier: 'medium',
           },
           LARGE: {
-            primary: 'Claude Sonnet 4.5 (copilot)',
+            primary: 'Claude Sonnet 4.6 (copilot)',
             fallbacks: ['GPT-4o (copilot)'],
             cost_tier: 'high',
             latency_tier: 'slow',

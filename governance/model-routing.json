@@ -161,12 +161,12 @@
       }
     },
     "fast-readonly": {
-      "primary": "GPT-5.4 mini (copilot)",
-      "fallbacks": ["GPT-5.4 (copilot)", "Claude Sonnet 4.6 (copilot)"],
-      "cost_tier": "low",
-      "latency_tier": "fast",
+      "primary": "Claude Sonnet 4.6 (copilot)",
+      "fallbacks": ["GPT-5.4 mini (copilot)", "GPT-5.4 (copilot)"],
+      "cost_tier": "medium",
+      "latency_tier": "medium",
       "consumers": ["CodeMapper-subagent.agent.md"],
-      "reasoning_effort_hint": "low",
+      "reasoning_effort_hint": "medium",
       "by_tier": {
         "TRIVIAL": { "inherit_from": "default" },
         "SMALL":   { "inherit_from": "default" },
