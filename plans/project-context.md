@@ -4,16 +4,16 @@
 
 The following agents are available for Orchestrator phase dispatch. The `executor_agent` field in Planner plans must use one of these exact names.
 
-| Agent | Role | Primary Use Case | Model Recommendation |
+| Agent | Role | Primary Use Case | Model Routing Role |
 | --- | --- | --- | --- |
-| CodeMapper-subagent | Read-only discovery | Codebase exploration, file mapping | Capable read-only model (Sonnet 4.6) |
-| Researcher-subagent | Research & evidence | Deep investigation, evidence extraction | Fast model (mini) |
-| CoreImplementer-subagent | Backend implementation | Code creation, modification, testing | Capable model (Sonnet) |
-| UIImplementer-subagent | UI implementation | Components, styling, accessibility | Capable model (Sonnet) |
-| PlatformEngineer-subagent | Infrastructure | CI/CD, containers, deployment | Capable model (Sonnet) |
-| TechnicalWriter-subagent | Documentation | Docs, diagrams, walkthroughs | Capable model (Sonnet) |
-| BrowserTester-subagent | E2E testing | Browser tests, accessibility audits | Capable model (Sonnet) |
-| CodeReviewer-subagent | Post-impl verification | Code review, quality gates | Capable-reviewer (tier-aware: Sonnet for TRIVIAL/SMALL/MEDIUM, Opus/GPT-5.5 for LARGE) |
+| CodeMapper-subagent | Read-only discovery | Codebase exploration, file mapping | `fast-readonly` |
+| Researcher-subagent | Research & evidence | Deep investigation, evidence extraction | `research-capable` |
+| CoreImplementer-subagent | Backend implementation | Code creation, modification, testing | `capable-implementer` |
+| UIImplementer-subagent | UI implementation | Components, styling, accessibility | `ui-implementer` |
+| PlatformEngineer-subagent | Infrastructure | CI/CD, containers, deployment | `capable-implementer` |
+| TechnicalWriter-subagent | Documentation | Docs, diagrams, walkthroughs | `documentation` |
+| BrowserTester-subagent | E2E testing | Browser tests, accessibility audits | `browser-testing` |
+| CodeReviewer-subagent | Post-impl verification | Code review, quality gates | `capable-reviewer` |
 
 **Note:** Optional Final Review Gate (Completion Gate sub-step) — activated for LARGE tier (auto) or on user request; dispatches CodeReviewer with review_scope=final; policy flag: governance/runtime-policy.json#final_review_gate
 
@@ -21,11 +21,11 @@ The following agents are available for Orchestrator phase dispatch. The `executo
 
 The following agents are dispatched by Orchestrator specifically during the PLAN_REVIEW lifecycle or pre-flight phase, and perform read-only auditing.
 
-| Agent | Role | Primary Use Case | Model Recommendation |
+| Agent | Role | Primary Use Case | Model Routing Role |
 | --- | --- | --- | --- |
-| PlanAuditor-subagent | Pre-impl plan audit | Architecture, security, risk review | Capable-reviewer (tier-aware: Sonnet for TRIVIAL/SMALL/MEDIUM, Opus/GPT-5.5 for LARGE) |
-| AssumptionVerifier-subagent | Mirage detection | Assumption verification, hallucination hunting | Capable-reviewer (tier-aware: Sonnet for TRIVIAL/SMALL/MEDIUM, Opus/GPT-5.5 for LARGE) |
-| ExecutabilityVerifier-subagent | Executability verification | Cold-start plan simulation | Read-only capable model (Sonnet) |
+| PlanAuditor-subagent | Pre-impl plan audit | Architecture, security, risk review | `capable-reviewer` |
+| AssumptionVerifier-subagent | Mirage detection | Assumption verification, hallucination hunting | `capable-reviewer` |
+| ExecutabilityVerifier-subagent | Executability verification | Cold-start plan simulation | `review-readonly` |
 
 *Note: `PlanAuditor-subagent`, `AssumptionVerifier-subagent`, and `ExecutabilityVerifier-subagent` are strictly review-only agents. They are dispatched by Orchestrator during the PLAN_REVIEW lifecycle and must NOT appear as `executor_agent` values in Planner plan phases. The `executor_agent` enum in `schemas/planner.plan.schema.json` enforces this exclusion.*
 

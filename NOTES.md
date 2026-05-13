@@ -2,6 +2,6 @@
 
 Repo-persistent active-objective state only. See `docs/agent-engineering/MEMORY-ARCHITECTURE.md` for the three-layer memory model; task-episodic history lives under `plans/artifacts/<task-slug>/`.
 
-- Active objective: Claude Code plugin implementation complete; awaiting user review.
+- Active objective: model-routing mismatch root-cause fix complete; awaiting user review of completion summary.
 - Blockers: none.
-- Pending: user review of final summary and any follow-up Claude CLI validation when available.
+- Pending: user review before any commit or merge action.

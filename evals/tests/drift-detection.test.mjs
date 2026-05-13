@@ -20,6 +20,7 @@ import addFormats from 'ajv-formats';
 import {
   MODEL_ROLE_CHECK_ENABLED,
   validateModelRole,
+  validateFrontmatterModelDefaults,
   validateAgentRoleIndex,
   parseRosterFromProjectContext,
   compareRosterEnum,
@@ -32,6 +33,7 @@ import {
   parseYamlConsumers,
   hasSharedAnchorMapFlag,
   validateByTierShape,
+  validatePayloadModelDescriptionSemantics,
   validateReviewScopeFinalCoupling,
   validateOrchestratorCompactionInvariant,
   validateOrchestratorMemoryPromotionOrder,
@@ -121,6 +123,45 @@ const _testRoutingJson = {
     'Test D: body-only model_role (no frontmatter key) → validation fails',
     result.ok === false && result.errors.length > 0,
     `ok=${result.ok}, errors=${JSON.stringify(result.errors)}`
+  );
+}
+
+// Negative/positive coverage for direct-invocation frontmatter defaults.
+// Frontmatter `model:` must match the role top-level primary, but must not be
+// forced to match tier-specific by_tier overrides used for internal dispatch.
+{
+  const routingJson = {
+    roles: {
+      'capable-implementer': {
+        primary: 'Claude Sonnet 4.6 (copilot)',
+        by_tier: {
+          TRIVIAL: { primary: 'GPT-5.4 mini (copilot)' },
+          LARGE: { primary: 'GPT-5.5 (copilot)' },
+        },
+      },
+    },
+  };
+
+  const mismatch = validateFrontmatterModelDefaults(
+    'CoreImplementer-subagent.agent.md',
+    '---\nmodel: GPT-5.5 (copilot)\nmodel_role: capable-implementer\n---\n## Prompt\n',
+    routingJson
+  );
+  check(
+    'Test E: frontmatter model differing from role default primary -> validation fails',
+    mismatch.ok === false && mismatch.errors.some(e => e.includes('top-level primary')),
+    `ok=${mismatch.ok}, errors=${JSON.stringify(mismatch.errors)}`
+  );
+
+  const tierOverrideAllowed = validateFrontmatterModelDefaults(
+    'CoreImplementer-subagent.agent.md',
+    '---\nmodel: Claude Sonnet 4.6 (copilot)\nmodel_role: capable-implementer\n---\n## Prompt\n',
+    routingJson
+  );
+  check(
+    'Test F: frontmatter model matches role default primary despite by_tier overrides -> validation passes',
+    tierOverrideAllowed.ok === true,
+    `ok=${tierOverrideAllowed.ok}, errors=${JSON.stringify(tierOverrideAllowed.errors)}`
   );
 }
 
@@ -522,6 +563,57 @@ console.log('\n=== Check #6 — by_tier matrix shape ===');
     'positive: well-formed role with all 4 tiers (mixed inherit/override) → ok=true',
     pos.ok === true && pos.errors.length === 0,
     `ok=${pos.ok}, errors=${JSON.stringify(pos.errors)}`
+  );
+}
+
+// ──────────────────────────────────────────────
+// Check #6b — payload model description semantics
+// ──────────────────────────────────────────────
+console.log('\n=== Check #6b — payload model description semantics ===');
+{
+  const validDescription = 'Payload-level model field carrying the governance-resolved model for delegation contract, validation, and audit context. Runtime enforcement is the outer tool-call model parameter passed to agent/runSubagent; this payload field does not by itself override frontmatter or select the runtime model.';
+  const validSchema = {
+    properties: {
+      agents: {
+        properties: {
+          Planner: {
+            required: ['task_description', 'model'],
+            properties: {
+              model: {
+                type: 'string',
+                description: validDescription,
+              },
+            },
+          },
+        },
+      },
+    },
+  };
+
+  const positive = validatePayloadModelDescriptionSemantics(validSchema);
+  check(
+    'positive: payload model description names payload-level context, outer tool-call model, and non-override semantics',
+    positive.ok === true,
+    `ok=${positive.ok}, errors=${JSON.stringify(positive.errors)}`
+  );
+
+  const conflatedSchema = JSON.parse(JSON.stringify(validSchema));
+  conflatedSchema.properties.agents.properties.Planner.properties.model.description =
+    "Runtime-resolved model string from governance/model-routing.json. Orchestrator sets this when dispatching to override the agent's literal frontmatter model.";
+  const conflated = validatePayloadModelDescriptionSemantics(conflatedSchema);
+  check(
+    'negative: payload model description that implies nested field overrides frontmatter -> drift detected',
+    conflated.ok === false && conflated.errors.some(e => e.includes('does not by itself override frontmatter')),
+    `ok=${conflated.ok}, errors=${JSON.stringify(conflated.errors)}`
+  );
+
+  const missingRequiredSchema = JSON.parse(JSON.stringify(validSchema));
+  missingRequiredSchema.properties.agents.properties.Planner.required = ['task_description'];
+  const missingRequired = validatePayloadModelDescriptionSemantics(missingRequiredSchema);
+  check(
+    'negative: payload object omitting required model field -> drift detected',
+    missingRequired.ok === false && missingRequired.errors.some(e => e.includes('required')),
+    `ok=${missingRequired.ok}, errors=${JSON.stringify(missingRequired.errors)}`
   );
 }
 

@@ -166,13 +166,13 @@ Before every `agent/runSubagent` call, regardless of dispatch context, apply thi
 4. Pass the resolved `primary` model string as the `model` parameter to `agent/runSubagent`. Never omit `model`.
 5. For initial planning dispatches before any plan `complexity_tier` exists, use the target role's top-level `primary` model. For replan/planning dispatches after a plan exists, use the active plan's `complexity_tier`. Never omit `model` because tier context is missing.
 
-This rule covers all dispatch paths without exception: Plan Review Gate reviewers (PlanAuditor, AssumptionVerifier, ExecutabilityVerifier), phase CodeReviewer dispatch, final CodeReviewer dispatch, needs_replan Planner dispatch, and Implementation Loop executor dispatch.
+This rule covers all dispatch paths without exception: Plan Review Gate reviewers (PlanAuditor, AssumptionVerifier, ExecutabilityVerifier), phase CodeReviewer dispatch, final CodeReviewer dispatch, failure-classification retry dispatch, needs_replan Planner dispatch, and Implementation Loop executor dispatch.
 
 ### Dispatch Tool-Call Contract (Required Fields)
 
 Every `agent/runSubagent` call must include these outer tool-call fields:
 - **`agentName`** — the verified target-agent field (string). Placing the agent name only inside prompt prose or a delegation payload is non-compliant.
-- **`model`** — the resolved primary model string from the Universal Model Resolution Rule. Never omit.
+- **`model`** — the resolved primary model string from the Universal Model Resolution Rule, passed as the outer `model` field at the tool-call boundary. Never omit. A payload-level `model` inside the prompt/delegation payload remains useful for schema validation and audit context, but it does not by itself select the runtime model and is not a substitute for this outer field.
 - **Prompt/context payload** — scope, deliverables, and relevant context references.
 
 #### Capable-Reviewer Model Routing

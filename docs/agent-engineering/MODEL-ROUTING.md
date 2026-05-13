@@ -1,7 +1,7 @@
 # Model Routing
 
 **Status:** Phase 4 spike (single-agent rollout)
-**File:** `governance/model-routing.json`
+**File:** `governance/model-routing.json` is the canonical source of truth for internal model selection.
 **trace_id:** 7d3f5a2e-1b4c-4e9f-9a8b-2c5d8e1f3a7b
 
 ## Purpose
@@ -25,7 +25,7 @@ Decouple agent definitions from hard-pinned model strings. Today every `*.agent.
 The 10 roles are:
 
 | Role | Consumers |
-|---|---|
+| --- | --- |
 | `orchestration-capable` | Orchestrator |
 | `capable-planner` | Planner |
 | `capable-implementer` | CoreImplementer, PlatformEngineer |
@@ -72,7 +72,11 @@ When Orchestrator or Planner dispatch a subagent via `agent/runSubagent`, they a
 1. They load `governance/model-routing.json`.
 2. They look up the target agent in `agent_role_index`.
 3. They apply the `by_tier` complexity rule to determine the required model string.
-4. They pass the resolved `primary` explicitly as the `model` parameter to `agent/runSubagent`, and MUST supply the verified target-agent field `agentName` at the tool-call boundary, overriding the agent's frontmatter at call time.
+4. They pass the resolved `primary` explicitly as the outer `model` parameter to `agent/runSubagent`, and MUST supply the verified target-agent field `agentName` at the outer tool-call boundary, overriding the agent's frontmatter at call time.
+
+### Delegation Payload Contract
+
+The schema definition in `schemas/orchestrator.delegation-protocol.schema.json` requires a nested payload-level `model` field in all delegation objects. These payload-level fields carry resolved model context for validation, audit, and prompt-visible traceability, but they do not by themselves enforce the runtime model override. The outer `model` parameter on the tool call is the strict enforcement point.
 
 While global VS Code Copilot execution (e.g., triggering an agent directly from chat) still relies on the frontmatter fallback, all internal orchestrated pipeline dispatches strictly enforce the logical routing graph dynamically. It is important to note that offline evals do not prove live `runSubagent` execution; we distinguish structural tests and tool/API-shape evidence from real live subagent dispatch (as proven by the existing model override spike).
 
@@ -114,17 +118,19 @@ fallback chain at every complexity tier.
 The prompt-driven runtime resolution module (Orchestrator/Planner dynamic lookup) is complete.
 
 Remaining prerequisites for Stage D (auto-tuning observability):
+
 - (a) accumulate ≥50 task telemetry entries via the NDJSON sink at `plans/artifacts/observability/`
 - (b) expand `governance/model-routing.json` schema with `inherit_from` targets beyond `"default"` (e.g., other roles or tier mixes)
 
 ### Stage C Cross-references
+
 - Phase 1 spike artifact: `plans/artifacts/model-routing-stage-c/phase-1-spike-result.md`
 - Validation helper: `evals/drift-checks.mjs` → `validateByTierShape`
 
 ## Cost/latency tier meanings
 
 | Tier | `cost_tier` | `latency_tier` |
-|---|---|---|
+| --- | --- | --- |
 | `low` | Inexpensive per-call; suitable for high-volume read-only or smoke tasks. | Sub-second to a few seconds typical first-token. |
 | `medium` | Mid-range per-call; default for implementer and review-readonly work. | A few seconds typical first-token. |
 | `high` | Expensive per-call; reserve for planning, deep review, or research. | `slow` — multi-second first-token; long completions expected. |

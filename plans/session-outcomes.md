@@ -12,6 +12,38 @@ Archive old entries when the log exceeds 50 entries (see `plans/templates/sessio
 
 ## Entry
 
+**Plan ID:** `model-routing-mismatch-root-cause-fix-plan-iter5`  
+**Date:** `2026-05-12`  
+**Complexity Tier:** `LARGE`  
+**Total Phases:** `4 / 4`  
+
+### Review Pipeline
+
+| Agent | Result | Notes |
+| --- | --- | --- |
+| AssumptionVerifier-subagent | COMPLETE | One Research Gate / LARGE pre-research concern proceeded by explicit user-approved override; no implementation blocker remained |
+| PlanAuditor-subagent | APPROVED | Iteration 5 plan proceeded after the Research Gate equivalence decision |
+| ExecutabilityVerifier-subagent | PASS | Full validation phase completed with canonical offline suite evidence |
+| CodeReviewer-subagent | APPROVED | All phase reviews and final gate approved; validated blocking issues: 0 at completion |
+
+**Total review iterations:** `5` / `5`  
+**Convergence:** `Converged with explicit user-approved Research Gate override`  
+
+### Outcome
+
+**Status:** `SUCCESS`  
+**CodeReviewer false positive rate:** `0 / 2` (`0%`)  
+
+### Lessons Learned
+
+1. Internal model routing depends on the outer `agent/runSubagent` `model` field; nested payload `model` fields are contract and audit context only.
+2. Direct-invocation frontmatter defaults should match the role top-level `primary`, while `by_tier` overrides remain internal-dispatch behavior.
+3. Tutorial examples need exact current governance values when they illustrate a real role, otherwise stale examples can recreate model-routing ambiguity.
+
+---
+
+## Entry
+
 **Plan ID:** `controlflow-claude-code-plugin-plan`  
 **Date:** `2026-05-11`  
 **Complexity Tier:** `LARGE`  

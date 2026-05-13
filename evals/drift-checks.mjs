@@ -27,6 +27,16 @@ const CF_SCENARIOS_DIR = join(__cfDir, 'scenarios');
 // Enabled after Phase 2 spike confirmed VS Code tolerates model_role: frontmatter.
 export const MODEL_ROLE_CHECK_ENABLED = true;
 
+function extractFrontmatterScope(agentContent) {
+  const fmMatch = agentContent.match(/^---\r?\n([\s\S]*?)\r?\n---\s*$/m);
+  return fmMatch ? fmMatch[1] : '';
+}
+
+function parseFrontmatterScalar(scope, key) {
+  const match = scope.match(new RegExp(`^${key}:\\s*(.+?)\\s*$`, 'm'));
+  return match ? match[1].trim() : null;
+}
+
 /**
  * Validate that an agent's frontmatter declares a valid model_role.
  * Scoped to the first YAML frontmatter block (delimited by `---`) only;
@@ -39,20 +49,104 @@ export function validateModelRole(agentFrontmatter, routingJson) {
   const errors = [];
   // Extract the first frontmatter block: must start with `---` on the first
   // non-empty line and end at the next `---` line. If no block, treat as missing.
-  const fmMatch = agentFrontmatter.match(/^---\r?\n([\s\S]*?)\r?\n---\s*$/m);
-  const scope = fmMatch ? fmMatch[1] : '';
-  const m = scope.match(/^model_role:\s*(\S+)\s*$/m);
-  if (!m) {
+  const scope = extractFrontmatterScope(agentFrontmatter);
+  const role = parseFrontmatterScalar(scope, 'model_role');
+  if (!role) {
     errors.push('model_role key missing from frontmatter');
     return { ok: false, errors };
   }
-  const role = m[1];
   const validRoles = Object.keys(routingJson.roles || {});
   if (!validRoles.includes(role)) {
     errors.push(`model_role value "${role}" is not a key in governance/model-routing.json roles (valid: ${validRoles.join(', ')})`);
     return { ok: false, errors };
   }
   return { ok: true, errors };
+}
+
+/**
+ * Validate direct-invocation frontmatter defaults against governance role primary.
+ * This intentionally does not compare against tier-specific by_tier overrides;
+ * those are used only when internal dispatch passes the outer tool-call model.
+ * @param {string} agentFileName - Agent filename for diagnostics.
+ * @param {string} agentFrontmatter - Full agent file content.
+ * @param {object} routingJson - Parsed governance/model-routing.json.
+ * @returns {{ ok: boolean, errors: string[] }}
+ */
+export function validateFrontmatterModelDefaults(agentFileName, agentFrontmatter, routingJson) {
+  const errors = [];
+  const scope = extractFrontmatterScope(agentFrontmatter);
+  const model = parseFrontmatterScalar(scope, 'model');
+  const role = parseFrontmatterScalar(scope, 'model_role');
+
+  if (!model) {
+    errors.push(`${agentFileName}: model key missing from frontmatter`);
+  }
+  if (!role) {
+    errors.push(`${agentFileName}: model_role key missing from frontmatter`);
+    return { ok: false, errors };
+  }
+
+  const roleConfig = routingJson?.roles?.[role];
+  if (!roleConfig) {
+    const validRoles = Object.keys(routingJson?.roles || {});
+    errors.push(`${agentFileName}: model_role value "${role}" is not a key in governance/model-routing.json roles (valid: ${validRoles.join(', ')})`);
+    return { ok: false, errors };
+  }
+
+  const defaultPrimary = roleConfig.primary;
+  if (typeof defaultPrimary !== 'string' || defaultPrimary.length === 0) {
+    errors.push(`${agentFileName}: role "${role}" is missing a top-level primary model`);
+  } else if (model && model !== defaultPrimary) {
+    errors.push(`${agentFileName}: frontmatter model "${model}" must match role "${role}" top-level primary "${defaultPrimary}" for direct invocation fallback; tier-specific by_tier overrides are only for internal dispatch`);
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+
+/**
+ * Validate payload-level model description semantics in the Orchestrator
+ * delegation protocol schema.
+ * @param {object} delegationProtocolSchema - Parsed orchestrator delegation schema.
+ * @returns {{ ok: boolean, errors: string[] }}
+ */
+export function validatePayloadModelDescriptionSemantics(delegationProtocolSchema) {
+  const errors = [];
+  const agentSchemas = delegationProtocolSchema?.properties?.agents?.properties;
+  if (!agentSchemas || typeof agentSchemas !== 'object' || Array.isArray(agentSchemas)) {
+    return { ok: false, errors: ['orchestrator delegation schema missing properties.agents.properties object'] };
+  }
+
+  for (const [agentName, agentSchema] of Object.entries(agentSchemas)) {
+    const required = agentSchema?.required;
+    const modelSchema = agentSchema?.properties?.model;
+    if (!Array.isArray(required) || !required.includes('model')) {
+      errors.push(`${agentName}: payload-level model must remain required`);
+    }
+    if (!modelSchema || typeof modelSchema !== 'object') {
+      errors.push(`${agentName}: payload-level model property missing`);
+      continue;
+    }
+
+    const description = String(modelSchema.description || '');
+    const lower = description.toLowerCase();
+    if (!lower.includes('payload-level')) {
+      errors.push(`${agentName}: payload model description must include "payload-level"`);
+    }
+    if (!lower.includes('delegation contract') || !lower.includes('audit context')) {
+      errors.push(`${agentName}: payload model description must frame the field as delegation contract and audit context`);
+    }
+    if (!lower.includes('outer tool-call model')) {
+      errors.push(`${agentName}: payload model description must name the outer tool-call model as the runtime enforcement boundary`);
+    }
+    if (!lower.includes('does not by itself override frontmatter')) {
+      errors.push(`${agentName}: payload model description must state it does not by itself override frontmatter`);
+    }
+    if (/sets this when dispatching to override/i.test(description)) {
+      errors.push(`${agentName}: payload model description still implies Orchestrator overrides frontmatter through the nested payload field`);
+    }
+  }
+
+  return { ok: errors.length === 0, errors };
 }
 
 function consumerToAgentStem(consumer) {

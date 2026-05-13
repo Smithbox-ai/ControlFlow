@@ -31,6 +31,13 @@ function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function extractBetween(text, startMarker, endMarker) {
+  const startIndex = text.indexOf(startMarker);
+  if (startIndex === -1) return '';
+  const endIndex = text.indexOf(endMarker, startIndex + startMarker.length);
+  return endIndex === -1 ? text.slice(startIndex) : text.slice(startIndex, endIndex);
+}
+
 /**
  * Resolve the effective { primary, fallbacks } for a role+tier.
  * Handles inherit_from: "default" by falling back to the role's top-level values.
@@ -66,12 +73,17 @@ const _capableReviewerLarge    = resolveRoleModel('capable-reviewer', 'LARGE');
 const capableReviewerLargePrimary  = _capableReviewerLarge.primary;       // e.g. Claude Opus 4.7 (copilot)
 const capableReviewerLargeFallback0 = _capableReviewerLarge.fallbacks[0]; // e.g. GPT-5.5 (copilot)
 
+const capableImplementerTrivialPrimary = resolveRoleModel('capable-implementer', 'TRIVIAL').primary;
+const capableImplementerLargePrimary = resolveRoleModel('capable-implementer', 'LARGE').primary;
+const documentationTrivialPrimary = resolveRoleModel('documentation', 'TRIVIAL').primary;
+
 // Pre-resolved planner role values (derived from governance/model-routing.json)
 const _capablePlanner         = resolveRoleModel('capable-planner', 'MEDIUM');
 const capablePlannerPrimary   = _capablePlanner.primary;        // GPT-5.5 (copilot)
 const capablePlannerFallback0 = _capablePlanner.fallbacks[0];   // Claude Opus 4.7 (copilot)
 const capablePlannerFallback1 = _capablePlanner.fallbacks[1];   // GPT-5.4 mini (copilot)
 const fastReadonlyPrimary = resolveRoleModel(modelRouting.agent_role_index['CodeMapper-subagent'], 'MEDIUM').primary;
+const researchCapableLargePrimary = resolveRoleModel(modelRouting.agent_role_index['Researcher-subagent'], 'LARGE').primary;
 
 let passed = 0;
 let failed = 0;
@@ -87,6 +99,25 @@ function check(label, ok) {
 }
 
 const orch = readFileSync(join(ROOT, 'Orchestrator.agent.md'), 'utf8');
+const planner = readFileSync(join(ROOT, 'Planner.agent.md'), 'utf8');
+const delegationProtocolSchema = JSON.parse(
+  readFileSync(join(ROOT, 'schemas', 'orchestrator.delegation-protocol.schema.json'), 'utf8')
+);
+const orchestratorDispatchContract = extractBetween(
+  orch,
+  '### Dispatch Tool-Call Contract (Required Fields)',
+  '#### Capable-Reviewer Model Routing'
+);
+const universalModelResolutionRule = extractBetween(
+  orch,
+  '### Universal Model Resolution Rule',
+  '### Initial Planner Dispatch Gate'
+);
+const plannerResearchDispatchRule = extractBetween(
+  planner,
+  '6. Research (delegate CodeMapper-subagent/Researcher-subagent when scope is large).',
+  '7. Design'
+);
 
 // ──────────────────────────────────────────────
 // PLAN_REVIEW gate invariants
@@ -611,6 +642,86 @@ check(
 );
 
 // ──────────────────────────────────────────────
+// Outer dispatch contract: agentName/model fields and payload separation
+// ──────────────────────────────────────────────
+console.log('\n=== Orchestrator — Outer Dispatch Contract ===');
+
+check(
+  'Dispatch contract: required fields are scoped to the outer agent/runSubagent tool-call envelope',
+  /Every `agent\/runSubagent` call must include these outer tool-call fields/i.test(orchestratorDispatchContract) &&
+  /\*\*`agentName`\*\*/.test(orchestratorDispatchContract) &&
+  /\*\*`model`\*\*/.test(orchestratorDispatchContract)
+);
+
+check(
+  'Dispatch contract: outer model is separated from payload-level model and payload model cannot substitute for runtime enforcement',
+  /outer (?:tool-call )?`model`|outer `model`/i.test(orchestratorDispatchContract) &&
+  /payload-level `model`|nested payload-level `model`/i.test(orchestratorDispatchContract) &&
+  /does not by itself select|not a substitute|cannot substitute|does not enforce/i.test(orchestratorDispatchContract)
+);
+
+check(
+  'Dispatch coverage: Universal Model Resolution Rule covers PLAN_REVIEW reviewer dispatches',
+  /Plan Review Gate reviewers[\s\S]{0,160}PlanAuditor[\s\S]{0,160}AssumptionVerifier[\s\S]{0,160}ExecutabilityVerifier/i.test(universalModelResolutionRule)
+);
+
+check(
+  'Dispatch coverage: Universal Model Resolution Rule covers implementation executor dispatch',
+  /Implementation Loop executor dispatch/i.test(universalModelResolutionRule)
+);
+
+check(
+  'Dispatch coverage: Universal Model Resolution Rule covers phase CodeReviewer dispatch',
+  /phase CodeReviewer dispatch/i.test(universalModelResolutionRule)
+);
+
+check(
+  'Dispatch coverage: Universal Model Resolution Rule covers final CodeReviewer dispatch',
+  /final CodeReviewer dispatch/i.test(universalModelResolutionRule)
+);
+
+check(
+  'Dispatch coverage: Universal Model Resolution Rule covers retry dispatch',
+  /retry dispatch/i.test(universalModelResolutionRule)
+);
+
+check(
+  'Dispatch coverage: Universal Model Resolution Rule covers needs_replan Planner dispatch',
+  /needs_replan Planner dispatch/i.test(universalModelResolutionRule)
+);
+
+check(
+  'Payload schema review: delegated payload model fields remain payload-level contract fields, not outer-dispatch evidence',
+  delegationProtocolSchema.properties?.agents?.properties?.['Planner']?.required?.includes('model') === true &&
+  delegationProtocolSchema.properties?.agents?.properties?.['CodeMapper-subagent']?.required?.includes('model') === true &&
+  !/Every `agent\/runSubagent` call must include these outer tool-call fields/i.test(JSON.stringify(delegationProtocolSchema))
+);
+
+// ──────────────────────────────────────────────
+// Planner research dispatch contract
+// ──────────────────────────────────────────────
+console.log('\n=== Planner — Research Dispatch Contract ===');
+
+check(
+  'Planner research dispatch: CodeMapper and Researcher are the scoped research delegates',
+  /CodeMapper-subagent/i.test(plannerResearchDispatchRule) && /Researcher-subagent/i.test(plannerResearchDispatchRule)
+);
+
+check(
+  'Planner research dispatch: requires outer agentName for every CodeMapper/Researcher agent/runSubagent call',
+  /outer `agentName`|`agentName`.*outer/i.test(plannerResearchDispatchRule) &&
+  /agent\/runSubagent/i.test(plannerResearchDispatchRule)
+);
+
+check(
+  'Planner research dispatch: requires outer model from governance and does not treat payload-level model as the runtime selector',
+  /outer (?:tool-call )?`model`|outer `model`/i.test(plannerResearchDispatchRule) &&
+  /governance\/model-routing\.json/i.test(plannerResearchDispatchRule) &&
+  /payload-level `model`|nested payload-level `model`/i.test(plannerResearchDispatchRule) &&
+  /does not by itself select|not a substitute|cannot substitute|does not enforce/i.test(plannerResearchDispatchRule)
+);
+
+// ──────────────────────────────────────────────
 // Initial Planner Dispatch Gate
 // ──────────────────────────────────────────────
 console.log('\n=== Orchestrator — Initial Planner Dispatch Gate ===');
@@ -679,43 +790,42 @@ check(
 //
 // The following checks enforce that Orchestrator uses the verified `agentName` field
 // for review dispatches and applies correct capable-reviewer model routing.
-// These checks are intentionally RED until Phase 2 is implemented.
 // ══════════════════════════════════════════════
-console.log('\n=== Orchestrator — Dispatch API Shape (Phase 1 RED checks) ===');
+console.log('\n=== Orchestrator — Dispatch API Shape (Phase 1) ===');
 
 check(
-  // RED until Phase 2: Orchestrator must name agentName as the tool-call field
+  // Orchestrator must name agentName as the tool-call field.
   // Evidence: agentName verified from extensionHostWorkerMain.js RunSubagentTool.getToolData()
-  'Dispatch contract: Orchestrator documents agentName as the agent/runSubagent target-agent field [RED — Phase 2 required]',
+  'Dispatch contract: Orchestrator documents agentName as the agent/runSubagent target-agent field',
   /agentName/i.test(orch)
 );
 
 check(
-  // RED until Phase 2: agentName must not appear only in prose — it must be in the dispatch contract
-  'Dispatch contract: agentName field referenced in the Universal Model Resolution Rule or dispatch contract section [RED — Phase 2 required]',
+  // agentName must not appear only in prose: it must be in the dispatch contract.
+  'Dispatch contract: agentName field referenced in the Universal Model Resolution Rule or dispatch contract section',
   /Universal Model Resolution Rule[\s\S]{0,1200}agentName|agentName[\s\S]{0,400}Universal Model Resolution Rule|dispatch.*tool.call.*contract[\s\S]{0,400}agentName|agentName[\s\S]{0,400}dispatch.*tool.call.*contract/i.test(orch)
 );
 
 check(
-  // RED until Phase 2: capable-reviewer primary dispatch must be derived from
+  // capable-reviewer primary dispatch must be derived from
   // governance/model-routing.json by effective review tier, not hardcoded by model name.
-  'Review dispatch: capable-reviewer primary resolves from governance/model-routing.json by effective review tier [RED — Phase 2 required]',
+  'Review dispatch: capable-reviewer primary resolves from governance/model-routing.json by effective review tier',
   /capable.reviewer[\s\S]{0,500}Effective review tier[\s\S]{0,500}Primary dispatch[\s\S]{0,500}governance\/model-routing\.json|Primary dispatch[\s\S]{0,500}roles\.capable-reviewer\.by_tier\[<effective_review_tier>\]/i.test(orch)
 );
 
 check(
-  // RED until Phase 2: first model_unavailable retry for capable-reviewer must use the configured
+  // first model_unavailable retry for capable-reviewer must use the configured
   // fallbacks list from governance/model-routing.json for the effective tier in order.
   // Derived from governance/model-routing.json roles.capable-reviewer.by_tier[effective_tier].fallbacks
-  'Review dispatch: model_unavailable retry for capable-reviewer uses configured fallbacks from governance/model-routing.json by effective tier in order [RED — Phase 2 required]',
+  'Review dispatch: model_unavailable retry for capable-reviewer uses configured fallbacks from governance/model-routing.json by effective tier in order',
   /capable.reviewer[\s\S]{0,500}model_unavailable[\s\S]{0,400}configured.*fallbacks|model_unavailable[\s\S]{0,400}configured.*fallbacks.*list[\s\S]{0,200}effective.tier|fallbacks.*list[\s\S]{0,200}effective.tier[\s\S]{0,200}order/i.test(orch)
 );
 
 check(
-  // RED until Phase 2: Orchestrator must not silently substitute any unconfigured model for
+  // Orchestrator must not silently substitute any unconfigured model for
   // capable-reviewer dispatches (e.g., its own frontmatter model), and must escalate to
   // WAITING_APPROVAL when all configured models for the effective tier are exhausted.
-  'Review dispatch: Orchestrator must not use unconfigured models as silent fallback for capable-reviewer; escalate to WAITING_APPROVAL when all configured models exhausted [RED — Phase 2 required]',
+  'Review dispatch: Orchestrator must not use unconfigured models as silent fallback for capable-reviewer; escalate to WAITING_APPROVAL when all configured models exhausted',
   /Do not silently substitute.*Orchestrator frontmatter model.*unconfigured model|unconfigured model.*permitted.*substitutes|escalate.*WAITING_APPROVAL.*all.*configured.*models.*unavailable|all.*configured.*models.*unavailable.*escalate.*WAITING_APPROVAL/i.test(orch)
 );
 
@@ -762,6 +872,33 @@ check(
 check(
   'Model resolution scenario: verified target-agent field is documented as agentName in scenario metadata',
   modelResScenario.input?.verified_target_agent_field === 'agentName'
+);
+
+const dispatchContract = modelResScenario.input?.dispatch_contract ?? {};
+check(
+  'Model resolution scenario: metadata separates outer agentName, outer model, and payload model fields',
+  dispatchContract.outer_agentName_field === 'agentName' &&
+  dispatchContract.outer_model_field === 'model' &&
+  dispatchContract.payload_model_field === 'model' &&
+  dispatchContract.payload_model_is_runtime_enforcement_boundary === false
+);
+
+check(
+  'Model resolution scenario: direct frontmatter model remains the fallback for direct invocation only',
+  dispatchContract.frontmatter_model_direct_invocation_fallback === true &&
+  /direct invocation/i.test(dispatchContract.frontmatter_scope ?? '')
+);
+
+const casesMissingOuterPayloadFields = allCases.filter(c => {
+  const expectation = c.reference_expectation ?? {};
+  return expectation.outer_agentName_field !== 'agentName' ||
+    expectation.outer_model_field !== 'model' ||
+    expectation.payload_model_field !== 'model' ||
+    expectation.payload_model_is_runtime_enforcement_boundary !== false;
+});
+check(
+  'Model resolution scenario: every reference case records outer and payload model fields separately',
+  casesMissingOuterPayloadFields.length === 0
 );
 
 const reviewPrimaryCase = allCases.find(c => c.case_id === 'capable-reviewer-primary-dispatch');
@@ -830,6 +967,63 @@ check(
 check(
   'Model resolution scenario: CodeMapper live_runtime_assertion is false',
   codeMapperCase?.reference_expectation?.live_runtime_assertion === false
+);
+
+const researcherCase = allCases.find(c => c.case_id === 'researcher-research-capable-large-override');
+check(
+  'Model resolution scenario: researcher-research-capable-large-override case exists',
+  researcherCase !== undefined
+);
+check(
+  `Model resolution scenario: Researcher LARGE dispatch resolves through research-capable to ${researchCapableLargePrimary}`,
+  researcherCase?.reference_expectation?.resolved_primary_model === researchCapableLargePrimary
+);
+check(
+  'Model resolution scenario: Researcher dispatch is reference-only and would mismatch direct frontmatter if outer model is omitted',
+  researcherCase?.reference_expectation?.live_runtime_assertion === false &&
+  researcherCase?.reference_expectation?.mismatch_if_outer_model_omitted === true
+);
+
+const capableImplementerTrivialCase = allCases.find(c => c.case_id === 'capable-implementer-trivial-override');
+check(
+  'Model resolution scenario: capable-implementer-trivial-override case exists',
+  capableImplementerTrivialCase !== undefined
+);
+check(
+  `Model resolution scenario: capable-implementer TRIVIAL resolves to ${capableImplementerTrivialPrimary}`,
+  capableImplementerTrivialCase?.reference_expectation?.resolved_primary_model === capableImplementerTrivialPrimary
+);
+check(
+  'Model resolution scenario: capable-implementer TRIVIAL records mismatch risk when outer model is omitted',
+  capableImplementerTrivialCase?.reference_expectation?.mismatch_if_outer_model_omitted === true
+);
+
+const capableImplementerLargeCase = allCases.find(c => c.case_id === 'capable-implementer-large-override');
+check(
+  'Model resolution scenario: capable-implementer-large-override case exists',
+  capableImplementerLargeCase !== undefined
+);
+check(
+  `Model resolution scenario: capable-implementer LARGE resolves to ${capableImplementerLargePrimary}`,
+  capableImplementerLargeCase?.reference_expectation?.resolved_primary_model === capableImplementerLargePrimary
+);
+check(
+  'Model resolution scenario: capable-implementer LARGE records mismatch risk when outer model is omitted',
+  capableImplementerLargeCase?.reference_expectation?.mismatch_if_outer_model_omitted === true
+);
+
+const documentationTrivialCase = allCases.find(c => c.case_id === 'documentation-trivial-override');
+check(
+  'Model resolution scenario: documentation-trivial-override case exists',
+  documentationTrivialCase !== undefined
+);
+check(
+  `Model resolution scenario: documentation TRIVIAL resolves to ${documentationTrivialPrimary}`,
+  documentationTrivialCase?.reference_expectation?.resolved_primary_model === documentationTrivialPrimary
+);
+check(
+  'Model resolution scenario: documentation TRIVIAL records mismatch risk when outer model is omitted',
+  documentationTrivialCase?.reference_expectation?.mismatch_if_outer_model_omitted === true
 );
 
 const largeHighRiskCase = allCases.find(c => c.case_id === 'capable-reviewer-large-high-risk-override');

@@ -7,6 +7,7 @@
 ## Что такое governance в ControlFlow
 
 Governance — это **5 JSON-файлов** в `governance/`, фиксирующих:
+
 1. Какие тулзы каждый агент имеет право использовать.
 2. Какие runtime-параметры (retry, тиры, ревью-пайплайн) применяются.
 3. Какие модели маршрутизируются на какие роли.
@@ -17,7 +18,7 @@ Governance — это **5 JSON-файлов** в `governance/`, фиксирую
 ## Карта governance-файлов
 
 | Файл | Назначение | Меняется при |
-|------|-----------|--------------|
+| --- | --- | --- |
 | `agent-grants.json` | Канонические права тулз агента | Изменении тулз агента |
 | `tool-grants.json` | Single source для frontmatter `tools:` | Том же |
 | `runtime-policy.json` | Operational параметры Orchestrator-а | Изменении retry/тира/ревью |
@@ -34,6 +35,7 @@ Governance — это **5 JSON-файлов** в `governance/`, фиксирую
 **Eval-проверка:** drift-checker сверяет `tools:` frontmatter каждого агента с `tool-grants.json`. Расхождение = fail.
 
 **Пример (упрощённо):**
+
 ```json
 // agent-grants.json (концептуально)
 {
@@ -66,7 +68,7 @@ Governance — это **5 JSON-файлов** в `governance/`, фиксирую
 Определяет, какие ревьюеры активны на каждом тире:
 
 | Tier | Активные ревьюеры |
-|------|-------------------|
+| --- | --- |
 | TRIVIAL | none |
 | SMALL | `["PlanAuditor"]` |
 | MEDIUM | `["PlanAuditor", "AssumptionVerifier"]` |
@@ -79,7 +81,7 @@ Governance — это **5 JSON-файлов** в `governance/`, фиксирую
 Бюджет PLAN_REVIEW-итераций:
 
 | Tier | Max iterations |
-|------|---------------|
+| --- | --- |
 | TRIVIAL | — (skip) |
 | SMALL | 2 |
 | MEDIUM | 5 |
@@ -113,6 +115,7 @@ Governance — это **5 JSON-файлов** в `governance/`, фиксирую
 ### plan_review_gate_trigger_conditions
 
 Когда активировать PLAN_REVIEW:
+
 - `min_phases` — минимальное количество фаз для триггера.
 - `confidence_threshold` — порог confidence (например, 0.9).
 - Деструктивные операции в скоупе.
@@ -133,7 +136,7 @@ Governance — это **5 JSON-файлов** в `governance/`, фиксирую
 Пороговые значения и стандарты качества памяти:
 
 | Ключ | Значение | Назначение |
-|------|---------|-----------|
+| --- | --- | --- |
 | `notes_md_max_lines` | 20 | Максимум строк в NOTES.md (проверяется CI, Pass 7) |
 | `archive_completed_plans_threshold_days` | 14 | Дней до архивации закрытого плана |
 | `archive_eligible_statuses` | `["DONE","SUPERSEDED","DEFERRED"]` | Статусы планов, подлежащих авто-архивации |
@@ -145,16 +148,24 @@ Governance — это **5 JSON-файлов** в `governance/`, фиксирую
 ## model-routing.json — логические роли моделей
 
 Каждый агент в frontmatter имеет:
+
 - `model: GPT-5.4 (copilot)` — литеральная строка модели.
 - `model_role: research-capable` — логическая роль.
 
 `governance/model-routing.json` определяет роли:
+
 ```json
 {
   "research-capable": {
-    "default": "GPT-5.4 (copilot)",
+    "primary": "GPT-5.4 (copilot)",
+    "fallbacks": ["GPT-5.5 (copilot)", "Claude Opus 4.7 (copilot)"],
     "by_tier": {
-      "TRIVIAL": "GPT-5.4 mini (copilot)"
+      "TRIVIAL": {
+        "primary": "GPT-5.4 mini (copilot)",
+        "fallbacks": ["GPT-5.4 (copilot)", "Claude Sonnet 4.6 (copilot)"],
+        "cost_tier": "low",
+        "latency_tier": "fast"
+      }
     }
   }
 }
@@ -162,17 +173,19 @@ Governance — это **5 JSON-файлов** в `governance/`, фиксирую
 
 **Зачем:** decoupling агентских файлов от хардкоженных моделей. Можно менять модель в одном месте, не трогая 13 агентов.
 
-**Сейчас:** runtime читает `model:` напрямую; `model_role` существует для логического индексирования, eval-выравнивания и будущей миграции.
+**Сейчас:** runtime читает `model:` напрямую при внешнем вызове (от пользователя); при внутреннем вызове Orchestrator/Planner используют `governance/model-routing.json` для вычисления нужной модели и передают её явно через параметр `model` внешних вызовов (например, `agent/runSubagent`). Поля `model_role` существуют для логического индексирования, eval-выравнивания и будущей миграции.
 
 **by_tier convention:**
-- Полный override на тир → `{"TRIVIAL": "..."}`.
-- Inherit → `{"TRIVIAL": "inherit_from: default"}`.
+
+- Полный override на тир → объектное значение (например, `{"TRIVIAL": { "primary": "GPT-5.5 (copilot)", "fallbacks": [...] }}`).
+- Inherit → объект с явным указанием `{"TRIVIAL": { "inherit_from": "default" }}`.
 
 См. [docs/agent-engineering/MODEL-ROUTING.md](../agent-engineering/MODEL-ROUTING.md).
 
 ## rename-allowlist.json
 
 Drift-чекер замечает, когда файлы появляются/исчезают. Без allowlist каждый намеренный rename ломал бы eval. Allowlist:
+
 ```json
 {
   "renames": [
@@ -211,7 +224,7 @@ flowchart TD
 ## Где жить какому знанию
 
 | Знание | Место |
-|--------|-------|
+| --- | --- |
 | Что агенту разрешено делать | `agent-grants.json` / `tool-grants.json` |
 | Сколько раз retry | `runtime-policy.json` → retry_budgets |
 | Какие ревьюеры на каком тире | `runtime-policy.json` → review_pipeline_by_tier |
@@ -223,6 +236,7 @@ flowchart TD
 ## Дополнительные governance-доки
 
 В `docs/agent-engineering/` (см. [главу 03](03-agent-roster.md) — список):
+
 - `PART-SPEC.md` — структура агентского файла.
 - `RELIABILITY-GATES.md` — verification gates (build/tests/lint).
 - `CLARIFICATION-POLICY.md` — 5 классов уточнений.

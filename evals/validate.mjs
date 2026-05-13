@@ -42,8 +42,10 @@ import { fileURLToPath } from 'url';
 import {
   MODEL_ROLE_CHECK_ENABLED,
   validateModelRole,
+  validateFrontmatterModelDefaults,
   validateAgentRoleIndex,
   validateByTierShape,
+  validatePayloadModelDescriptionSemantics,
   parseRosterFromProjectContext,
   compareRosterEnum,
   parseResourcesRepoPaths,
@@ -1308,6 +1310,13 @@ if (MODEL_ROLE_CHECK_ENABLED) {
         }
         allPass = false;
       }
+      const defaultModel = validateFrontmatterModelDefaults(agentFile, content, routingJson);
+      if (!defaultModel.ok) {
+        for (const err of defaultModel.errors) {
+          fail(`Pass 8 Check #1: ${err}`);
+        }
+        allPass = false;
+      }
     }
     // Fold by_tier matrix shape check into the same pass/fail block (zero count drift).
     const tierShape = validateByTierShape(routingJson);
@@ -1317,8 +1326,15 @@ if (MODEL_ROLE_CHECK_ENABLED) {
       }
       allPass = false;
     }
+    const payloadModelSemantics = validatePayloadModelDescriptionSemantics(parsedSchemas['orchestrator.delegation-protocol.schema.json']);
+    if (!payloadModelSemantics.ok) {
+      for (const err of payloadModelSemantics.errors) {
+        fail(`Pass 8 Check #1: payload model semantics — ${err}`);
+      }
+      allPass = false;
+    }
     if (allPass) {
-      pass(`model_role resolution + by_tier shape: all ${agentFiles.length} agents carry valid model_role; routing matrix has valid by_tier entries`);
+      pass(`model_role/default-model resolution + by_tier shape + payload model semantics: all ${agentFiles.length} agents align with governance and delegation schema wording`);
     }
   }
 }
