@@ -17,6 +17,10 @@ Run end-to-end browser tests, verify UI/UX behavior, and check accessibility com
 `docs/agent-engineering/TOOL-ROUTING.md` is the authoritative source for local-first and external-fetch routing.
 Keep the health-first gate, observation-first protocol, accessibility severity rules, browser cleanup mandate, and schema-specific output fields inline in this file.
 
+### Context Packet
+
+If `context_packet` is present in your dispatch, read the referenced `artifact_path` first before opening raw source files. Skip re-investigation of paths listed in `do_not_re_read` unless contradicting evidence is found.
+
 ### Scope IN
 - E2E browser test execution by running provided test scripts or harnesses via runCommands/runTasks.
 - UI/UX behavior verification against validation matrix.

@@ -69,3 +69,14 @@ Tool outputs exceeding in-context thresholds should be spilled to the directory 
 
 - BrowserTester is script/harness-based. It may run provided executable browser test scripts or harnesses through its command/task grants, but it must return `ABSTAIN` when no executable browser test harness or script is supplied. It must not claim direct browser-session control unsupported by the provided harness.
 - CodeReviewer final review must use Orchestrator-injected `prior_phase_findings[]` for novelty filtering. It must not self-source prior phase plans or artifacts from `plans/artifacts/` to decide whether a finding is new.
+
+### Rule 8 - Resource Path Resolution Fallback
+
+Agent resource paths are workspace-relative by default. When a file listed in an agent's `## Resources` section is not found in the active workspace root:
+
+1. Retry the read using the absolute prefix `{{VSCODE_USER_PROMPTS_FOLDER}}/` — e.g. `{{VSCODE_USER_PROMPTS_FOLDER}}/governance/model-routing.json`.
+2. If still not found, log the missing path in the gate event and continue with `confidence` reduced by 0.1 per missing critical file.
+3. Never fabricate file contents. Never silently proceed as if a missing governance file contained default values.
+4. **Applies to:** `governance/`, `schemas/`, `plans/project-context.md`, `docs/agent-engineering/`, `skills/` — any path referenced in a `## Resources` section of any agent file.
+
+This rule resolves the gap when agents are loaded as global prompts (from `User/prompts/`) but the active workspace does not contain the ControlFlow governance tree. It is intentionally duplicated in `.github/copilot-instructions.md` so the fallback is available before this file itself can be loaded.

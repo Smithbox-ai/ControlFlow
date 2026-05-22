@@ -17,6 +17,10 @@ Generate accurate technical documentation, Mermaid diagrams, and maintain strict
 `docs/agent-engineering/TOOL-ROUTING.md` is the authoritative source for local-first and external-fetch routing.
 Keep documentation parity, Mermaid rules, documentation-only constraints, and schema-specific output fields inline in this file.
 
+### Context Packet
+
+If `context_packet` is present in your dispatch, read the referenced `artifact_path` first before opening raw source files. Skip re-investigation of paths listed in `do_not_re_read` unless contradicting evidence is found.
+
 ### Scope IN
 - Technical documentation creation (API docs, architecture docs, guides).
 - Mermaid diagram generation for architecture/flow visualization.

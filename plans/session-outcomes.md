@@ -12,6 +12,38 @@ Archive old entries when the log exceeds 50 entries (see `plans/templates/sessio
 
 ## Entry
 
+**Plan ID:** `gem-team-adoption-analysis-plan-iter2`
+**Date:** `2026-05-24`
+**Complexity Tier:** `LARGE`
+**Total Phases:** `7 / 7`
+
+### Review Pipeline
+
+| Agent | Result | Notes |
+| --- | --- | --- |
+| AssumptionVerifier-subagent | COMPLETE | Iteration 2 plan; 0 blocking mirages; revision_of: gem-team-adoption-analysis-plan.md |
+| PlanAuditor-subagent | APPROVED | Approved after iteration 2 plan narrowing; final score passed threshold |
+| ExecutabilityVerifier-subagent | PASS | Full pipeline LARGE tier; passed before execution |
+| CodeReviewer-subagent | APPROVED | All 7 phase reviews approved; final gate 96.5%; validated blocking issues: 0 |
+
+**Total review iterations:** `2` / `5`
+**Convergence:** `Converged`
+
+### Outcome
+
+**Status:** `SUCCESS`
+**CodeReviewer false positive rate:** `0 / 1` (`0%`) — 1 MAJOR (MD033 lint) caught and fixed; no false positives
+
+### Lessons Learned
+
+1. Template placeholder tokens must be backtick-wrapped (`` `<placeholder>` ``) to avoid MD033 lint failures — established convention from session-outcome-template.md applies to all new templates.
+2. Pre-wave cache guard must be recommendation-only and structurally separated from approval-gate logic; hardcoding in prompt prose provides defense-in-depth independent of governance knob values.
+3. Skill-promotion governance requires a confidence threshold (0.85) expressed in schema (`minimum: 0.85`), skill pattern text, and Orchestrator routing bullet for full machine-enforcement plus human readability.
+
+
+
+## Entry
+
 **Plan ID:** `model-routing-mismatch-root-cause-fix-plan-iter5`  
 **Date:** `2026-05-12`  
 **Complexity Tier:** `LARGE`  

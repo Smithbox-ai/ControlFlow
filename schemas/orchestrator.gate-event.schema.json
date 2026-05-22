@@ -75,6 +75,30 @@
       "type": "string",
       "format": "uuid",
       "description": "UUID v4 for log correlation across multi-agent chains."
+    },
+    "diagnosis_packet": {
+      "type": "object",
+      "description": "Optional structured diagnosis evidence attached when routing a fixable retry on a MEDIUM/LARGE plan. Required by Orchestrator Diagnosis Packet policy for MEDIUM/LARGE fixable retries.",
+      "additionalProperties": false,
+      "properties": {
+        "reproduction_steps": {
+          "type": "string",
+          "description": "Minimal command or scenario that reproduces the failure on demand."
+        },
+        "root_cause_hypothesis": {
+          "type": "string",
+          "description": "One-sentence explanation of the underlying cause, not the symptom."
+        },
+        "affected_component": {
+          "type": "string",
+          "description": "Smallest file, schema, rule, or module that must change to fix the root cause."
+        },
+        "stack_trace_excerpt": {
+          "type": "string",
+          "description": "Key lines from error output or logs confirming the hypothesis. Optional."
+        }
+      },
+      "required": ["reproduction_steps", "root_cause_hypothesis", "affected_component"]
     }
   }
 }

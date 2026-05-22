@@ -18,7 +18,8 @@
     "budget_defaults",
     "final_review_gate",
     "memory_hygiene",
-    "compaction"
+    "compaction",
+    "task_cache"
   ],
   "properties": {
     "_comment": {
@@ -189,6 +190,18 @@
         "_comment":                  { "type": "string" },
         "max_consecutive_failures":  { "type": "integer", "minimum": 1 },
         "circuit_breaker_action":    { "type": "string", "enum": ["escalate"] }
+      }
+    },
+    "task_cache": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "lookback_phases", "similarity_scope", "recommendation_only"],
+      "properties": {
+        "_comment":            { "type": "string" },
+        "enabled":             { "type": "boolean" },
+        "lookback_phases":     { "type": "integer", "minimum": 1 },
+        "similarity_scope":    { "type": "string" },
+        "recommendation_only": { "type": "boolean" }
       }
     }
   },

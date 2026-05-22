@@ -118,6 +118,30 @@
     "clarification_request": {
       "$ref": "clarification-request.schema.json",
       "description": "Required when status is NEEDS_INPUT. Structured payload for Orchestrator to present to user via askQuestions. See schemas/clarification-request.schema.json for full contract."
+    },
+    "diagnosis_evidence": {
+      "type": "object",
+      "description": "Optional. Structured diagnosis packet to include in fixable retry dispatch. Required by Orchestrator when failure_classification is 'fixable' on MEDIUM/LARGE plans.",
+      "additionalProperties": false,
+      "properties": {
+        "reproduction_steps": {
+          "type": "string",
+          "description": "Minimal command or scenario that reproduces the failure on demand."
+        },
+        "root_cause_hypothesis": {
+          "type": "string",
+          "description": "One-sentence explanation of the underlying cause, not the symptom."
+        },
+        "affected_component": {
+          "type": "string",
+          "description": "Smallest file, schema, rule, or module that must change."
+        },
+        "stack_trace_excerpt": {
+          "type": "string",
+          "description": "Key lines from error output or logs. Optional."
+        }
+      },
+      "required": ["reproduction_steps", "root_cause_hypothesis", "affected_component"]
     }
   },
   "allOf": [

@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://copilot-atlas.local/schemas/skill-proposal.schema.json",
+  "title": "SkillProposal",
+  "description": "Proposal artifact for a candidate skill pattern identified during a plan phase. Proposals must be reviewed and approved by a human before the pattern is promoted to the active skill library under skills/patterns/.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "proposed_by",
+    "task_slug",
+    "phase_id",
+    "pattern_name",
+    "confidence",
+    "status",
+    "problem",
+    "pattern_description",
+    "evidence",
+    "applicability",
+    "dedupe_check",
+    "proposed_destination"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "proposed_by": { "type": "string", "description": "Agent name that generated this proposal." },
+    "task_slug": { "type": "string", "description": "The task artifact slug under plans/artifacts/." },
+    "phase_id": { "type": "integer", "minimum": 1, "description": "Phase during which the pattern was identified." },
+    "pattern_name": { "type": "string", "description": "Short human-readable name for the pattern." },
+    "confidence": {
+      "type": "number",
+      "minimum": 0.85,
+      "maximum": 1,
+      "description": "Estimated confidence (0–1) that this pattern is cross-plan applicable. Must be ≥ 0.85 to qualify for proposal."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["PROPOSED", "APPROVED", "REJECTED", "DEFERRED"],
+      "description": "Review status. Only human reviewers may set APPROVED."
+    },
+    "problem": { "type": "string", "minLength": 10, "description": "One paragraph describing the recurring challenge." },
+    "pattern_description": { "type": "string", "minLength": 10, "description": "3–5 sentence description of the reusable approach." },
+    "evidence": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["citation", "description"],
+        "properties": {
+          "citation": { "type": "string", "description": "file:line or plan:phase reference." },
+          "description": { "type": "string" }
+        }
+      },
+      "description": "At least two concrete citations supporting the pattern."
+    },
+    "applicability": { "type": "string", "description": "Which agent roles or workflow contexts benefit from this pattern." },
+    "dedupe_check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["skills_index_searched", "independent_occurrences"],
+      "properties": {
+        "skills_index_searched": { "type": "boolean", "description": "True if skills/index.md was searched and no duplicate was found." },
+        "independent_occurrences": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "type": "string" },
+          "description": "List of at least 2 independent task/phase slugs where this pattern appeared."
+        }
+      }
+    },
+    "proposed_destination": { "type": "string", "description": "Relative path where the skill file would be created (e.g., skills/patterns/pattern-slug.md)." },
+    "reviewer_notes": { "type": "string", "description": "Optional notes from the human reviewer." }
+  }
+}

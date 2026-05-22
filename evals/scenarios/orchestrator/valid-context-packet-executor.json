@@ -1,0 +1,84 @@
+{
+  "_target_schema": "orchestrator.delegation-protocol.schema.json",
+  "_fixture_type": "schema",
+  "_expected_validation": "pass",
+  "_comment": "CoreImplementer dispatch with context_packet should be valid (cp-executor-valid)",
+
+  "schema_version": "1.0.0",
+  "agents": {
+    "CodeMapper-subagent": {
+      "scope_description": "Discover context packet contract files",
+      "model": "gpt-4o"
+    },
+    "Researcher-subagent": {
+      "research_query": "Investigate Gem Team patterns for ControlFlow adoption.",
+      "model": "gpt-4o"
+    },
+    "Planner": {
+      "task_description": "Plan the context packet contract implementation.",
+      "model": "gpt-4o"
+    },
+    "CoreImplementer-subagent": {
+      "task_id": "phase-3-test",
+      "phase_id": 3,
+      "task_definition": "Implement the context packet contract per Phase 3 scope.",
+      "model": "Claude Sonnet 4.6 (copilot)",
+      "context_packet": {
+        "artifact_path": "plans/artifacts/gem-team-adoption/adoption-analysis.md",
+        "summary": "Gem Team adoption analysis complete. High-value: context packet, skill promotion, pre-wave cache.",
+        "key_findings": ["context_packet is optional, executor shapes only"],
+        "do_not_re_read": ["plans/artifacts/gem-team-adoption/source-provenance.md"]
+      }
+    },
+    "UIImplementer-subagent": {
+      "task_id": "ui-placeholder",
+      "phase_id": 4,
+      "task_definition": "No UI work in this phase.",
+      "model": "gpt-4o"
+    },
+    "PlatformEngineer-subagent": {
+      "task_id": "platform-placeholder",
+      "phase_id": 5,
+      "environment": "development",
+      "model": "gpt-4o"
+    },
+    "TechnicalWriter-subagent": {
+      "task_id": "docs-placeholder",
+      "phase_id": 6,
+      "task_type": "documentation",
+      "model": "gpt-4o"
+    },
+    "BrowserTester-subagent": {
+      "task_id": "test-placeholder",
+      "phase_id": 7,
+      "model": "gpt-4o"
+    },
+    "CodeReviewer-subagent": {
+      "phase_id": 3,
+      "changed_files": ["schemas/orchestrator.delegation-protocol.schema.json"],
+      "model": "gpt-4o"
+    },
+    "PlanAuditor-subagent": {
+      "task_id": "audit-context-packet",
+      "plan_path": "plans/gem-team-adoption-analysis-plan-iter2.md",
+      "plan_summary": "Plan to implement context packet contract for executor agent shapes.",
+      "trace_id": "550e8400-e29b-41d4-a716-446655440010",
+      "iteration_index": 0,
+      "model": "gpt-4o"
+    },
+    "AssumptionVerifier-subagent": {
+      "plan_path": "plans/gem-team-adoption-analysis-plan-iter2.md",
+      "plan_summary": "Plan to implement context packet contract for executor agent shapes.",
+      "trace_id": "550e8400-e29b-41d4-a716-446655440011",
+      "iteration_index": 0,
+      "model": "gpt-4o"
+    },
+    "ExecutabilityVerifier-subagent": {
+      "plan_path": "plans/gem-team-adoption-analysis-plan-iter2.md",
+      "plan_summary": "Plan to implement context packet contract for executor agent shapes.",
+      "trace_id": "550e8400-e29b-41d4-a716-446655440012",
+      "iteration_index": 0,
+      "model": "gpt-4o"
+    }
+  }
+}

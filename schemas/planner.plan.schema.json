@@ -282,6 +282,10 @@
     "revision_of": {
       "type": "string",
       "description": "Path of the prior plan artifact this plan supersedes. Set on REPLAN-with-new-plan-path events so the new plan is traceable to its predecessor. Optional — iter-1 plans omit this field."
+    },
+    "context_packet_path": {
+      "type": "string",
+      "description": "Optional. Path to a markdown research digest file that downstream executor agents should read before opening raw source files. Set by Planner for MEDIUM/LARGE plans when research evidence is non-trivial."
     }
   },
   "allOf": [

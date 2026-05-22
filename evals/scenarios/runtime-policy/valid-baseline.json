@@ -121,5 +121,13 @@
     "max_consecutive_failures": 3,
     "circuit_breaker_action": "escalate",
     "_comment": "autoCompact circuit breaker — adapted from free-code-main/src/services/compact/autoCompact.ts MAX_CONSECUTIVE_AUTOCOMPACT_FAILURES = 3"
+  },
+
+  "task_cache": {
+    "_comment": "Pre-wave cache guard knobs. The guard is recommendation-only and cannot auto-complete phases or skip approval gates.",
+    "enabled": true,
+    "lookback_phases": 10,
+    "similarity_scope": "phase_title_and_file_targets",
+    "recommendation_only": true
   }
 }

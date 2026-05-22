@@ -137,3 +137,18 @@ Automation and machine-enforced invariants that prevent the three canonical poll
 - `skills/patterns/repo-memory-hygiene.md` — write-side dedup checklist for `/memories/repo/` and NOTES.md prune routine.
 - `evals/archive-completed-plans.mjs` — task-episodic auto-archive script.
 - `evals/drift-checks.mjs` — exports `validateNotesMdStyle` consumed by Pass 7.
+
+## Pre-Wave Cache Guard
+
+Before dispatching each wave, Orchestrator scans `plans/artifacts/` (task-episodic memory) for recently completed phases or tasks whose scope overlaps the current wave. This is a read-only operation against the task-episodic layer.
+
+**Evidence source:** task-episodic memory (`plans/artifacts/<task-slug>/`) — the authoritative record of completed work.
+
+**Output:** a human-visible recommendation only. The guard cannot silently complete a phase, skip an approval gate, or modify the wave execution plan.
+
+**Configuration:** `governance/runtime-policy.json → task_cache` controls whether the guard is enabled and how many prior phases to scan (`lookback_phases`).
+
+**Memory layer relationship:**
+
+- Reads from: task-episodic (`plans/artifacts/`).
+- Does not write to any memory layer. The recommendation is surfaced inline in the Orchestrator's progress summary.

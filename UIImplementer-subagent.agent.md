@@ -17,6 +17,10 @@ Implement scoped UI/frontend tasks with deterministic quality gates: tests, buil
 
 Keep the frontend-specific accessibility gates, responsive checks, design-system boundaries, and output evidence inline in this file.
 
+### Context Packet
+
+If `context_packet` is present in your dispatch, read the referenced `artifact_path` first before opening raw source files. Skip re-investigation of paths listed in `do_not_re_read` unless contradicting evidence is found.
+
 ### Scope IN
 - UI components and layout changes.
 - Styling within project design system.

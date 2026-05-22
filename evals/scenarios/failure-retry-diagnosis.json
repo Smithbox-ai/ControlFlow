@@ -1,0 +1,27 @@
+{
+  "id": "failure-retry-diagnosis",
+  "target_agent": "Orchestrator",
+  "goal": "On MEDIUM/LARGE plans, Orchestrator requires a diagnosis packet (reproduction_steps, root_cause_hypothesis, affected_component) before dispatching a fixable retry, and passes the packet in the retry dispatch payload",
+  "input": {
+    "plan_complexity_tier": "LARGE",
+    "failing_phase": {
+      "phase_id": 3,
+      "executor_agent": "CoreImplementer-subagent",
+      "status": "FAILED",
+      "failure_classification": "fixable",
+      "failure_reason": "Schema fixture validation error: expected additionalProperties:false to reject unknown field 'foo', but fixture passed.",
+      "diagnosis_evidence": {
+        "reproduction_steps": "cd evals && npm run test:structural — fails at Pass 1 schema fixture orchestrator/invalid-foo-field.json",
+        "root_cause_hypothesis": "The fixture payload contains a field 'foo' not present in the schema properties map, but additionalProperties is not set to false on the target sub-object.",
+        "affected_component": "schemas/orchestrator.delegation-protocol.schema.json",
+        "stack_trace_excerpt": "AJV: /properties/CoreImplementer-subagent — additionalProperties not enforced on nested shape"
+      }
+    }
+  },
+  "expected": {
+    "diagnosis_packet_required_before_retry": true,
+    "retry_dispatch_includes_diagnosis": true,
+    "fix_hint_alone_insufficient_for_LARGE": true,
+    "trivial_small_plans_exempt": true
+  }
+}

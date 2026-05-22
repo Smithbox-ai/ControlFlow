@@ -90,6 +90,7 @@ See [docs/agent-engineering/MEMORY-ARCHITECTURE.md](docs/agent-engineering/MEMOR
 Agent-specific fields:
 - At phase completion, load `skills/patterns/memory-promotion-candidates.md` to identify candidate facts.
 - Then run Checklist C in `skills/patterns/repo-memory-hygiene.md` before promoting any fact to repo memory.
+- When a reusable cross-plan pattern emerges with confidence ≥ 0.85 at a phase or completion boundary, produce a skill proposal artifact using `plans/templates/skill-proposal-template.md` and save it to `plans/artifacts/<task-slug>/skill-proposals/`. Do NOT write directly to `skills/patterns/`; proposals must wait for human review and explicit approval before promotion to the active skill library.
 - Update `NOTES.md` only at phase boundaries for active objective/current phase; prune stale notes using `skills/patterns/repo-memory-hygiene.md` before any `/memories/repo/` write or NOTES update.
 
 ### State Tracking
@@ -308,6 +309,9 @@ For detailed per-agent parameter shapes and required/optional fields, load `sche
 
 ### Wave-Aware Execution
 When the plan (from Planner) contains `wave` fields on phases:
+
+**Pre-Wave Cache Guard (before each wave):** Before dispatching any wave, scan `plans/artifacts/` for recently completed phases or tasks with a scope description that overlaps the current wave's phase titles or file targets. If a match is found, surface a recommendation to the operator (e.g., "Similar work detected in `<task-slug>` — review prior artifacts before proceeding?"). The guard produces recommendations only; it cannot silently mark any phase complete, skip a user approval gate, or modify the wave execution plan. If the cache guard evidence is absent or unavailable, skip silently and proceed.
+
 1. Group phases by wave number (ascending).
 2. Within a wave, execute independent phases in parallel (up to `max_parallel_agents` limit).
 3. Wait for ALL phases in a wave to complete before advancing to the next wave.
@@ -324,6 +328,16 @@ When a subagent returns a `failure_classification`, Orchestrator routes automati
 | `model_unavailable` | Retry the same agent up to `retry_budgets.model_unavailable_max` times; on exhaustion, escalate to user via `WAITING_APPROVAL` | retry_budgets.model_unavailable_max |
 
 If retry limit is exhausted, escalate to user with accumulated failure evidence. For all dispatch actions in this table (retry or replan), apply the Universal Model Resolution Rule to resolve the `model` parameter — including needs_replan Planner dispatch.
+
+### Diagnosis Packet (MEDIUM/LARGE — Fixable Retries)
+
+For `fixable` failures on MEDIUM/LARGE plans, before dispatching a retry the Orchestrator MUST collect a diagnosis packet from the failing subagent's report or by reading the referenced build/test evidence. The packet must contain:
+- `reproduction_steps`: minimal command or scenario that reproduces the failure.
+- `root_cause_hypothesis`: one-sentence explanation of the underlying cause (not the symptom).
+- `affected_component`: the smallest file, schema, or module that needs to change.
+- `stack_trace_excerpt` (optional): key lines from error output or logs that confirm the root cause.
+
+Include the diagnosis packet in the retry dispatch payload. A fixable retry dispatched without this packet on a MEDIUM/LARGE plan is non-compliant. For TRIVIAL/SMALL plans, the fix hint alone is sufficient.
 
 ### Retry Reliability Policy
 Use `governance/runtime-policy.json` as the source of truth for retry budgets, same-classification escalation, and transient wave throttling. Inline invariants: never proceed after empty response, timeout, or HTTP 429; include `retry_attempt` on transient retries; when the same `failure_classification` repeats to the configured threshold, escalate; if a phase fails 3 times with the same classification, escalate to the user.

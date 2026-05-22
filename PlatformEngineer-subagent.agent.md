@@ -16,6 +16,10 @@ Execute scoped infrastructure, CI/CD, and container operations from the conducto
 
 Keep the platform-specific approval gates, idempotency mandate, rollback protocol, and health or deployment evidence inline in this file.
 
+### Context Packet
+
+If `context_packet` is present in your dispatch, read the referenced `artifact_path` first before opening raw source files. Skip re-investigation of paths listed in `do_not_re_read` unless contradicting evidence is found.
+
 ### Scope IN
 - Infrastructure deployment and configuration.
 - CI/CD pipeline setup and execution.

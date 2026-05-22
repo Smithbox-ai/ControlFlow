@@ -723,6 +723,42 @@ console.log('\n=== Check #9 — Rule 6 / Tool Output Spill presence in TOOL-ROUT
 }
 
 // ──────────────────────────────────────────────
+// Check #9b — Rule 8 boot-time path-resolution availability
+// ──────────────────────────────────────────────
+console.log('\n=== Check #9b — Rule 8 boot-time path-resolution availability ===');
+{
+  const ROOT = join(__dirname, '..', '..');
+  const trPath = join(ROOT, 'docs', 'agent-engineering', 'TOOL-ROUTING.md');
+  const ciPath = join(ROOT, '.github', 'copilot-instructions.md');
+  const toolRouting = existsSync(trPath) ? readFileSync(trPath, 'utf8') : '';
+  const sharedInstructions = existsSync(ciPath) ? readFileSync(ciPath, 'utf8') : '';
+
+  const requiredTokens = [
+    '{{VSCODE_USER_PROMPTS_FOLDER}}/',
+    'Never fabricate file contents',
+    'missing governance file contained default values',
+  ];
+
+  check(
+    'D3: TOOL-ROUTING.md contains Rule 8 resource path fallback',
+    toolRouting.includes('Rule 8 - Resource Path Resolution Fallback') &&
+    requiredTokens.every(token => toolRouting.includes(token))
+  );
+
+  check(
+    'D4: copilot-instructions.md contains boot-time Path Resolution fallback',
+    sharedInstructions.includes('## Path Resolution') &&
+    requiredTokens.every(token => sharedInstructions.includes(token))
+  );
+
+  check(
+    'D5: Rule 8 and copilot instructions cross-reference intentional duplication',
+    toolRouting.includes('intentionally duplicated in `.github/copilot-instructions.md`') &&
+    sharedInstructions.includes('intentionally duplicates `docs/agent-engineering/TOOL-ROUTING.md` Rule 8')
+  );
+}
+
+// ──────────────────────────────────────────────
 // Check #10 — review_scope=final bidirectional coupling
 // ──────────────────────────────────────────────
 console.log('\n=== Check #10 — review_scope=final bidirectional coupling ===');

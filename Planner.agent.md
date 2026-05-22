@@ -64,6 +64,7 @@ For all other scopes, record applicability, impact, evidence source, and disposi
    - Record design decisions in the plan artifact's "Design Decisions" section (see plan document template).
 8. Planning (phase decomposition with quality gates).
 9. Handoff (artifact-first plan file plus `plan_path` handoff for Orchestrator; PLAN_REVIEW ownership remains with Orchestrator).
+   - For MEDIUM/LARGE plans where Researcher produced a non-trivial evidence packet, set `context_packet_path` in the plan to the research digest artifact path so downstream executors can consume it without re-investigation.
 
 ### Clarification Policy
 Reference: `docs/agent-engineering/CLARIFICATION-POLICY.md`. Step 2 above is the authoritative gate. All five mandatory classes and the `vscode/askQuestions` format are defined in the policy doc.

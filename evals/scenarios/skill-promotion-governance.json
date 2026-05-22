@@ -1,0 +1,38 @@
+{
+  "id": "skill-promotion-governance",
+  "target_agent": "Orchestrator",
+  "category": "structural",
+  "description": "Skill-promotion governance: high-confidence cross-plan patterns route to a proposal artifact; low-confidence and duplicate candidates are skipped; human approval is required before active skill library promotion.",
+  "goal": "Orchestrator routes high-confidence cross-plan patterns to a skill-proposal artifact rather than writing directly to skills/patterns/. Low-confidence or duplicate candidates are skipped. Human approval is required before active skill library promotion.",
+  "input": {
+    "phase_completed": 5,
+    "complexity_tier": "LARGE",
+    "candidate_patterns": [
+      {
+        "pattern": "context-packet-handoff",
+        "confidence": 0.91,
+        "already_in_skills": false,
+        "cross_plan_applicable": true
+      },
+      {
+        "pattern": "low-confidence-pattern",
+        "confidence": 0.72,
+        "already_in_skills": false,
+        "cross_plan_applicable": true
+      },
+      {
+        "pattern": "duplicate-of-existing-skill",
+        "confidence": 0.88,
+        "already_in_skills": true,
+        "cross_plan_applicable": true
+      }
+    ]
+  },
+  "expected": {
+    "high_confidence_new_pattern_routes_to_proposal_artifact": true,
+    "low_confidence_pattern_skipped": true,
+    "duplicate_pattern_skipped": true,
+    "no_direct_write_to_skills_patterns": true,
+    "human_approval_required_before_promotion": true
+  }
+}
