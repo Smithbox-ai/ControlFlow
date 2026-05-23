@@ -220,6 +220,149 @@
           "live_runtime_assertion": false
         }
       }
+    ],
+    "negative_cases": [
+      {
+        "case_id": "missing-outer-agentName",
+        "description": "Broken dispatch names the target only in payload/audit context and omits the outer agent/runSubagent agentName field.",
+        "broken_dispatch": {
+          "outer_fields": {
+            "agentName_present": false,
+            "model_present": true,
+            "model": "GPT-5.5 (copilot)"
+          },
+          "payload_fields": {
+            "agentName_present": true,
+            "agentName": "CoreImplementer-subagent",
+            "model_present": true,
+            "model": "GPT-5.5 (copilot)"
+          }
+        },
+        "expected": {
+          "rejected": true,
+          "violates": "missing_outer_agentName",
+          "reason": "The verified runtime target field is the outer agentName parameter; payload/prose target metadata cannot substitute for it.",
+          "offline_detection_scope": "structural_contract",
+          "live_runtime_assertion": false
+        }
+      },
+      {
+        "case_id": "missing-outer-model",
+        "description": "Broken dispatch supplies the outer agentName but omits the outer model field entirely.",
+        "broken_dispatch": {
+          "outer_fields": {
+            "agentName_present": true,
+            "agentName": "CoreImplementer-subagent",
+            "model_present": false
+          },
+          "payload_fields": {
+            "model_present": false
+          }
+        },
+        "expected": {
+          "rejected": true,
+          "violates": "missing_outer_model",
+          "reason": "Every internal dispatch must pass the governance-resolved primary model as the outer model parameter.",
+          "offline_detection_scope": "structural_contract",
+          "live_runtime_assertion": false
+        }
+      },
+      {
+        "case_id": "payload-only-model",
+        "description": "Broken dispatch carries a payload-level model for audit context but omits the outer model runtime selector.",
+        "broken_dispatch": {
+          "outer_fields": {
+            "agentName_present": true,
+            "agentName": "Researcher-subagent",
+            "model_present": false
+          },
+          "payload_fields": {
+            "model_present": true,
+            "model": "GPT-5.5 (copilot)",
+            "model_purpose": "delegation contract and audit context only"
+          }
+        },
+        "expected": {
+          "rejected": true,
+          "violates": "payload_only_model",
+          "reason": "A payload-level model does not by itself override frontmatter or select the runtime model.",
+          "offline_detection_scope": "structural_contract",
+          "live_runtime_assertion": false
+        }
+      },
+      {
+        "case_id": "wrong-effective-review-tier",
+        "description": "Broken review dispatch keeps MEDIUM routing even though unresolved HIGH risk requires LARGE effective review tier.",
+        "input_context": {
+          "target_agent": "PlanAuditor-subagent",
+          "role": "capable-reviewer",
+          "plan_complexity_tier": "MEDIUM",
+          "unresolved_high_risk": true
+        },
+        "broken_resolution": {
+          "effective_review_tier": "MEDIUM",
+          "model": "Claude Sonnet 4.6 (copilot)",
+          "model_source": "governance/model-routing.json roles.capable-reviewer.by_tier.MEDIUM.primary"
+        },
+        "expected": {
+          "rejected": true,
+          "violates": "wrong_effective_review_tier",
+          "effective_review_tier": "LARGE",
+          "resolved_primary_model": "Claude Opus 4.7 (copilot)",
+          "model_source": "governance/model-routing.json roles.capable-reviewer.by_tier.LARGE (inherit_from default -> role default)",
+          "offline_detection_scope": "structural_contract",
+          "live_runtime_assertion": false
+        }
+      },
+      {
+        "case_id": "unconfigured-fallback",
+        "description": "Broken model_unavailable retry chooses a model that is not in the configured fallback list for the effective review tier.",
+        "input_context": {
+          "target_agent": "CodeReviewer-subagent",
+          "role": "capable-reviewer",
+          "effective_review_tier": "MEDIUM",
+          "primary_unavailable": true
+        },
+        "broken_retry": {
+          "model": "Claude Opus 4.7 (copilot)",
+          "configured_fallbacks_source": "governance/model-routing.json roles.capable-reviewer.by_tier.MEDIUM.fallbacks",
+          "configured_fallbacks": ["GPT-5.4 (copilot)", "GPT-5.5 (copilot)"]
+        },
+        "expected": {
+          "rejected": true,
+          "violates": "unconfigured_fallback",
+          "configured_fallbacks_only": true,
+          "reason": "Retries may use only the configured fallbacks for the same effective tier, in order.",
+          "offline_detection_scope": "structural_contract",
+          "live_runtime_assertion": false
+        }
+      },
+      {
+        "case_id": "omitted-model-due-missing-tier-context",
+        "description": "Broken dispatch omits model because no complexity_tier is available yet instead of using the target role top-level primary.",
+        "input_context": {
+          "target_agent": "Planner",
+          "role": "capable-planner",
+          "complexity_tier_present": false,
+          "dispatch_family": "initial_planner_dispatch"
+        },
+        "broken_dispatch": {
+          "outer_fields": {
+            "agentName_present": true,
+            "agentName": "Planner",
+            "model_present": false
+          }
+        },
+        "expected": {
+          "rejected": true,
+          "violates": "omitted_model_missing_tier_context",
+          "resolution_when_tier_missing": "top_level_primary",
+          "resolved_primary_model": "GPT-5.5 (copilot)",
+          "reason": "Missing tier context changes the resolution source, not the requirement to pass an outer model field.",
+          "offline_detection_scope": "structural_contract",
+          "live_runtime_assertion": false
+        }
+      }
     ]
   },
   "expected": {
@@ -227,6 +370,7 @@
     "offline_harness_observes_live_runSubagent_model_parameters": false,
     "live_runtime_behavior_out_of_scope": true,
     "behavioral_runtime_assertions_present": false,
-    "reference_cases_documented": 10
+    "reference_cases_documented": 10,
+    "negative_cases_documented": 6
   }
 }

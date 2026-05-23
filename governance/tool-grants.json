@@ -27,6 +27,7 @@
   ],
   "Planner.agent.md": [
     "read/readFile",
+    "agent",
     "agent/runSubagent",
     "edit/createFile",
     "search/codebase",

@@ -1,0 +1,33 @@
+{
+  "version": "1.0.0",
+  "targets": [
+    {
+      "source_path": "skills",
+      "host_outputs": {
+        "codex": {
+          "dest_path": "skills",
+          "allowed_deltas": false
+        },
+        "claude_code": {
+          "dest_path": "skills",
+          "override_path": "skills",
+          "allowed_deltas": true
+        }
+      }
+    },
+    {
+      "source_path": "templates",
+      "host_outputs": {
+        "codex": {
+          "dest_path": "templates",
+          "allowed_deltas": false
+        },
+        "claude_code": {
+          "dest_path": "templates",
+          "override_path": "templates",
+          "allowed_deltas": true
+        }
+      }
+    }
+  ]
+}

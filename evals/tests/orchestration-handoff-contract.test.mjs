@@ -119,6 +119,15 @@ const plannerResearchDispatchRule = extractBetween(
   '7. Design'
 );
 
+const requiredModelRoutingNegativeCases = [
+  'missing-outer-agentName',
+  'missing-outer-model',
+  'payload-only-model',
+  'wrong-effective-review-tier',
+  'unconfigured-fallback',
+  'omitted-model-due-missing-tier-context',
+];
+
 // ──────────────────────────────────────────────
 // PLAN_REVIEW gate invariants
 // ──────────────────────────────────────────────
@@ -315,9 +324,90 @@ check(
 // ──────────────────────────────────────────────
 console.log('\n=== Orchestrator — Todo Lifecycle ===');
 
+const todoScenario = JSON.parse(
+  readFileSync(join(ROOT, 'evals', 'scenarios', 'orchestrator-todo-orchestration.json'), 'utf8')
+);
+const todoResumeScenario = JSON.parse(
+  readFileSync(join(ROOT, 'evals', 'scenarios', 'orchestrator-todo-resume-reconciliation.json'), 'utf8')
+);
+const todoExpected = todoScenario.expected ?? {};
+const todoCalls = todoExpected.todo_tool_calls ?? {};
+const resumeExpected = todoResumeScenario.expected ?? {};
+const resumeCalls = resumeExpected.todo_tool_calls ?? {};
+const todoNegativeCases = [
+  ...(todoExpected.negative_cases ?? []),
+  ...(resumeExpected.negative_cases ?? []),
+];
+
 check(
-  'Todo-before-advance: todo marking is blocking prerequisite',
-  /todo.*blocking prerequisite|no phase transition.*todo/i.test(orch)
+  'Todo scenario: phase review pass requires one #todos completion before approval pause',
+  todoCalls.on_phase_review_pass?.tool === '#todos' &&
+  todoCalls.on_phase_review_pass?.action === 'complete' &&
+  todoCalls.on_phase_review_pass?.one_completion_call_per_phase === true &&
+  todoCalls.on_phase_review_pass?.count_per_review_pass === 1 &&
+  todoCalls.on_phase_review_pass?.must_occur_after === 'phase_review_gate_pass' &&
+  todoCalls.on_phase_review_pass?.must_occur_before === 'approval_pause' &&
+  todoCalls.on_phase_review_pass?.must_not_batch_with_other_phases === true
+);
+
+check(
+  'Todo scenario: plan completion reconciles all phase todos before summary',
+  todoCalls.on_plan_completion?.tool === '#todos' &&
+  todoCalls.on_plan_completion?.action === 'reconcile' &&
+  todoCalls.on_plan_completion?.all_todos_completed === true &&
+  todoCalls.on_plan_completion?.must_not_produce_summary_with_open_todos === true
+);
+
+check(
+  'Todo scenario: open prior phase todo blocks P2/P3 start until #todos reconciliation',
+  todoCalls.on_prior_phase_open_before_next_phase_start?.tool === '#todos' &&
+  todoCalls.on_prior_phase_open_before_next_phase_start?.blocks_next_phase_start === true &&
+  todoCalls.on_prior_phase_open_before_next_phase_start?.must_occur_before_next_phase_start === true &&
+  todoCalls.on_prior_phase_open_before_next_phase_start?.applicable_phase_transitions?.includes('P1→P2') === true &&
+  todoCalls.on_prior_phase_open_before_next_phase_start?.applicable_phase_transitions?.includes('P1→P3') === true &&
+  todoExpected.pre_phase_open_todo_reconcile_required?.if_prior_phase_todo_is_open === true
+);
+
+check(
+  'Todo resume scenario: compaction/resume reconciliation includes active Phase 1 before work resumes',
+  todoResumeScenario.input?.resume_context?.active_phase_id === 'P1' &&
+  resumeCalls.on_resume_or_compaction?.tool === '#todos' &&
+  resumeCalls.on_resume_or_compaction?.action === 'reconcile' &&
+  resumeCalls.on_resume_or_compaction?.must_be_first_action_after_resume === true &&
+  resumeCalls.on_resume_or_compaction?.must_occur_before_phase_work_resumes === true &&
+  resumeExpected.pre_phase_open_todo_reconcile_required?.active_phase_1_included === true
+);
+
+for (const caseId of [
+  'no-batching-phase-completions',
+  'resume-active-phase-1-after-compaction',
+  'open-prior-todo-blocks-next-phase',
+]) {
+  const negativeCase = todoNegativeCases.find(c => c.case_id === caseId);
+  check(
+    `Todo negative scenario: ${caseId} is rejected`,
+    negativeCase?.expected?.rejected === true && negativeCase?.expected?.violates === caseId
+  );
+}
+
+check(
+  'Orchestrator: phase review pass completion is a separate #todos call before approval pause',
+  /phase review gate passes[\s\S]{0,240}#todos[\s\S]{0,240}before.*approval pause|#todos[\s\S]{0,240}after.*phase review gate passes[\s\S]{0,240}before.*approval pause/i.test(orch)
+);
+
+check(
+  'Orchestrator: no batching of phase todo completions is explicit',
+  /No batching of completions[\s\S]{0,500}own `#todos` call[\s\S]{0,500}bulk update|No batching of todo completions[\s\S]{0,500}separate `#todos` call/i.test(orch)
+);
+
+check(
+  'Orchestrator: resume reconciliation is first action and explicitly includes active Phase 1',
+  /first action before any other phase work[\s\S]{0,500}Phase 1|Phase 1[\s\S]{0,500}first action before any other phase work/i.test(orch)
+);
+
+check(
+  'Orchestrator: no phase or wave advancement with open prior todos',
+  /open prior phase todo[\s\S]{0,500}before.*phase or wave advancement|phase or wave advancement[\s\S]{0,500}open prior phase todo/i.test(orch)
 );
 
 // ──────────────────────────────────────────────
@@ -721,6 +811,12 @@ check(
   /does not by itself select|not a substitute|cannot substitute|does not enforce/i.test(plannerResearchDispatchRule)
 );
 
+check(
+  'Planner research dispatch: missing tier context uses top-level primary instead of omitting outer model',
+  /complexity_tier.*unavailable[\s\S]{0,240}top-level `primary`|top-level `primary`[\s\S]{0,240}complexity_tier.*unavailable/i.test(plannerResearchDispatchRule) &&
+  /Never omit `model` because tier context is missing/i.test(plannerResearchDispatchRule)
+);
+
 // ──────────────────────────────────────────────
 // Initial Planner Dispatch Gate
 // ──────────────────────────────────────────────
@@ -863,6 +959,7 @@ const modelResScenario = JSON.parse(
 
 // All cases must remain reference-only (Phase 1 plan requirement 6)
 const allCases = modelResScenario.input?.reference_cases ?? [];
+const negativeCases = modelResScenario.input?.negative_cases ?? [];
 
 check(
   'Model resolution scenario: offline_harness_observes_live_runSubagent_model_parameters is false',
@@ -899,6 +996,75 @@ const casesMissingOuterPayloadFields = allCases.filter(c => {
 check(
   'Model resolution scenario: every reference case records outer and payload model fields separately',
   casesMissingOuterPayloadFields.length === 0
+);
+
+check(
+  'Model resolution scenario: all required outer-dispatch negative cases are documented',
+  requiredModelRoutingNegativeCases.every(caseId => negativeCases.some(c => c.case_id === caseId)) &&
+  modelResScenario.expected?.negative_cases_documented === requiredModelRoutingNegativeCases.length
+);
+
+for (const caseId of requiredModelRoutingNegativeCases) {
+  const negativeCase = negativeCases.find(c => c.case_id === caseId);
+  check(
+    `Model resolution negative scenario: ${caseId} is rejected as structural contract drift`,
+    negativeCase?.expected?.rejected === true &&
+    negativeCase?.expected?.offline_detection_scope === 'structural_contract' &&
+    negativeCase?.expected?.live_runtime_assertion === false
+  );
+}
+
+const missingOuterAgentNameCase = negativeCases.find(c => c.case_id === 'missing-outer-agentName');
+check(
+  'Model resolution negative scenario: missing outer agentName cannot be repaired by payload agentName',
+  missingOuterAgentNameCase?.broken_dispatch?.outer_fields?.agentName_present === false &&
+  missingOuterAgentNameCase?.broken_dispatch?.payload_fields?.agentName_present === true &&
+  missingOuterAgentNameCase?.expected?.violates === 'missing_outer_agentName'
+);
+
+const missingOuterModelCase = negativeCases.find(c => c.case_id === 'missing-outer-model');
+check(
+  'Model resolution negative scenario: missing outer model is rejected even when agentName is present',
+  missingOuterModelCase?.broken_dispatch?.outer_fields?.agentName_present === true &&
+  missingOuterModelCase?.broken_dispatch?.outer_fields?.model_present === false &&
+  missingOuterModelCase?.expected?.violates === 'missing_outer_model'
+);
+
+const payloadOnlyModelCase = negativeCases.find(c => c.case_id === 'payload-only-model');
+check(
+  'Model resolution negative scenario: payload-only model is not runtime enforcement',
+  payloadOnlyModelCase?.broken_dispatch?.outer_fields?.model_present === false &&
+  payloadOnlyModelCase?.broken_dispatch?.payload_fields?.model_present === true &&
+  payloadOnlyModelCase?.expected?.violates === 'payload_only_model'
+);
+
+const wrongEffectiveReviewTierCase = negativeCases.find(c => c.case_id === 'wrong-effective-review-tier');
+check(
+  `Model resolution negative scenario: unresolved HIGH risk must use LARGE capable-reviewer model ${capableReviewerLargePrimary}`,
+  wrongEffectiveReviewTierCase?.input_context?.plan_complexity_tier === 'MEDIUM' &&
+  wrongEffectiveReviewTierCase?.input_context?.unresolved_high_risk === true &&
+  wrongEffectiveReviewTierCase?.broken_resolution?.effective_review_tier === 'MEDIUM' &&
+  wrongEffectiveReviewTierCase?.expected?.effective_review_tier === 'LARGE' &&
+  wrongEffectiveReviewTierCase?.expected?.resolved_primary_model === capableReviewerLargePrimary &&
+  wrongEffectiveReviewTierCase?.expected?.violates === 'wrong_effective_review_tier'
+);
+
+const unconfiguredFallbackCase = negativeCases.find(c => c.case_id === 'unconfigured-fallback');
+check(
+  'Model resolution negative scenario: unconfigured fallback is rejected for the effective tier',
+  unconfiguredFallbackCase?.input_context?.effective_review_tier === 'MEDIUM' &&
+  unconfiguredFallbackCase?.expected?.configured_fallbacks_only === true &&
+  !resolveRoleModel('capable-reviewer', 'MEDIUM').fallbacks.includes(unconfiguredFallbackCase?.broken_retry?.model)
+);
+
+const omittedDueMissingTierCase = negativeCases.find(c => c.case_id === 'omitted-model-due-missing-tier-context');
+check(
+  `Model resolution negative scenario: missing tier context still resolves top-level primary ${capablePlannerPrimary}`,
+  omittedDueMissingTierCase?.input_context?.complexity_tier_present === false &&
+  omittedDueMissingTierCase?.broken_dispatch?.outer_fields?.model_present === false &&
+  omittedDueMissingTierCase?.expected?.resolution_when_tier_missing === 'top_level_primary' &&
+  omittedDueMissingTierCase?.expected?.resolved_primary_model === capablePlannerPrimary &&
+  omittedDueMissingTierCase?.expected?.violates === 'omitted_model_missing_tier_context'
 );
 
 const reviewPrimaryCase = allCases.find(c => c.case_id === 'capable-reviewer-primary-dispatch');

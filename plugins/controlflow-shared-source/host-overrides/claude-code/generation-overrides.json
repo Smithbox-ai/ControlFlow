@@ -1,0 +1,35 @@
+{
+  "version": "1.0.0",
+  "files": [
+    {
+      "source_path": "templates/assumption-verifier-report-template.md",
+      "line_ending": "crlf",
+      "insertions": [
+        {
+          "after": "**Failure Classification:** `fixable` | `needs_replan` | `escalate` | omitted when no blocking mirages",
+          "text": "Invoke via: `/controlflow-claude-code:controlflow-assumption-verifier`"
+        }
+      ]
+    },
+    {
+      "source_path": "templates/executability-verifier-report-template.md",
+      "line_ending": "crlf",
+      "insertions": [
+        {
+          "after": "**Failure Classification:** `transient` | `fixable` | `needs_replan` | `escalate` | omitted when not failing",
+          "text": "Invoke via: `/controlflow-claude-code:controlflow-executability-verifier`"
+        }
+      ]
+    },
+    {
+      "source_path": "templates/plan-audit-report-template.md",
+      "line_ending": "crlf",
+      "insertions": [
+        {
+          "after": "**Failure Classification:** `fixable` | `needs_replan` | `escalate` | omitted when approved",
+          "text": "Invoke via: `/controlflow-claude-code:controlflow-plan-audit`"
+        }
+      ]
+    }
+  ]
+}

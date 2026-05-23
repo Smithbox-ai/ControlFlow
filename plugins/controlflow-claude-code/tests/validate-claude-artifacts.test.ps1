@@ -7,6 +7,7 @@ $ErrorActionPreference = "Continue"
 
 $repoRootResolved = (Resolve-Path $RepoRoot).Path
 $validatorPath    = Join-Path $repoRootResolved "plugins\controlflow-claude-code\scripts\validate-claude-artifacts.ps1"
+$generatedAssetsValidatorPath = Join-Path $repoRootResolved "plugins\controlflow-shared-source\scripts\validate-generated-assets.ps1"
 
 $validFixturePath      = "plugins/controlflow-claude-code/tests/fixtures/strict-plan-valid-plan.md"
 $invalidFixturePath    = "plugins/controlflow-claude-code/tests/fixtures/strict-plan-missing-sections-plan.md"
@@ -143,6 +144,22 @@ if ($exitCode -eq 0) {
     $passedCount++
 } else {
     Write-Output "  FAIL: Full plugin validation failed. Failures must be resolved before Phase 6 begins:"
+    $output | ForEach-Object { Write-Output "    $_" }
+    $failedCount++
+}
+
+# ---------------------------------------------------------------------------
+# TEST 7: Generated asset validation must pass for Claude Code output targets
+# ---------------------------------------------------------------------------
+Write-Output "TEST 7: Claude Code generated asset targets must match shared source manifest"
+$output    = powershell.exe -ExecutionPolicy Bypass -NoProfile -File $generatedAssetsValidatorPath `
+                 -RepoRoot $RepoRoot -Host claude_code 2>&1
+$exitCode  = $LASTEXITCODE
+if ($exitCode -eq 0) {
+    Write-Output "  PASS: Claude Code generated outputs match shared source targets (exit 0)"
+    $passedCount++
+} else {
+    Write-Output "  FAIL: Claude Code generated outputs drifted from shared source targets. Output:"
     $output | ForEach-Object { Write-Output "    $_" }
     $failedCount++
 }

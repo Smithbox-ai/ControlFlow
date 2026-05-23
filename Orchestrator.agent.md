@@ -103,11 +103,11 @@ Maintain awareness of current orchestration state at all times:
 - **Failure Retries:** Count of retries per classification for current phase (if any).
 - Todo Management Protocol:
    - At plan start, create a todo item for each phase using the format `Phase {N} — {Title}`.
-   - At phase completion, mark the corresponding todo item as completed immediately after the phase review gate passes.
+   - At phase completion, after the phase review gate passes, use the `#todos` tool to mark exactly that phase's todo item completed before any approval pause.
    - At wave completion, verify all todo items for that wave are marked completed before advancing.
    - At plan completion, verify all phase todo items are marked completed during the Completion Gate.
    - **No batching of completions.** Each phase's todo item must be marked in its own `#todos` call as soon as that phase's verification checklist passes. Holding completions for a later bulk update is non-compliant — even if intermediate phases are obvious successes.
-   - **Context-compaction reconciliation.** Immediately after any context summarization, conversation resumption, or session restart, the first action before any other phase work MUST be a `#todos` reconciliation pass: compare the current todo list against the actual state of plan artifacts (created files, completed phases per `plans/<task>-plan.md`) and update statuses to match reality. Resuming work without reconciliation is non-compliant.
+   - **Context-compaction reconciliation.** Immediately after any context summarization, conversation resumption, or session restart, the first action before any other phase work MUST be a `#todos` reconciliation pass: compare the current todo list against the actual state of plan artifacts (created files, completed phases per `plans/<task>-plan.md`) and update statuses to match reality. This applies even when the active phase is Phase 1; resume, review, or implementation work for Phase 1 cannot continue until reconciliation is complete. Resuming work without reconciliation is non-compliant.
 
 ### Observability Sink
 When emitting gate events, optionally also append one NDJSON line per event to `plans/artifacts/observability/<task-id>.ndjson`. See [docs/agent-engineering/OBSERVABILITY.md](docs/agent-engineering/OBSERVABILITY.md).
@@ -164,8 +164,8 @@ Before every `agent/runSubagent` call, regardless of dispatch context, apply thi
 1. Load `governance/model-routing.json`.
 2. Look up the target agent name in the top-level `agent_role_index` map to get its role.
 3. Read `roles[role].by_tier[complexity_tier]`. If the entry is `{ "inherit_from": "default" }`, use the role's top-level `primary` model; otherwise use the tier-specific `primary`.
-4. Pass the resolved `primary` model string as the `model` parameter to `agent/runSubagent`. Never omit `model`.
-5. For initial planning dispatches before any plan `complexity_tier` exists, use the target role's top-level `primary` model. For replan/planning dispatches after a plan exists, use the active plan's `complexity_tier`. Never omit `model` because tier context is missing.
+4. Pass the exact target as the outer `agentName` parameter and the resolved `primary` model string as the outer `model` parameter to `agent/runSubagent`. Never omit either outer field.
+5. For initial planning dispatches before any plan `complexity_tier` exists, use the target role's top-level `primary` model. For replan/planning dispatches after a plan exists, use the active plan's `complexity_tier`. Never omit `model` because tier context is missing; missing tier context changes the resolution source, not the outer tool-call contract.
 
 This rule covers all dispatch paths without exception: Plan Review Gate reviewers (PlanAuditor, AssumptionVerifier, ExecutabilityVerifier), phase CodeReviewer dispatch, final CodeReviewer dispatch, failure-classification retry dispatch, needs_replan Planner dispatch, and Implementation Loop executor dispatch.
 
@@ -247,7 +247,7 @@ For `CodeReviewer-subagent`, `PlanAuditor-subagent`, and `AssumptionVerifier-sub
    - If trigger conditions are not met: skip directly to Implementation Loop.
 
 5. **Implementation Loop (Per Phase)**
-   - **Pre-Phase Gate (phases after Phase 1):** Before starting any phase after Phase 1, verify the previous phase's todo item is marked completed. If it is not, mark it via the `#todos` tool before proceeding.
+   - **Pre-Phase Gate:** Before starting any phase or advancing a wave, verify all prior phase todo items are marked completed. If an open prior phase todo exists, use the `#todos` tool to reconcile the open prior phase todo before any phase or wave advancement. P2 or P3 must not start while the P1 todo remains open. For Phase 1 after context compaction, conversation resumption, or session restart, run the `#todos` reconciliation pass before resuming Phase 1 work.
    - Run PreFlect gate.
    - Resolve the phase owner from `phase.executor_agent`. This field is authoritative for delegation and approval summaries.
    - If a legacy phase omits `executor_agent`, do not infer silently. Route the plan back through `REPLAN` to Planner and stop the implementation batch until the phase is reissued with an explicit executor.
@@ -257,7 +257,7 @@ For `CodeReviewer-subagent`, `PlanAuditor-subagent`, and `AssumptionVerifier-sub
    - Delegate to CodeReviewer-subagent for phase code review (apply Universal Model Resolution Rule). Code review is mandatory for all complexity tiers — see `governance/runtime-policy.json → review_pipeline_by_tier.code_review`. Pass the changed files list, phase scope, and executor agent execution report.
    - Block only on `validated_blocking_issues` from CodeReviewer-subagent verdict — not on raw unvalidated CRITICAL/MAJOR findings. If `validated_blocking_issues` is empty, the phase may proceed even if unvalidated issues exist.
    - If CodeReviewer-subagent review status is not `APPROVED`, loop with targeted revision context.
-   - Mark the completed phase's todo item as completed using the `#todos` tool.
+   - After the phase review gate passes, mark the completed phase's todo item as completed using a separate `#todos` tool call before the approval pause.
    - Pause for user commit/continue approval.
 
 6. **Completion Gate**

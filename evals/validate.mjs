@@ -46,6 +46,7 @@ import {
   validateAgentRoleIndex,
   validateByTierShape,
   validatePayloadModelDescriptionSemantics,
+  validateModelResolutionScenarioNegatives,
   parseRosterFromProjectContext,
   compareRosterEnum,
   parseResourcesRepoPaths,
@@ -1272,11 +1273,11 @@ header('Pass 7c: Tutorial Parity');
   }
 }
 
-// ─── Pass 8: Drift Detection — Phase 9 Additive Checks ──────────────────────
+// ─── Pass 8: Drift Detection — active model routing and roster checks ────────
 // Non-duplication: see plans/artifacts/controlflow-revision/phase-1-existing-drift-checks.yaml.
-// Only the four checks flagged `missing_checks_target_phase_9` are implemented here.
-// Check #1 (`model_role` resolution) is gated off pending Phase 4 spike re-enable.
-header('Pass 8: Drift Detection — Roster ↔ Enum Bidirectional Alignment');
+// Check #1 (`model_role` resolution) is active and includes default-model,
+// by_tier, payload semantics, and outer-dispatch negative-case coverage.
+header('Pass 8: Drift Detection — Model Routing, Roster, and Contract Alignment');
 
 const routingPath = join(ROOT, 'governance', 'model-routing.json');
 let routingJson = null;
@@ -1333,8 +1334,22 @@ if (MODEL_ROLE_CHECK_ENABLED) {
       }
       allPass = false;
     }
+    const modelResolutionScenarioPath = join(SCENARIOS_DIR, 'orchestrator-model-resolution.json');
+    try {
+      const modelResolutionScenario = JSON.parse(readFileSync(modelResolutionScenarioPath, 'utf8'));
+      const modelResolutionNegatives = validateModelResolutionScenarioNegatives(modelResolutionScenario);
+      if (!modelResolutionNegatives.ok) {
+        for (const err of modelResolutionNegatives.errors) {
+          fail(`Pass 8 Check #1: model resolution negatives — ${err}`);
+        }
+        allPass = false;
+      }
+    } catch (e) {
+      fail(`Pass 8 Check #1: cannot read evals/scenarios/orchestrator-model-resolution.json — ${e.message}`);
+      allPass = false;
+    }
     if (allPass) {
-      pass(`model_role/default-model resolution + by_tier shape + payload model semantics: all ${agentFiles.length} agents align with governance and delegation schema wording`);
+      pass(`model_role/default-model resolution + by_tier shape + payload semantics + outer-dispatch negative cases: all ${agentFiles.length} agents align with governance and delegation schema wording`);
     }
   }
 }

@@ -1,6 +1,6 @@
 # Model Routing
 
-**Status:** Phase 4 spike (single-agent rollout)
+**Status:** Active logical-role routing with structural offline regression coverage
 **File:** `governance/model-routing.json` is the canonical source of truth for internal model selection.
 **trace_id:** 7d3f5a2e-1b4c-4e9f-9a8b-2c5d8e1f3a7b
 
@@ -50,7 +50,7 @@ This yields a pragmatic split:
 - Premium tokens are spent on planning and on finding flaws.
 - Routine orchestration and implementation stay cheaper, managed through dynamic subagent dispatch logic.
 
-During the rollout window, agents add a `model_role:` line to their frontmatter **alongside** the existing `model:` line:
+During the compatibility window, agents carry a `model_role:` line in their frontmatter **alongside** the existing `model:` line:
 
 ```yaml
 ---
@@ -71,14 +71,27 @@ When Orchestrator or Planner dispatch a subagent via `agent/runSubagent`, they a
 
 1. They load `governance/model-routing.json`.
 2. They look up the target agent in `agent_role_index`.
-3. They apply the `by_tier` complexity rule to determine the required model string.
-4. They pass the resolved `primary` explicitly as the outer `model` parameter to `agent/runSubagent`, and MUST supply the verified target-agent field `agentName` at the outer tool-call boundary, overriding the agent's frontmatter at call time.
+3. They apply the `by_tier` complexity rule to determine the required model string. If no `complexity_tier` exists yet, they use the target role's top-level `primary` model rather than omitting model selection.
+4. They pass the verified target-agent field as the outer `agentName` parameter and the resolved `primary` explicitly as the outer `model` parameter to `agent/runSubagent`, overriding the agent's frontmatter at call time.
 
 ### Delegation Payload Contract
 
 The schema definition in `schemas/orchestrator.delegation-protocol.schema.json` requires a nested payload-level `model` field in all delegation objects. These payload-level fields carry resolved model context for validation, audit, and prompt-visible traceability, but they do not by themselves enforce the runtime model override. The outer `model` parameter on the tool call is the strict enforcement point.
 
 While global VS Code Copilot execution (e.g., triggering an agent directly from chat) still relies on the frontmatter fallback, all internal orchestrated pipeline dispatches strictly enforce the logical routing graph dynamically. It is important to note that offline evals do not prove live `runSubagent` execution; we distinguish structural tests and tool/API-shape evidence from real live subagent dispatch (as proven by the existing model override spike).
+
+### Offline Regression Coverage
+
+Structural and behavior evals validate the dispatch contract shape and the prompt-visible routing rules. They intentionally do not claim to observe live `agent/runSubagent` runtime parameters.
+
+Current negative cases are documented in `evals/scenarios/orchestrator-model-resolution.json` and validated by `evals/validate.mjs`, `evals/tests/orchestration-handoff-contract.test.mjs`, and `evals/tests/drift-detection.test.mjs`:
+
+- Missing outer `agentName`, even if a payload/prose target is present.
+- Missing outer `model`, even if `agentName` is present.
+- Payload-only `model`, where the nested delegation payload carries model context but the outer runtime selector is omitted.
+- Wrong effective review tier, especially unresolved HIGH risk that must route capable-reviewer dispatch through `LARGE`.
+- Unconfigured fallback on `model_unavailable`, where retry models must come from the configured fallback list for the same effective tier.
+- Omitted model due to missing tier context, where the correct behavior is to use the target role's top-level `primary` model.
 
 ## Matrix shape (Stage C/D)
 
@@ -181,6 +194,6 @@ The field lives at the **per-role** level, as a sibling of `primary`, `fallbacks
 ## Cross-references
 
 - Repository agent-engineering index: `docs/agent-engineering/README.md` (authored in Phase 10).
-- Drift detection: `evals/validate.mjs` and the upcoming `evals/scenarios/model-routing-alignment.json`.
+- Drift detection: `evals/validate.mjs`, `evals/scenarios/model-routing-alignment.json`, and `evals/scenarios/orchestrator-model-resolution.json`.
 - Plan: `plans/controlflow-comprehensive-revision-plan.md` Phase 4.
 - Spike record: `plans/artifacts/model-resolver/phase-1-spike.md`.

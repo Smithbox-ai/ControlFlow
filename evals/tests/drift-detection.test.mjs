@@ -34,6 +34,7 @@ import {
   hasSharedAnchorMapFlag,
   validateByTierShape,
   validatePayloadModelDescriptionSemantics,
+  validateModelResolutionScenarioNegatives,
   validateReviewScopeFinalCoupling,
   validateOrchestratorCompactionInvariant,
   validateOrchestratorMemoryPromotionOrder,
@@ -614,6 +615,102 @@ console.log('\n=== Check #6b — payload model description semantics ===');
     'negative: payload object omitting required model field -> drift detected',
     missingRequired.ok === false && missingRequired.errors.some(e => e.includes('required')),
     `ok=${missingRequired.ok}, errors=${JSON.stringify(missingRequired.errors)}`
+  );
+}
+
+// ──────────────────────────────────────────────
+// Check #6c — model resolution scenario negative cases
+// ──────────────────────────────────────────────
+console.log('\n=== Check #6c — model resolution scenario negative cases ===');
+{
+  const validScenario = {
+    input: {
+      dispatch_contract: {
+        outer_agentName_field: 'agentName',
+        outer_model_field: 'model',
+        payload_model_field: 'model',
+        payload_model_is_runtime_enforcement_boundary: false,
+      },
+      negative_cases: [
+        {
+          case_id: 'missing-outer-agentName',
+          broken_dispatch: {
+            outer_fields: { agentName_present: false, model_present: true },
+            payload_fields: { agentName_present: true, model_present: true },
+          },
+          expected: { rejected: true, violates: 'missing_outer_agentName', offline_detection_scope: 'structural_contract', live_runtime_assertion: false },
+        },
+        {
+          case_id: 'missing-outer-model',
+          broken_dispatch: {
+            outer_fields: { agentName_present: true, model_present: false },
+            payload_fields: { model_present: false },
+          },
+          expected: { rejected: true, violates: 'missing_outer_model', offline_detection_scope: 'structural_contract', live_runtime_assertion: false },
+        },
+        {
+          case_id: 'payload-only-model',
+          broken_dispatch: {
+            outer_fields: { agentName_present: true, model_present: false },
+            payload_fields: { model_present: true },
+          },
+          expected: { rejected: true, violates: 'payload_only_model', offline_detection_scope: 'structural_contract', live_runtime_assertion: false },
+        },
+        {
+          case_id: 'wrong-effective-review-tier',
+          input_context: { plan_complexity_tier: 'MEDIUM', unresolved_high_risk: true },
+          broken_resolution: { effective_review_tier: 'MEDIUM' },
+          expected: { rejected: true, violates: 'wrong_effective_review_tier', effective_review_tier: 'LARGE', resolved_primary_model: 'Claude Opus 4.7 (copilot)', offline_detection_scope: 'structural_contract', live_runtime_assertion: false },
+        },
+        {
+          case_id: 'unconfigured-fallback',
+          input_context: { effective_review_tier: 'MEDIUM' },
+          broken_retry: { model: 'Claude Opus 4.7 (copilot)', configured_fallbacks: ['GPT-5.4 (copilot)', 'GPT-5.5 (copilot)'] },
+          expected: { rejected: true, violates: 'unconfigured_fallback', configured_fallbacks_only: true, offline_detection_scope: 'structural_contract', live_runtime_assertion: false },
+        },
+        {
+          case_id: 'omitted-model-due-missing-tier-context',
+          input_context: { complexity_tier_present: false },
+          broken_dispatch: { outer_fields: { agentName_present: true, model_present: false } },
+          expected: { rejected: true, violates: 'omitted_model_missing_tier_context', resolution_when_tier_missing: 'top_level_primary', resolved_primary_model: 'GPT-5.5 (copilot)', offline_detection_scope: 'structural_contract', live_runtime_assertion: false },
+        },
+      ],
+    },
+    expected: { negative_cases_documented: 6 },
+  };
+
+  const positive = validateModelResolutionScenarioNegatives(validScenario);
+  check(
+    'positive: required model-resolution negative cases are structurally complete',
+    positive.ok === true,
+    `ok=${positive.ok}, errors=${JSON.stringify(positive.errors)}`
+  );
+
+  const missingCaseScenario = JSON.parse(JSON.stringify(validScenario));
+  missingCaseScenario.input.negative_cases = missingCaseScenario.input.negative_cases.filter(c => c.case_id !== 'payload-only-model');
+  const missingCase = validateModelResolutionScenarioNegatives(missingCaseScenario);
+  check(
+    'negative: missing payload-only-model case is flagged',
+    missingCase.ok === false && missingCase.errors.some(e => e.includes('payload-only-model')),
+    `ok=${missingCase.ok}, errors=${JSON.stringify(missingCase.errors)}`
+  );
+
+  const payloadOnlyConflatedScenario = JSON.parse(JSON.stringify(validScenario));
+  payloadOnlyConflatedScenario.input.negative_cases.find(c => c.case_id === 'payload-only-model').broken_dispatch.outer_fields.model_present = true;
+  const payloadOnlyConflated = validateModelResolutionScenarioNegatives(payloadOnlyConflatedScenario);
+  check(
+    'negative: payload-only-model case with outer model present is flagged',
+    payloadOnlyConflated.ok === false && payloadOnlyConflated.errors.some(e => e.includes('payload-only-model')),
+    `ok=${payloadOnlyConflated.ok}, errors=${JSON.stringify(payloadOnlyConflated.errors)}`
+  );
+
+  const wrongTierScenario = JSON.parse(JSON.stringify(validScenario));
+  wrongTierScenario.input.negative_cases.find(c => c.case_id === 'wrong-effective-review-tier').expected.effective_review_tier = 'MEDIUM';
+  const wrongTier = validateModelResolutionScenarioNegatives(wrongTierScenario);
+  check(
+    'negative: wrong-effective-review-tier case that does not require LARGE is flagged',
+    wrongTier.ok === false && wrongTier.errors.some(e => e.includes('wrong-effective-review-tier')),
+    `ok=${wrongTier.ok}, errors=${JSON.stringify(wrongTier.errors)}`
   );
 }
 

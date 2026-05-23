@@ -7,8 +7,9 @@
  * Non-duplication rationale:
  *   Existing drift coverage is inventoried in
  *   plans/artifacts/controlflow-revision/phase-1-existing-drift-checks.yaml.
- *   This module adds only the four checks marked `missing_checks_target_phase_9`
- *   (Check #1 `model_role` remains gated off pending Phase 4 spike re-enable).
+ *   This module adds only the checks marked `missing_checks_target_phase_9`;
+ *   Check #1 `model_role` validation is active and also covers model-routing
+ *   outer-dispatch contract fixtures.
  */
 
 import { readFileSync, readdirSync, existsSync } from 'fs';
@@ -143,6 +144,186 @@ export function validatePayloadModelDescriptionSemantics(delegationProtocolSchem
     }
     if (/sets this when dispatching to override/i.test(description)) {
       errors.push(`${agentName}: payload model description still implies Orchestrator overrides frontmatter through the nested payload field`);
+    }
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+
+const REQUIRED_MODEL_RESOLUTION_NEGATIVE_CASES = [
+  'missing-outer-agentName',
+  'missing-outer-model',
+  'payload-only-model',
+  'wrong-effective-review-tier',
+  'unconfigured-fallback',
+  'omitted-model-due-missing-tier-context',
+];
+
+function requireRejectedNegativeCase(caseId, negativeCase, errors) {
+  const expected = negativeCase?.expected ?? {};
+  if (expected.rejected !== true) {
+    errors.push(`${caseId}: expected.rejected must be true`);
+  }
+  if (expected.offline_detection_scope !== 'structural_contract') {
+    errors.push(`${caseId}: expected.offline_detection_scope must be "structural_contract"`);
+  }
+  if (expected.live_runtime_assertion !== false) {
+    errors.push(`${caseId}: expected.live_runtime_assertion must be false`);
+  }
+}
+
+/**
+ * Validate that the orchestrator model-resolution scenario documents the
+ * negative cases needed to guard the outer agent/runSubagent boundary.
+ * These checks remain structural: they prove fixture and prompt contract shape,
+ * not live runtime model selection.
+ * @param {object} scenario - Parsed evals/scenarios/orchestrator-model-resolution.json.
+ * @returns {{ ok: boolean, errors: string[] }}
+ */
+export function validateModelResolutionScenarioNegatives(scenario) {
+  const errors = [];
+  const dispatchContract = scenario?.input?.dispatch_contract ?? {};
+  if (dispatchContract.outer_agentName_field !== 'agentName') {
+    errors.push('dispatch_contract.outer_agentName_field must be "agentName"');
+  }
+  if (dispatchContract.outer_model_field !== 'model') {
+    errors.push('dispatch_contract.outer_model_field must be "model"');
+  }
+  if (dispatchContract.payload_model_field !== 'model') {
+    errors.push('dispatch_contract.payload_model_field must be "model"');
+  }
+  if (dispatchContract.payload_model_is_runtime_enforcement_boundary !== false) {
+    errors.push('dispatch_contract.payload_model_is_runtime_enforcement_boundary must be false');
+  }
+
+  const negativeCases = scenario?.input?.negative_cases;
+  if (!Array.isArray(negativeCases)) {
+    errors.push('input.negative_cases must be an array');
+    return { ok: false, errors };
+  }
+
+  if (scenario?.expected?.negative_cases_documented !== REQUIRED_MODEL_RESOLUTION_NEGATIVE_CASES.length) {
+    errors.push(`expected.negative_cases_documented must be ${REQUIRED_MODEL_RESOLUTION_NEGATIVE_CASES.length}`);
+  }
+
+  const byId = new Map();
+  for (const negativeCase of negativeCases) {
+    if (typeof negativeCase?.case_id !== 'string' || negativeCase.case_id.length === 0) {
+      errors.push('negative case missing non-empty case_id');
+      continue;
+    }
+    if (byId.has(negativeCase.case_id)) {
+      errors.push(`duplicate negative case_id "${negativeCase.case_id}"`);
+    }
+    byId.set(negativeCase.case_id, negativeCase);
+  }
+
+  for (const caseId of REQUIRED_MODEL_RESOLUTION_NEGATIVE_CASES) {
+    const negativeCase = byId.get(caseId);
+    if (!negativeCase) {
+      errors.push(`missing required model-resolution negative case "${caseId}"`);
+      continue;
+    }
+    requireRejectedNegativeCase(caseId, negativeCase, errors);
+  }
+
+  const missingOuterAgentName = byId.get('missing-outer-agentName');
+  if (missingOuterAgentName) {
+    if (missingOuterAgentName?.broken_dispatch?.outer_fields?.agentName_present !== false) {
+      errors.push('missing-outer-agentName: outer agentName must be absent');
+    }
+    if (missingOuterAgentName?.broken_dispatch?.payload_fields?.agentName_present !== true) {
+      errors.push('missing-outer-agentName: payload agentName must be present to prove it cannot substitute for the outer field');
+    }
+    if (missingOuterAgentName?.expected?.violates !== 'missing_outer_agentName') {
+      errors.push('missing-outer-agentName: expected.violates must be "missing_outer_agentName"');
+    }
+  }
+
+  const missingOuterModel = byId.get('missing-outer-model');
+  if (missingOuterModel) {
+    if (missingOuterModel?.broken_dispatch?.outer_fields?.agentName_present !== true) {
+      errors.push('missing-outer-model: outer agentName must be present so the failure is isolated to model');
+    }
+    if (missingOuterModel?.broken_dispatch?.outer_fields?.model_present !== false) {
+      errors.push('missing-outer-model: outer model must be absent');
+    }
+    if (missingOuterModel?.expected?.violates !== 'missing_outer_model') {
+      errors.push('missing-outer-model: expected.violates must be "missing_outer_model"');
+    }
+  }
+
+  const payloadOnlyModel = byId.get('payload-only-model');
+  if (payloadOnlyModel) {
+    if (payloadOnlyModel?.broken_dispatch?.outer_fields?.model_present !== false) {
+      errors.push('payload-only-model: outer model must be absent');
+    }
+    if (payloadOnlyModel?.broken_dispatch?.payload_fields?.model_present !== true) {
+      errors.push('payload-only-model: payload model must be present to prove payload-only is insufficient');
+    }
+    if (payloadOnlyModel?.expected?.violates !== 'payload_only_model') {
+      errors.push('payload-only-model: expected.violates must be "payload_only_model"');
+    }
+  }
+
+  const wrongEffectiveReviewTier = byId.get('wrong-effective-review-tier');
+  if (wrongEffectiveReviewTier) {
+    if (wrongEffectiveReviewTier?.input_context?.plan_complexity_tier !== 'MEDIUM') {
+      errors.push('wrong-effective-review-tier: input plan tier must be MEDIUM');
+    }
+    if (wrongEffectiveReviewTier?.input_context?.unresolved_high_risk !== true) {
+      errors.push('wrong-effective-review-tier: unresolved_high_risk must be true');
+    }
+    if (wrongEffectiveReviewTier?.broken_resolution?.effective_review_tier !== 'MEDIUM') {
+      errors.push('wrong-effective-review-tier: broken effective tier must be MEDIUM');
+    }
+    if (wrongEffectiveReviewTier?.expected?.effective_review_tier !== 'LARGE') {
+      errors.push('wrong-effective-review-tier: expected effective tier must be LARGE');
+    }
+    if (typeof wrongEffectiveReviewTier?.expected?.resolved_primary_model !== 'string' || wrongEffectiveReviewTier.expected.resolved_primary_model.length === 0) {
+      errors.push('wrong-effective-review-tier: expected resolved_primary_model must be a non-empty string');
+    }
+    if (wrongEffectiveReviewTier?.expected?.violates !== 'wrong_effective_review_tier') {
+      errors.push('wrong-effective-review-tier: expected.violates must be "wrong_effective_review_tier"');
+    }
+  }
+
+  const unconfiguredFallback = byId.get('unconfigured-fallback');
+  if (unconfiguredFallback) {
+    const configuredFallbacks = unconfiguredFallback?.broken_retry?.configured_fallbacks;
+    const brokenRetryModel = unconfiguredFallback?.broken_retry?.model;
+    if (unconfiguredFallback?.input_context?.effective_review_tier !== 'MEDIUM') {
+      errors.push('unconfigured-fallback: effective review tier must be MEDIUM');
+    }
+    if (!Array.isArray(configuredFallbacks) || configuredFallbacks.length === 0) {
+      errors.push('unconfigured-fallback: broken_retry.configured_fallbacks must be a non-empty array');
+    } else if (configuredFallbacks.includes(brokenRetryModel)) {
+      errors.push('unconfigured-fallback: broken retry model must not be in configured_fallbacks');
+    }
+    if (unconfiguredFallback?.expected?.configured_fallbacks_only !== true) {
+      errors.push('unconfigured-fallback: expected.configured_fallbacks_only must be true');
+    }
+    if (unconfiguredFallback?.expected?.violates !== 'unconfigured_fallback') {
+      errors.push('unconfigured-fallback: expected.violates must be "unconfigured_fallback"');
+    }
+  }
+
+  const omittedDueMissingTier = byId.get('omitted-model-due-missing-tier-context');
+  if (omittedDueMissingTier) {
+    if (omittedDueMissingTier?.input_context?.complexity_tier_present !== false) {
+      errors.push('omitted-model-due-missing-tier-context: complexity_tier_present must be false');
+    }
+    if (omittedDueMissingTier?.broken_dispatch?.outer_fields?.model_present !== false) {
+      errors.push('omitted-model-due-missing-tier-context: outer model must be absent in the broken dispatch');
+    }
+    if (omittedDueMissingTier?.expected?.resolution_when_tier_missing !== 'top_level_primary') {
+      errors.push('omitted-model-due-missing-tier-context: expected resolution_when_tier_missing must be "top_level_primary"');
+    }
+    if (typeof omittedDueMissingTier?.expected?.resolved_primary_model !== 'string' || omittedDueMissingTier.expected.resolved_primary_model.length === 0) {
+      errors.push('omitted-model-due-missing-tier-context: expected resolved_primary_model must be a non-empty string');
+    }
+    if (omittedDueMissingTier?.expected?.violates !== 'omitted_model_missing_tier_context') {
+      errors.push('omitted-model-due-missing-tier-context: expected.violates must be "omitted_model_missing_tier_context"');
     }
   }
 

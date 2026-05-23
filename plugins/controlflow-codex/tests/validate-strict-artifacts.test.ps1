@@ -7,6 +7,7 @@ $ErrorActionPreference = "Continue"
 
 $repoRootResolved = (Resolve-Path $RepoRoot).Path
 $validatorPath = Join-Path $repoRootResolved "plugins/controlflow-codex/scripts/validate-strict-artifacts.ps1"
+$generatedAssetsValidatorPath = Join-Path $repoRootResolved "plugins/controlflow-shared-source/scripts/validate-generated-assets.ps1"
 $validFixturePath = "plugins/controlflow-codex/tests/fixtures/strict-plan-lifecycle-valid-plan.md"
 $invalidFixturePath = "plugins/controlflow-codex/tests/fixtures/strict-plan-lifecycle-missing-sections-plan.md"
 
@@ -59,6 +60,21 @@ if ($test2Exit -ne 0) {
 }
 
 # ---------------------------------------------------------------------------
+# TEST 3 — Generated asset validation must pass for Codex output targets
+# ---------------------------------------------------------------------------
+Write-Output "TEST 3: Codex generated asset targets must match shared source manifest"
+$output = powershell.exe -ExecutionPolicy Bypass -NoProfile -File $generatedAssetsValidatorPath -RepoRoot $RepoRoot -Host codex 2>&1
+$test3Exit = $LASTEXITCODE
+if ($test3Exit -eq 0) {
+    Write-Output "  PASS: Codex generated outputs match shared source targets (exit 0)"
+    $passed++
+} else {
+    Write-Output "  FAIL: Codex generated outputs drifted from shared source targets. Output:"
+    $output | ForEach-Object { Write-Output "    $_" }
+    $failed++
+}
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 Write-Output ""
@@ -72,4 +88,5 @@ if ($failed -gt 0) {
     Write-Error "validate-strict-artifacts.test.ps1: $failed test(s) FAILED"
     exit 1
 }
+
 Write-Output "All tests passed."
