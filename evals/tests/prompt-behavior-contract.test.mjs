@@ -88,6 +88,14 @@ console.log('\n=== Planner — Behavioral Invariants ===');
     /do not produce any chat output until the file is saved/i.test(src)
   );
 
+  check(
+    'Output contract: persisted_artifact covers initial create, same-path update, and supersession artifact modes',
+    /Persist the markdown plan artifact first/i.test(src) &&
+    /initial_create/i.test(src) &&
+    /in_place_update[\s\S]*return that same path as `plan_path`/i.test(src) &&
+    /new_artifact_supersession[\s\S]*revision_of/i.test(src)
+  );
+
   // Chat-after-artifact: no inline plan content in chat
   check(
     'Output contract: chat must not contain inline plan breakdowns',

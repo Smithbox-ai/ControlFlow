@@ -37,7 +37,7 @@ stateDiagram-v2
 Из `schemas/orchestrator.gate-event.schema.json`:
 
 | Event type | Когда |
-|------------|-------|
+| ---------- | ----- |
 | `PLAN_GATE` | Решение о принятии плана к исполнению. |
 | `PREFLECT_GATE` | Pre-action гейт (4 risk-класса). |
 | `PHASE_REVIEW_GATE` | Ревью результата фазы или итерации plan-review. |
@@ -113,7 +113,7 @@ Orchestrator делегирует задачу subagent-у через струк
 - `scope` — описание задачи.
 - `inputs` — пути к файлам, контекст.
 - `expected_output_schema` — какую схему subagent должен вернуть.
-- `trace_id`, `iteration_index`.
+- `trace_id`, `iteration_index` — пробрасываются через все payloads для Planner (replan/update) и dispatches внутри цикла ревью для полной корреляции событий.
 
 **Правило:** Orchestrator делегирует **только** агентам, перечисленным в `plans/project-context.md`. Внешние агенты запрещены.
 
@@ -144,13 +144,14 @@ Orchestrator делегирует задачу subagent-у через струк
 Каждый сбой получает `failure_classification`. Orchestrator маршрутизирует автоматически (см. [главу 13](13-failure-taxonomy.md)):
 
 | Класс | Действие | Лимит |
-|-------|---------|-------|
+| ----- | -------- | ----- |
 | transient | Retry той же задачи | 3 |
 | fixable | Retry с подсказкой | 1 |
 | needs_replan | Замкнуть на Planner для замены фазы | 1 |
 | escalate | СТОП → WAITING_APPROVAL → пользователь | 0 |
 
 **Reliability policy** (из `governance/runtime-policy.json`):
+
 - `max_retries_per_phase` = 5 кумулятивно.
 - 3 одинаковых сбоя подряд → эскалация (несмотря на класс).
 - ≥2 transient в одной волне → следующая волна с 50% параллелизма.

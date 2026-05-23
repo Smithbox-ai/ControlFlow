@@ -14,6 +14,8 @@
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import Ajv2020 from 'ajv/dist/2020.js';
+import addFormats from 'ajv-formats';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..', '..');
@@ -36,6 +38,12 @@ function extractBetween(text, startMarker, endMarker) {
   if (startIndex === -1) return '';
   const endIndex = text.indexOf(endMarker, startIndex + startMarker.length);
   return endIndex === -1 ? text.slice(startIndex) : text.slice(startIndex, endIndex);
+}
+
+function withoutProperty(obj, key) {
+  const copy = { ...obj };
+  delete copy[key];
+  return copy;
 }
 
 /**
@@ -103,6 +111,10 @@ const planner = readFileSync(join(ROOT, 'Planner.agent.md'), 'utf8');
 const delegationProtocolSchema = JSON.parse(
   readFileSync(join(ROOT, 'schemas', 'orchestrator.delegation-protocol.schema.json'), 'utf8')
 );
+const ajv = new Ajv2020({ strict: false, allErrors: true });
+addFormats(ajv);
+const plannerDelegationPayloadSchema = delegationProtocolSchema.properties?.agents?.properties?.Planner;
+const validatePlannerDelegationPayload = ajv.compile(plannerDelegationPayloadSchema);
 const orchestratorDispatchContract = extractBetween(
   orch,
   '### Dispatch Tool-Call Contract (Required Fields)',
@@ -423,6 +435,72 @@ check(
   'Trace ID: propagated to all gate events and delegations',
   /propagate.*gate.*event|propagate.*delegation/i.test(orch)
 );
+
+// ──────────────────────────────────────────────
+// Planner revision payload contract
+// ──────────────────────────────────────────────
+console.log('\n=== Orchestrator — Planner Revision Payload Contract ===');
+{
+  const plannerRequired = plannerDelegationPayloadSchema.required ?? [];
+  const basePlannerPayload = {
+    task_description: 'Create an implementation plan for a focused eval migration.',
+    model: capablePlannerPrimary,
+  };
+  const validInPlacePayload = {
+    ...basePlannerPayload,
+    trace_id: '550e8400-e29b-41d4-a716-446655440100',
+    iteration_index: 2,
+    revision_mode: 'in_place_update',
+    revision_reason: 'Address PLAN_REVIEW findings PA-MAJOR-1 and AV-BLOCKING-2.',
+    active_plan_path: 'plans/active-plan.md',
+  };
+  const validSupersessionPayload = {
+    ...basePlannerPayload,
+    trace_id: '550e8400-e29b-41d4-a716-446655440101',
+    iteration_index: 3,
+    revision_mode: 'new_artifact_supersession',
+    revision_reason: 'Material architecture pivot requires a citable replacement plan.',
+    existing_plan_path: 'plans/active-plan.md',
+  };
+
+  check(
+    'Delegation schema: base Planner payload does not unconditionally require trace_id',
+    !plannerRequired.includes('trace_id') && validatePlannerDelegationPayload(basePlannerPayload)
+  );
+  check(
+    'Delegation schema: base Planner payload does not unconditionally require revision_mode',
+    !plannerRequired.includes('revision_mode') && validatePlannerDelegationPayload(basePlannerPayload)
+  );
+  check(
+    'Delegation schema: in_place_update requires trace_id',
+    !validatePlannerDelegationPayload(withoutProperty(validInPlacePayload, 'trace_id'))
+  );
+  check(
+    'Delegation schema: in_place_update requires review-loop iteration_index',
+    !validatePlannerDelegationPayload(withoutProperty(validInPlacePayload, 'iteration_index'))
+  );
+  check(
+    'Delegation schema: in_place_update requires active_plan_path and accepts the complete payload',
+    !validatePlannerDelegationPayload(withoutProperty(validInPlacePayload, 'active_plan_path')) &&
+    validatePlannerDelegationPayload(validInPlacePayload)
+  );
+  check(
+    'Delegation schema: new_artifact_supersession requires existing_plan_path and accepts the complete payload',
+    !validatePlannerDelegationPayload(withoutProperty(validSupersessionPayload, 'existing_plan_path')) &&
+    validatePlannerDelegationPayload(validSupersessionPayload)
+  );
+  check(
+    'Planner replan/update dispatch: prompt requires trace_id, iteration_index, revision_mode, revision_reason, and selected path field before active-plan edits',
+    /Planner payload must include payload-level `model`, `trace_id`, review-loop `iteration_index`, `revision_mode`, `revision_reason`/i.test(orch) &&
+    /active_plan_path` for `in_place_update` or `existing_plan_path` for `new_artifact_supersession`/i.test(orch) &&
+    /edit only the supplied `active_plan_path`/i.test(planner)
+  );
+  check(
+    'Planner write dispatch: Orchestrator serializes same trace_id and active_plan_path revisions',
+    /Serialize write-capable Planner revisions by[\s\S]{0,80}trace_id[\s\S]{0,80}active_plan_path/i.test(orch) &&
+    /Never run two write-capable Planner updates to the same plan in parallel/i.test(orch)
+  );
+}
 
 // ──────────────────────────────────────────────
 // Gate-event schema contract (F4)

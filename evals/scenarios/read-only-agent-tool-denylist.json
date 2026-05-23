@@ -1,0 +1,33 @@
+{
+  "id": "read-only-agent-tool-denylist",
+  "target_agent": "Orchestrator",
+  "goal": "Independent guard that read-only review, discovery, research, and verification-only agents cannot gain edit tools even when frontmatter and governance grants drift consistently",
+  "input": {
+    "no_edit_agents": [
+      "PlanAuditor-subagent.agent.md",
+      "AssumptionVerifier-subagent.agent.md",
+      "ExecutabilityVerifier-subagent.agent.md",
+      "CodeMapper-subagent.agent.md",
+      "Researcher-subagent.agent.md",
+      "CodeReviewer-subagent.agent.md"
+    ],
+    "deny_tool_prefixes": ["edit", "edit/"],
+    "synthetic_consistent_drift_case": {
+      "agent": "CodeReviewer-subagent.agent.md",
+      "frontmatter_tools": ["search", "edit/editFiles"],
+      "governance_tools": ["search", "edit/editFiles"]
+    }
+  },
+  "expected": {
+    "no_edit_tools_in_frontmatter": true,
+    "no_edit_tools_in_governance": true,
+    "fail_even_if_frontmatter_and_governance_match": true,
+    "deny_edit_category": true,
+    "deny_edit_tool_prefix": true
+  },
+  "assertions": [
+    "PlanAuditor, AssumptionVerifier, ExecutabilityVerifier, CodeMapper, Researcher, and CodeReviewer remain read-only with respect to edit tools.",
+    "The denylist rejects edit, edit/createFile, edit/editFiles, and any other edit/ tool in both frontmatter and governance/tool-grants.json.",
+    "The guard is independent from manifest/frontmatter consistency, so matching incorrect grants still fail."
+  ]
+}

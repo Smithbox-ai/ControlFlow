@@ -2,7 +2,7 @@
   "scenario_id": "auditor-regression-lineage",
   "agent": "PlanAuditor-subagent",
   "title": "Auditor finding regression lineage fields",
-  "description": "Validates that plan-auditor findings can carry regression_iteration and regression_finding_id to mark same-finding regressions across plan iterations, and that findings without these fields remain valid.",
+  "description": "Validates that plan-auditor findings can carry regression_iteration and regression_finding_id to mark same-finding regressions across plan iterations, including same-path in-place plan updates, and that findings without these fields remain valid.",
   "category": "contract",
   "inputs": [
     {
@@ -10,7 +10,8 @@
       "description": "Positive case: an auditor finding on iter-2 marks a recurrence of PA-MAJOR-1 from iter-1 using regression_iteration and regression_finding_id.",
       "input": {
         "plan_path": "plans/sample-iter2-plan.md",
-        "context": "PlanAuditor is reviewing iter-2. A finding that was VERIFIED in iter-1 has regressed. The finding object includes regression_iteration: 2 and regression_finding_id: 'PA-MAJOR-1'."
+        "context": "PlanAuditor is reviewing iteration_index 2 for the same active plan_path after an in-place update. A finding that was VERIFIED in iteration 1 has regressed. The finding object includes regression_iteration: 2 and regression_finding_id: 'PA-MAJOR-1'.",
+        "active_plan_path": "plans/sample-active-plan.md"
       },
       "expected": {
         "schema": "schemas/plan-auditor.plan-audit.schema.json",
@@ -37,6 +38,7 @@
   ],
   "assertions": [
     "regression_iteration is optional: iter-1 findings without it remain schema-valid.",
+    "Same-path in-place plan updates preserve finding identity through regression_finding_id instead of requiring a new plan artifact path.",
     "regression_finding_id is optional: iter-1 findings without it remain schema-valid.",
     "When both regression fields are present they follow their type constraints: integer >= 1 and string.",
     "additionalProperties: false on finding objects is honored — regression fields are explicitly declared."

@@ -296,6 +296,72 @@ console.log('\n=== capability-matrix: buildCapabilityMatrix ===');
   assert(rows[0].agent === 'RealAgent.agent.md', 'row is for the real agent, not meta keys');
 }
 
+// ── Read-only edit denylist guard ─────────────────────────────────────────────
+
+console.log('\n=== capability-matrix: read-only edit denylist ===');
+
+const readOnlyDenylistScenario = JSON.parse(
+  readFileSync(join(ROOT, 'evals', 'scenarios', 'read-only-agent-tool-denylist.json'), 'utf8')
+);
+const readOnlyDenylistedAgents = readOnlyDenylistScenario.input?.no_edit_agents ?? [];
+
+function editToolTokens(tools = []) {
+  return tools.filter((tool) => /^edit(?:\/|$)/i.test(tool));
+}
+
+{
+  const driftConsistentGrants = {
+    'CodeReviewer-subagent.agent.md': ['search', 'edit/editFiles'],
+  };
+  const driftConsistentAgents = new Map([
+    ['CodeReviewer-subagent.agent.md', { modelRole: 'capable-reviewer', tools: ['search', 'edit/editFiles'] }],
+  ]);
+  const roster = {
+    executors: [],
+    reviewPipeline: ['CodeReviewer-subagent'],
+    roleMatrix: new Map([['CodeReviewer-subagent', { schemaOutput: 'schemas/code-reviewer.verdict.schema.json' }]]),
+  };
+  const rows = buildCapabilityMatrix({ grants: driftConsistentGrants, agents: driftConsistentAgents, roster });
+  assert(
+    rows[0].driftFlags.length === 0,
+    'baseline matrix can look drift-clean when frontmatter and grants consistently add edit tools'
+  );
+  assert(
+    editToolTokens(driftConsistentGrants['CodeReviewer-subagent.agent.md']).length === 1 &&
+      editToolTokens(driftConsistentAgents.get('CodeReviewer-subagent.agent.md').tools).length === 1,
+    'independent denylist detector catches edit tools even when manifest/frontmatter drift is consistent'
+  );
+}
+
+{
+  const expectedDenylist = [
+    'PlanAuditor-subagent.agent.md',
+    'AssumptionVerifier-subagent.agent.md',
+    'ExecutabilityVerifier-subagent.agent.md',
+    'CodeMapper-subagent.agent.md',
+    'Researcher-subagent.agent.md',
+    'CodeReviewer-subagent.agent.md',
+  ];
+  assert(
+    expectedDenylist.every((agent) => readOnlyDenylistedAgents.includes(agent)) &&
+      readOnlyDenylistedAgents.every((agent) => expectedDenylist.includes(agent)),
+    'read-only denylist fixture includes every review, discovery, research, and verification-only agent'
+  );
+}
+
+{
+  const grantsPath = join(ROOT, 'governance', 'tool-grants.json');
+  const grantsRaw = JSON.parse(readFileSync(grantsPath, 'utf8'));
+  let liveViolations = 0;
+  for (const agentFile of readOnlyDenylistedAgents) {
+    const manifestTokens = editToolTokens(grantsRaw[agentFile] ?? []);
+    const agentPath = join(ROOT, agentFile);
+    const frontmatterTokens = editToolTokens(parseAgentFrontmatter(readFileSync(agentPath, 'utf8')).tools);
+    liveViolations += manifestTokens.length + frontmatterTokens.length;
+  }
+  assert(liveViolations === 0, 'live read-only denylisted agents have no edit tools in grants or frontmatter');
+}
+
 // ── renderMatrixMarkdown ──────────────────────────────────────────────────────
 
 console.log('\n=== capability-matrix: renderMatrixMarkdown ===');

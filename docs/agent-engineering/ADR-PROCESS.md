@@ -30,13 +30,13 @@ ADRs must strictly adhere to the `ADR-TEMPLATE.md` format. They must include exa
 
 ## Storage Convention
 
-ADRs are stored in the `docs/architecture-decisions/` directory using the naming format `NNNN-kebab-title.md` (where `NNNN` is a zero-padded sequential number, e.g., `0001-initial-architecture.md`). The directory will be created when the first ADR is written.
+ADRs are stored as individual append-only records in the `docs/architecture-decisions/` directory using the naming format `NNNN-kebab-title.md` (where `NNNN` is a zero-padded sequential number, e.g., `0001-initial-architecture.md`). The directory will be created when the first ADR is written. Unlike active plans which undergo `in_place_update` revisions, ADRs preserve historical context.
 
 ## Status Lifecycle
 
 1. **Proposed**: The decision is drafted and under review along with the associated plan or PR.
 2. **Accepted**: The decision has been approved and is being implemented or has been implemented.
-3. **Superseded**: The decision is no longer active and has been replaced by a newer decision (accompanied by a link to the superseding ADR).
+3. **Superseded**: The decision is no longer active and has been replaced by a newer decision (accompanied by a link to the superseding ADR, following a `new_artifact_supersession` model).
 
 ## Review Expectations
 

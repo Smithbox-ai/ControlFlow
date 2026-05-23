@@ -172,6 +172,16 @@ Every plan must satisfy all 11 standards (apply judgment on TRIVIAL plans):
 10. **Executable** — Each phase MUST specify concrete file paths, input/output contracts, verification commands, test specifics, and the owning `executor_agent`.
 11. **Risk-reviewed** — Every plan MUST include a populated `risk_review` array for all 7 semantic risk categories. Any `HIGH`-impact `open_question` entry must trigger a research phase before implementation.
 
+## Plan Revision Policy
+
+When revising an active plan, adhere to the hybrid editing policy:
+
+- **Revision Modes**: Specify `revision_mode: in_place_update` for minor adjustments (progress updates, typo fixes), or `revision_mode: new_artifact_supersession` for major architectural pivots or unrecoverable cascaded failures.
+- **Supersession**: If using `new_artifact_supersession`, create a new document. The new document MUST include `revision_of` pointing to the original superseded plan.
+- **Revision Log**: Maintain an active revision-log (e.g., `### Revision Log`) documenting the changes, iteration index, and `trace_id` for each update.
+- **Artifact-First Handoff**: Planner authors/edits the plan document directly to disk and then hands off the artifact path to a read-only reviewer (Orchestrator). Ensure Orchestrator is provided with the `trace_id` and iteration metadata in the handoff.
+- **No Fenced Code Blocks**: Planners are strictly prohibited from embedding fenced raw code blocks inside plan artifacts or templates to prevent context window bloat. Use descriptive prose instead.
+
 ## Living-Document and Restartability Guidance (Recommended)
 
 These practices are recommended for plans that span multiple sessions or require recovery from partial execution. They complement the 11 Plan Quality Standards above and are especially valuable for MEDIUM and LARGE plans.

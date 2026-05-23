@@ -281,7 +281,7 @@
     },
     "revision_of": {
       "type": "string",
-      "description": "Path of the prior plan artifact this plan supersedes. Set on REPLAN-with-new-plan-path events so the new plan is traceable to its predecessor. Optional — iter-1 plans omit this field."
+      "description": "Supersession lineage only: path of the prior plan artifact replaced by a newly created superseding plan. Set when revision_mode is new_artifact_supersession; omit for in_place_update and iter-1 initial plans."
     },
     "context_packet_path": {
       "type": "string",

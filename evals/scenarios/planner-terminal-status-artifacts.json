@@ -1,7 +1,7 @@
 {
   "id": "planner-terminal-status-artifacts",
   "target_agent": "Planner",
-  "goal": "Planner emits a markdown plan artifact for ABSTAIN and REPLAN_REQUIRED terminal statuses, not only for READY_FOR_EXECUTION",
+  "goal": "Planner persists a markdown plan artifact for ABSTAIN and REPLAN_REQUIRED terminal statuses, not only for READY_FOR_EXECUTION, without forcing a new path when an active plan path exists",
   "inputs": [
     {
       "label": "abstain-inaccessible-evidence",
@@ -14,7 +14,7 @@
         "risk_review_present": true,
         "complexity_tier_present": true,
         "required_status": "ABSTAIN",
-        "plan_file_created": true,
+        "persisted_artifact": true,
         "abstain_reasons_min": 1,
         "must_include_blockers": true
       }
@@ -30,7 +30,31 @@
         "risk_review_present": true,
         "complexity_tier_present": true,
         "required_status": "REPLAN_REQUIRED",
-        "plan_file_created": true,
+        "persisted_artifact": true,
+        "must_include_recovery_next_step": true
+      }
+    },
+    {
+      "label": "replan-required-active-plan-update",
+      "description": "An active plan exists and a review finding invalidates part of it. Planner must persist terminal diagnostics to the active artifact without forcing a new path.",
+      "input": {
+        "query": "Update the active plan after PLAN_REVIEW found missing rollback evidence.",
+        "context": "Scope is understood, but PA-MAJOR-1 invalidates the current rollback section. The active artifact remains the right place for diagnostics.",
+        "revision_mode": "in_place_update",
+        "active_plan_path": "plans/active-auth-plan.md",
+        "review_finding_ids": ["PA-MAJOR-1"],
+        "revision_request": "Address PA-MAJOR-1 by adding rollback diagnostics to the active plan without creating a new path."
+      },
+      "expected": {
+        "risk_review_present": true,
+        "complexity_tier_present": true,
+        "required_status": "REPLAN_REQUIRED",
+        "persisted_artifact": true,
+        "revision_mode": "in_place_update",
+        "active_plan_path": "plans/active-auth-plan.md",
+        "plan_path_matches_active_plan_path": true,
+        "must_not_create_new_plan_path": true,
+        "review_finding_ids_ref_only": true,
         "must_include_recovery_next_step": true
       }
     }
@@ -38,7 +62,8 @@
   "assertions": [
     "ABSTAIN output includes a markdown plan artifact with at minimum a blockers section and abstain reasons",
     "REPLAN_REQUIRED output includes a markdown plan artifact capturing what was invalidated and a recovery next step",
-    "Both terminal statuses produce a plan file — plan_file_created is true for all non-READY_FOR_EXECUTION outcomes",
-    "Planner does not reply in chat only without creating a plan artifact even when status is not READY_FOR_EXECUTION"
+    "Terminal statuses use persisted_artifact semantics for all non-READY_FOR_EXECUTION outcomes",
+    "Planner does not reply in chat only without persisting a plan artifact even when status is not READY_FOR_EXECUTION",
+    "When revision_mode: in_place_update supplies active_plan_path, terminal diagnostics persist to that same plan_path instead of forcing a new artifact path"
   ]
 }

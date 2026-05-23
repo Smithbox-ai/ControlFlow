@@ -25,6 +25,8 @@ Structural, behavioral, and orchestration validation fixtures for the ControlFlo
 19. Runtime-policy enum hardening for batch approval and final-review tiers.
 20. F7 complexity tier validation for Planner scenarios.
 21. F8 reference integrity scanning for core documentation paths.
+22. Plan artifact lifecycle vocabulary: `persisted_artifact`, `revision_mode: in_place_update`, `new_artifact_supersession_requires_revision_of`, and Planner replan payload metadata assertions.
+23. Independent read-only edit-tool denylist enforcement for review, discovery, research, and verification-only agents.
 
 ## Validation passes
 
@@ -44,6 +46,16 @@ Run `npm test` to see the current total.
 2. Validate fixture payloads, expected fields, and negative cases against matching schemas in `schemas/`.
 3. Check structural and behavioral invariants through deterministic local harnesses.
 4. Record drift in gate-event expectations, abstention decisions, and cross-file contracts.
+
+## Assertion Vocabulary
+
+- `persisted_artifact` means Planner saved a markdown plan artifact before chat handoff. The saved artifact may be a new file or the supplied active path for an in-place update.
+- `revision_mode: in_place_update` means Orchestrator supplies `active_plan_path`, `trace_id`, review-loop `iteration_index`, and `revision_reason`; Planner persists changes to that same `plan_path`.
+- `new_artifact_supersession_requires_revision_of` means a new superseding plan artifact must set `revision_of` to the prior `existing_plan_path`.
+- `planner_replan_payload_trace_id_required` means Planner replan/update dispatches require payload-level `trace_id` for cross-agent correlation.
+- `planner_replan_payload_iteration_index_required` means Planner PLAN_REVIEW replan/update dispatches require review-loop `iteration_index` as payload data.
+
+Base Planner delegation payloads keep compatibility with initial-create and legacy bare dispatch fixtures: `revision_mode` and `trace_id` are not required unconditionally. Conditional enforcement applies to `in_place_update` and `new_artifact_supersession` payloads.
 
 ## Scenario set
 
@@ -141,11 +153,12 @@ npm test
 | Pass | What it checks |
 | ---- | -------------- |
 | **1 — Schema Validity** | All `schemas/*.schema.json` compile under Ajv JSON Schema 2020-12 with `strict: false`; validates live runtime policy plus runtime-policy, Planner `risk_review`, AssumptionVerifier, and ExecutabilityVerifier fixtures. |
-| **2 — Scenario Integrity** | All `evals/scenarios/*.json` have the required identity fields and point to real agent files. Planner scenarios must assert `risk_review_present: true` and `complexity_tier_present: true`. Planner terminal-status scenarios (`ABSTAIN` / `REPLAN_REQUIRED`) must assert `plan_file_created: true`. |
+| **2 — Scenario Integrity** | All `evals/scenarios/*.json` have the required identity fields and point to real agent files. Planner scenarios must assert `risk_review_present: true` and `complexity_tier_present: true`. Planner terminal-status scenarios (`ABSTAIN` / `REPLAN_REQUIRED`) must assert `persisted_artifact: true`. |
 | **3 — Reference Integrity** | All backtick schema/doc references inside `*.agent.md` resolve to existing files. |
 | **3a — F7/F8 Enforcement** | F7: all Planner scenarios assert `complexity_tier_present` explicitly on every input (no vacuous pass). F8: internal markdown links and backtick code references in `README.md` and `docs/agent-engineering/*.md` resolve to files under the known top-level directories. |
 | **3b — Required Artifacts** | Shared repo-local dependencies like `.github/copilot-instructions.md`, `plans/project-context.md`, and governance docs exist. |
 | **3c — Tool Grant Consistency** | Every agent frontmatter `tools:` list matches the repository's canonical least-privilege tool set. |
+| **3c.1 — Read-Only Edit-Tool Denylist** | PlanAuditor, AssumptionVerifier, ExecutabilityVerifier, CodeMapper, Researcher, and CodeReviewer must not gain `edit`, `edit/createFile`, `edit/editFiles`, or any other `edit/` tool in frontmatter or `governance/tool-grants.json`, even if both surfaces drift consistently. |
 | **3d — Agent Grant Consistency** | Every agent frontmatter `agents:` list matches `governance/agent-grants.json`. |
 | **4 — P.A.R.T Section Order** | Every `*.agent.md` preserves `## Prompt` → `## Archive` → `## Resources` → `## Tools` ordering. |
 | **4b — Clarification Triggers & Tool Routing** | Every agent either has a `### Clarification` section, delegates via `NEEDS_INPUT`, or is an ABSTAIN-only role (§5). Agents with external tools must have a `### Tool Routing` section (§6). |

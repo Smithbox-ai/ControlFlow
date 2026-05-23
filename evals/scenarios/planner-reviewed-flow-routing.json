@@ -1,8 +1,8 @@
 {
   "scenario_id": "planner-reviewed-flow-routing",
   "target_agent": "Planner",
-  "description": "A Planner-authored plan artifact with review-triggering characteristics still enters Orchestrator's PLAN_REVIEW path. Planner produces the plan file and a concise handoff; Orchestrator owns the review gate, approvals, todo lifecycle, and execution gating.",
-  "goal": "Verify that Planner produces a saved plan artifact with a plan_path handoff to Orchestrator, and that Orchestrator review applies under normal trigger conditions — preserving the architectural separation of plan authoring (Planner) and plan review/execution (Orchestrator)",
+  "description": "A Planner-authored plan artifact with review-triggering characteristics still enters Orchestrator's PLAN_REVIEW path. Planner persists the artifact and provides a concise handoff; Orchestrator owns the review gate, approvals, todo lifecycle, and execution gating.",
+  "goal": "Verify that Planner persists a saved plan artifact with a plan_path handoff to Orchestrator, and that Orchestrator review applies under normal trigger conditions — preserving the architectural separation of plan authoring (Planner) and plan review/execution (Orchestrator)",
   "input": {
     "query": "Refactor the payment service to extract a shared retry-policy module used by three microservices, with migration steps for each consumer",
     "context": "This is a multi-phase, cross-service task. After Planner produces the plan artifact, Orchestrator evaluates PLAN_REVIEW triggers before dispatching subagents."
@@ -10,7 +10,7 @@
   "expected": {
     "risk_review_present": true,
     "complexity_tier_present": true,
-    "plan_file_created": true,
+    "persisted_artifact": true,
     "plan_path_produced": true,
     "orchestrator_review_applies": true,
     "planner_does_not_own_plan_review": true,
@@ -20,7 +20,7 @@
   },
   "assertions": [
     "Planner keeps semantic-risk taxonomy guidance anchored to plans/project-context.md while preserving the existing risk_review contract.",
-    "Planner handoff stays artifact-first and concise; Orchestrator owns PLAN_REVIEW, approvals, and execution gating.",
+    "Planner handoff stays artifact-first and concise through persisted_artifact semantics; Orchestrator owns PLAN_REVIEW, approvals, and execution gating.",
     "Orchestrator applies review semantics from governance/runtime-policy.json rather than treating the handoff itself as approval."
   ]
 }

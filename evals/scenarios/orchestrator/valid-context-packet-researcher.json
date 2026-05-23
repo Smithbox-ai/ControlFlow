@@ -3,6 +3,8 @@
   "_fixture_type": "schema",
   "_expected_validation": "pass",
   "_comment": "Researcher dispatch with context_packet should be valid (cp-researcher-valid)",
+  "_phase4_contract": "base_planner_payload_compatibility_preserved",
+  "_phase4_expectation": "Planner payload intentionally omits revision_mode and trace_id here; Phase 3 compatibility keeps this current pass fixture valid while replan/update modes enforce those fields conditionally.",
 
   "schema_version": "1.0.0",
   "agents": {

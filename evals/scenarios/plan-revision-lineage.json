@@ -2,22 +2,50 @@
   "scenario_id": "plan-revision-lineage",
   "agent": "Planner",
   "title": "Plan-revision lineage fields — positive and regression cases",
-  "description": "Validates that revision_of on planner plans and regression_iteration/regression_finding_id on auditor findings are accepted by their respective schemas, and that iter-1 plans without revision_of still validate (optional-field regression guard).",
+  "description": "Validates that revision_of is required by policy for new artifact supersession, same-path in-place updates omit revision_of, and iter-1 plans without revision_of still validate (optional-field regression guard).",
   "category": "contract",
   "inputs": [
     {
-      "label": "planner-plan-with-revision-of",
-      "description": "Positive case: a planner plan produced by a REPLAN-with-new-plan-path event carries revision_of pointing to the prior plan artifact. Schema must accept it.",
+      "label": "planner-plan-with-new-artifact-supersession",
+      "description": "Positive case: a planner plan produced under revision_mode: new_artifact_supersession carries revision_of pointing to the prior plan artifact. Schema must accept it and policy requires it.",
       "input": {
-        "context": "Orchestrator incremented iteration_index to 2 and issued a REPLAN-with-new-plan-path. Planner produces a revised plan with revision_of set."
+        "context": "Orchestrator incremented iteration_index to 2 and issued revision_mode: new_artifact_supersession with existing_plan_path. Planner produces a revised plan with revision_of set.",
+        "revision_mode": "new_artifact_supersession",
+        "existing_plan_path": "plans/controlflow-reliability-hardening-plan-iter1.md"
       },
       "expected": {
         "schema": "schemas/planner.plan.schema.json",
+        "revision_mode": "new_artifact_supersession",
+        "new_artifact_supersession_requires_revision_of": true,
         "revision_of_present": true,
         "revision_of_value": "plans/controlflow-reliability-hardening-plan-iter1.md",
         "risk_review_present": true,
         "complexity_tier_present": true,
         "must_not": "revision_of absent when plan supersedes a prior iteration"
+      }
+    },
+    {
+      "label": "planner-in-place-update-same-plan-path",
+      "description": "Positive case: ordinary PLAN_REVIEW fixes update the active plan path in place and do not require revision_of.",
+      "input": {
+        "context": "Orchestrator sent revision_mode: in_place_update for review findings PA-MAJOR-1 and AV-BLOCKING-2.",
+        "revision_mode": "in_place_update",
+        "active_plan_path": "plans/controlflow-reliability-hardening-plan.md",
+        "review_finding_ids": ["PA-MAJOR-1", "AV-BLOCKING-2"],
+        "revision_request": "Address PA-MAJOR-1 and AV-BLOCKING-2 in the active plan path; do not inline the prior plan body."
+      },
+      "expected": {
+        "schema": "schemas/planner.plan.schema.json",
+        "revision_mode": "in_place_update",
+        "persisted_artifact": true,
+        "active_plan_path": "plans/controlflow-reliability-hardening-plan.md",
+        "plan_path_matches_active_plan_path": true,
+        "revision_of_present": false,
+        "token_economy_uses_active_plan_path": true,
+        "review_finding_ids_ref_only": true,
+        "risk_review_present": true,
+        "complexity_tier_present": true,
+        "must_not": "revision_of required for same-path in-place update"
       }
     },
     {
@@ -37,8 +65,8 @@
     }
   ],
   "assertions": [
-    "revision_of is optional: iter-1 plans without it remain schema-valid.",
-    "revision_of is a string when present, pointing to a prior plan path.",
+    "revision_of is optional: iter-1 plans and same-path in-place updates without it remain schema-valid.",
+    "new_artifact_supersession_requires_revision_of: revision_of is a string when present, pointing to a prior plan path.",
     "Schema additionalProperties: false is honored — no undeclared fields slip in."
   ]
 }

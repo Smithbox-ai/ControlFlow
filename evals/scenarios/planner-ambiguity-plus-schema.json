@@ -1,7 +1,7 @@
 {
   "id": "planner-ambiguity-plus-schema",
   "target_agent": "Planner",
-  "goal": "Ambiguous planning request triggers askQuestions first; after clarification, Planner creates a markdown plan file and provides a concise handoff message",
+  "goal": "Ambiguous planning request triggers askQuestions first; after clarification, Planner persists a markdown plan artifact and provides a concise handoff message",
   "input": {
     "query": "Improve the performance of the system",
     "context": "Repository contains both a Node.js API service and a React frontend. Request does not specify which subsystem or what kind of performance improvement is needed."
@@ -26,7 +26,7 @@
     ],
     "must_block_planning_until_resolved": true,
     "after_clarification": {
-      "plan_file_created": true,
+      "persisted_artifact": true,
       "handoff_message_present": true,
       "risk_review_present": true
     },

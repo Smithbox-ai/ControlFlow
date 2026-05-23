@@ -37,7 +37,7 @@ stateDiagram-v2
 From `schemas/orchestrator.gate-event.schema.json`:
 
 | Event type | When |
-|------------|------|
+| ---------- | ---- |
 | `PLAN_GATE` | Decision to accept a plan for execution. |
 | `PREFLECT_GATE` | Pre-action gate (4 risk classes). |
 | `PHASE_REVIEW_GATE` | Review of a phase result or plan-review iteration. |
@@ -113,7 +113,7 @@ The Orchestrator delegates a task to a subagent via a structured payload conform
 - `scope` — task description.
 - `inputs` — file paths, context.
 - `expected_output_schema` — which schema the subagent must return.
-- `trace_id`, `iteration_index`.
+- `trace_id`, `iteration_index` — propagated through all Planner replan/update payloads and review-loop dispatches to ensure full correlation.
 
 **Rule:** The Orchestrator delegates **only** to agents listed in `plans/project-context.md`. External agents are prohibited.
 
@@ -144,13 +144,14 @@ Decision: GO / REPLAN / ABSTAIN. **"Silent GO with unresolved risk is a contract
 Every failure receives a `failure_classification`. The Orchestrator routes automatically (see [Chapter 13](13-failure-taxonomy.md)):
 
 | Class | Action | Limit |
-|-------|--------|-------|
+| ----- | ------ | ----- |
 | transient | Retry the same task | 3 |
 | fixable | Retry with a hint | 1 |
 | needs_replan | Route to Planner for targeted phase replan | 1 |
 | escalate | STOP → WAITING_APPROVAL → user | 0 |
 
 **Reliability policy** (from `governance/runtime-policy.json`):
+
 - `max_retries_per_phase` = 5 cumulative.
 - 3 identical failures in a row → escalate (regardless of class).
 - ≥2 transient failures in one wave → next wave runs at 50% parallelism.

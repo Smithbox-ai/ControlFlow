@@ -3,6 +3,8 @@
   "_fixture_type": "schema",
   "_expected_validation": "pass",
   "_comment": "Legacy CoreImplementer dispatch without context_packet should remain valid (cp-legacy-valid, backwards compat)",
+  "_phase4_contract": "base_planner_payload_compatibility_preserved",
+  "_phase4_expectation": "Planner payload intentionally omits revision_mode and trace_id here; Phase 3 compatibility keeps this current pass fixture valid while replan/update modes enforce those fields conditionally.",
 
   "schema_version": "1.0.0",
   "agents": {

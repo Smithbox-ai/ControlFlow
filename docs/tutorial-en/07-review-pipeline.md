@@ -9,7 +9,7 @@ Understand **PLAN_REVIEW** — the adversarial plan-validation phase that runs *
 - **PLAN_REVIEW** — the Orchestrator stage between plan approval and the start of execution.
 - **Adversarial review** — the reviewer tries to **break** the plan, not confirm it.
 - **Reviewer** — a read-only agent that never appears as `executor_agent`.
-- **Iteration loop** — the review cycle with an iteration cap; each iteration can refine the plan.
+- **Iteration loop** — the review cycle with an iteration cap; each iteration can refine the active `persisted_artifact` via an `in_place_update` (it does not create a new plan file from scratch for every revision). The review-loop `iteration_index` and task `trace_id` are propagated for Planner replan dispatches, keeping an unbroken log.
 - **Stagnation** — when the plan stops improving between iterations; triggers escalation.
 
 ## PLAN_REVIEW Triggers
@@ -26,7 +26,7 @@ If none fire — skip the pipeline and proceed directly to execution.
 ## Routing by Tier
 
 | Tier | Active reviewers | Max iterations |
-|------|-----------------|----------------|
+| ---- | ---------------- | -------------- |
 | TRIVIAL | — (pipeline skipped) | — |
 | SMALL | PlanAuditor | 2 |
 | MEDIUM | PlanAuditor + AssumptionVerifier | 5 |
@@ -55,6 +55,7 @@ flowchart LR
 ### PlanAuditor — Design and Risk
 
 **What it looks for:**
+
 - Architectural inconsistencies.
 - Security vulnerabilities.
 - Missing rollback for destructive steps.
@@ -64,7 +65,7 @@ flowchart LR
 **Focus areas** are determined by the mapping in [project-context.md](../../plans/project-context.md):
 
 | Risk category | PlanAuditor focus |
-|---------------|------------------|
+| ------------- | ----------------- |
 | data_volume, performance | `["performance"]` |
 | concurrency, access_control | `["architecture"]` |
 | migration_rollback | `["destructive_risk", "missing_rollback"]` |
@@ -94,6 +95,7 @@ flowchart LR
 **What it looks for:** Simulates whether an executor, given only the repository plus the first 3 plan tasks, can start work without additional questions.
 
 **Checklist:**
+
 - Are file paths concrete?
 - Are input/output contracts specified?
 - Are verification commands given?
@@ -168,7 +170,7 @@ Selective rerun is allowed **only** for reviewer summary wording changes with no
 Each reviewer returns a structured report with a status:
 
 | Status | Meaning |
-|--------|---------|
+| ------ | ------- |
 | APPROVED | No issues; plan proceeds to execution. |
 | NEEDS_REVISION | Correctable issues; replan via Planner. |
 | REJECTED | Plan is fundamentally wrong; escalate to user. |

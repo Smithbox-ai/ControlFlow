@@ -74,6 +74,14 @@ Do NOT use `vscode/askQuestions` for questions answerable from codebase evidence
 - Include `trace_id`, `iteration_index`, and `max_iterations` in every gate-event emission per `schemas/orchestrator.gate-event.schema.json`.
 - Purpose: enable log correlation across multi-agent orchestration chains.
 
+### Planner Revision Modes
+- Use `revision_mode: initial_create` when no active plan exists.
+- Use `revision_mode: in_place_update` for ordinary PLAN_REVIEW fixes to an active draft/current plan. The payload-selected path is `active_plan_path`, and Planner must return the same `plan_path`.
+- Use `revision_mode: new_artifact_supersession` only for accepted-baseline replacement, user-requested new artifacts, material invalidation, or independent citation needs. The payload-selected path is `existing_plan_path`, and the new Planner output should set `revision_of` to that prior path.
+- Apply the Universal Model Resolution Rule before every Planner dispatch. For replan/update dispatches, the outer `agent/runSubagent` call must include the resolved outer `model`, and the Planner payload must include payload-level `model`, `trace_id`, review-loop `iteration_index`, `revision_mode`, `revision_reason`, and exactly the selected path field for the mode: `active_plan_path` for `in_place_update` or `existing_plan_path` for `new_artifact_supersession`.
+- Serialize write-capable Planner revisions by `(trace_id, active_plan_path)`. Never run two write-capable Planner updates to the same plan in parallel; parallel review agents may read the same `plan_path` but must not edit it.
+- Phase 3 structural validation is not behavior-complete. `cd evals && npm run test:structural` confirms schema structure and legacy compatibility only; Phase 4 owns conditional enforcement behavior tests and scenario migration for `revision_mode`, selected path fields, `trace_id`, and `iteration_index`.
+
 ## Archive
 
 ### Context Compaction Policy
@@ -193,6 +201,7 @@ For `CodeReviewer-subagent`, `PlanAuditor-subagent`, and `AssumptionVerifier-sub
 **Dispatch:**
 - Apply the Universal Model Resolution Rule. Before a plan `complexity_tier` exists (no `plan_path` yet), use Planner's top-level `primary` model — never omit `model` because tier context is missing.
 - Dispatch Planner as an **entry-point delegate, not a phase executor**, with:
+   - `revision_mode: initial_create` because no active plan exists. Phase 3 keeps the schema field optional for legacy fixture compatibility, but live initial planning dispatch uses this mode.
   - The original user request.
   - The current `trace_id` and known constraints.
   - Any evidence already gathered.
@@ -238,12 +247,12 @@ For `CodeReviewer-subagent`, `PlanAuditor-subagent`, and `AssumptionVerifier-sub
      4. If PlanAuditor `APPROVED` AND (AssumptionVerifier not dispatched OR zero BLOCKING mirages):
         - If ExecutabilityVerifier is in scope for the current tier or HIGH-risk override: dispatch ExecutabilityVerifier-subagent (apply Universal Model Resolution Rule) with `plan_path`.
         - If ExecutabilityVerifier `PASS` or not in scope → plan APPROVED, exit loop.
-        - If ExecutabilityVerifier `FAIL`/`WARN` → route findings to Planner, increment `iteration_index`.
-     5. If PlanAuditor `NEEDS_REVISION` or AssumptionVerifier has BLOCKING mirages → route combined findings to Planner, increment `iteration_index`.
+        - If ExecutabilityVerifier `FAIL`/`WARN` → increment `iteration_index` and route findings to Planner using `revision_mode: in_place_update` unless the Planner Revision Modes criteria require `new_artifact_supersession`.
+     5. If PlanAuditor `NEEDS_REVISION` or AssumptionVerifier has BLOCKING mirages → increment `iteration_index` and route combined findings to Planner using `revision_mode: in_place_update` unless the Planner Revision Modes criteria require `new_artifact_supersession`.
      6. **Convergence Detection:** If `iteration_index ≥ 3` and score improvement over previous 2 iterations < 5% → stagnation. Present findings summary to user with `WAITING_APPROVAL`.
      7. If `iteration_index > max_iterations` → present best plan version and unresolved issues to user.
    - **Regression Tracking:** At `iteration_index > 1`, load verified items from previous iteration. Pass to PlanAuditor as context. Any previously verified item that now fails → automatic BLOCKING regression issue.
-   - **Lineage Contract:** When incrementing `iteration_index` and routing a REPLAN-with-new-plan-path, the new plan SHOULD carry `revision_of` set to the prior plan path. Auditor outputs that mark a same-finding recurrence SHOULD carry `regression_iteration` + `regression_finding_id` on the relevant finding object to enable per-finding regression tracing across iterations.
+   - **Lineage Contract:** `revision_of` is supersession lineage only. Use it when `revision_mode: new_artifact_supersession` creates a replacement plan artifact; do not require it for `revision_mode: in_place_update`, where successive review iterations may refer to the same `plan_path`. Auditor outputs that mark a same-finding recurrence SHOULD carry `regression_iteration` + `regression_finding_id` on the relevant finding object to enable per-finding regression tracing across iterations.
    - If trigger conditions are not met: skip directly to Implementation Loop.
 
 5. **Implementation Loop (Per Phase)**
@@ -327,7 +336,7 @@ When a subagent returns a `failure_classification`, Orchestrator routes automati
 | `escalate` | STOP — transition to `WAITING_APPROVAL`, present to user | 0 |
 | `model_unavailable` | Retry the same agent up to `retry_budgets.model_unavailable_max` times; on exhaustion, escalate to user via `WAITING_APPROVAL` | retry_budgets.model_unavailable_max |
 
-If retry limit is exhausted, escalate to user with accumulated failure evidence. For all dispatch actions in this table (retry or replan), apply the Universal Model Resolution Rule to resolve the `model` parameter — including needs_replan Planner dispatch.
+If retry limit is exhausted, escalate to user with accumulated failure evidence. For all dispatch actions in this table (retry or replan), apply the Universal Model Resolution Rule to resolve the `model` parameter — including needs_replan Planner dispatch. A `needs_replan` Planner dispatch that updates an active plan must follow Planner Revision Modes: include outer `model`, payload-level `model`, `trace_id`, review-loop `iteration_index`, `revision_mode`, `revision_reason`, and either `active_plan_path` for `in_place_update` or `existing_plan_path` for `new_artifact_supersession`.
 
 ### Diagnosis Packet (MEDIUM/LARGE — Fixable Retries)
 

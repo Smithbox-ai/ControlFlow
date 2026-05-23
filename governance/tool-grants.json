@@ -30,6 +30,7 @@
     "agent",
     "agent/runSubagent",
     "edit/createFile",
+    "edit/editFiles",
     "search/codebase",
     "search/fileSearch",
     "search/listDirectory",

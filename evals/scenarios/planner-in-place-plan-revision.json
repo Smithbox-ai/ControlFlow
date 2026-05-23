@@ -1,0 +1,37 @@
+{
+  "id": "planner-in-place-plan-revision",
+  "target_agent": "Planner",
+  "goal": "Planner handles revision_mode: in_place_update by persisting changes to the supplied active_plan_path, using review finding IDs instead of embedding the full prior plan body",
+  "input": {
+    "query": "Update the active plan for review findings PA-MAJOR-1 and AV-BLOCKING-2.",
+    "revision_mode": "in_place_update",
+    "active_plan_path": "plans/plan-editing-policy-reform-plan-iter6.md",
+    "trace_id": "6ec0f22d-931c-4f46-9f28-7c8976d8b1a2",
+    "iteration_index": 6,
+    "revision_reason": "Resolve PLAN_REVIEW findings PA-MAJOR-1 and AV-BLOCKING-2.",
+    "review_finding_ids": ["PA-MAJOR-1", "AV-BLOCKING-2"],
+    "revision_request": "Apply the review findings to active_plan_path only. Reference PA-MAJOR-1 and AV-BLOCKING-2, keep prior plan context by path, and do not paste the prior plan body."
+  },
+  "expected": {
+    "schema": "schemas/planner.plan.schema.json",
+    "persisted_artifact": true,
+    "revision_mode": "in_place_update",
+    "active_plan_path_required": true,
+    "planner_replan_payload_trace_id_required": true,
+    "planner_replan_payload_iteration_index_required": true,
+    "revision_reason_required": true,
+    "plan_path_matches_active_plan_path": true,
+    "review_finding_ids_ref_only": true,
+    "must_not_embed_prior_plan_body": true,
+    "max_revision_request_chars": 1500,
+    "risk_review_present": true,
+    "complexity_tier_present": true,
+    "handoff_message_present": true,
+    "must_not_inline_plan_in_chat": true
+  },
+  "assertions": [
+    "revision_mode: in_place_update requires active_plan_path, trace_id, iteration_index, and revision_reason before Planner may edit an active plan.",
+    "persisted_artifact means the same plan_path is saved before chat handoff; it does not require a new path.",
+    "Token economy: revision_request references active_plan_path and review_finding_ids, never an embedded prior plan body, and stays under 1500 characters."
+  ]
+}

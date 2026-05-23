@@ -87,11 +87,61 @@
             "task_description": { "type": "string", "minLength": 10 },
             "constraints": { "type": "array", "items": { "type": "string" } },
             "context_refs": { "type": "array", "items": { "type": "string" } },
+            "trace_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID v4 for cross-agent trace correlation. Phase 3 keeps this compatibility-safe for base Planner payloads; replan/update modes require it conditionally."
+            },
+            "iteration_index": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Review-loop iteration index. Required conditionally for Planner replan/update payloads."
+            },
+            "revision_mode": {
+              "type": "string",
+              "enum": ["initial_create", "in_place_update", "new_artifact_supersession"],
+              "description": "Optional in the base Planner payload during Phase 3 compatibility. Orchestrator uses initial_create when no active plan exists, in_place_update for ordinary PLAN_REVIEW fixes, and new_artifact_supersession for accepted-baseline replacement, user-requested new artifacts, material invalidation, or independent citation needs."
+            },
+            "revision_reason": {
+              "type": "string",
+              "minLength": 5,
+              "description": "Concise reason for the requested plan revision. Required for in_place_update and new_artifact_supersession."
+            },
+            "active_plan_path": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Existing active plan artifact Planner may edit when revision_mode is in_place_update."
+            },
+            "existing_plan_path": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Prior plan artifact that a new superseding artifact replaces when revision_mode is new_artifact_supersession."
+            },
             "model": {
               "type": "string",
               "description": "Payload-level model field carrying the governance-resolved model for delegation contract, validation, and audit context. Runtime enforcement is the outer tool-call model parameter passed to agent/runSubagent; this payload field does not by itself override frontmatter or select the runtime model."
             }
-          }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": { "revision_mode": { "const": "in_place_update" } },
+                "required": ["revision_mode"]
+              },
+              "then": {
+                "required": ["active_plan_path", "revision_reason", "trace_id", "iteration_index"]
+              }
+            },
+            {
+              "if": {
+                "properties": { "revision_mode": { "const": "new_artifact_supersession" } },
+                "required": ["revision_mode"]
+              },
+              "then": {
+                "required": ["existing_plan_path", "revision_reason", "trace_id", "iteration_index"]
+              }
+            }
+          ]
         },
         "CoreImplementer-subagent": {
           "type": "object",

@@ -7,7 +7,7 @@
  *                             point to an existing agent.md. Planner scenarios must
  *                             assert `risk_review_present: true`. Planner terminal-status
  *                             scenarios (ABSTAIN / REPLAN_REQUIRED) must assert
- *                             `plan_file_created: true`.
+ *                             `persisted_artifact: true`.
  *   3. Reference Integrity  — all *.agent.md schema/doc references resolve to
  *                             existing files; required project artifacts exist
  *   3b. Required Artifacts  — shared project context files exist (includes governance/tool-grants.json)
@@ -110,6 +110,31 @@ function parseFrontmatterTools(content) {
 
 function normalizeToolSet(tools) {
   return [...tools].sort();
+}
+
+function isEditTool(tool) {
+  return /^edit(?:\/|$)/i.test(tool);
+}
+
+function hasOwn(obj, key) {
+  return Object.prototype.hasOwnProperty.call(obj, key);
+}
+
+function collectExpectedBlocks(scenario) {
+  const blocks = [];
+  if (scenario.expected) blocks.push({ exp: scenario.expected, input: scenario.input ?? {}, label: '' });
+  if (Array.isArray(scenario.inputs)) {
+    for (const inp of scenario.inputs) {
+      if (inp.expected) {
+        blocks.push({
+          exp: inp.expected,
+          input: inp.input ?? {},
+          label: inp.label ? `input "${inp.label}" — ` : '',
+        });
+      }
+    }
+  }
+  return blocks;
 }
 
 /**
@@ -243,6 +268,12 @@ for (const file of schemaFiles) {
 // hardcoded branches can skip them (double-processing guard).
 const processedSchemaFixtures = new Set();
 
+const phase4ContextPacketCompatibilityFixtures = new Set([
+  'orchestrator/valid-context-packet-legacy.json',
+  'orchestrator/valid-context-packet-executor.json',
+  'orchestrator/valid-context-packet-researcher.json',
+]);
+
 {
   const allScenarioFiles = collectAllScenarioJsonFiles(SCENARIOS_DIR);
   const normalizedScenariosDir = SCENARIOS_DIR.replace(/\\/g, '/');
@@ -297,6 +328,17 @@ const processedSchemaFixtures = new Set();
       }
     } else {
       fail(`Schema fixture: ${relPath} has invalid or missing _expected_validation (got: ${JSON.stringify(expectedValidation)})`);
+    }
+
+    if (phase4ContextPacketCompatibilityFixtures.has(relPath)) {
+      const plannerPayload = raw.agents?.Planner ?? {};
+      if (raw._phase4_contract !== 'base_planner_payload_compatibility_preserved') {
+        fail(`Phase 4 compatibility marker missing: ${relPath} must declare _phase4_contract="base_planner_payload_compatibility_preserved"`);
+      } else if (hasOwn(plannerPayload, 'revision_mode') || hasOwn(plannerPayload, 'trace_id')) {
+        fail(`Phase 4 compatibility fixture drift: ${relPath} should preserve base Planner payload compatibility by omitting revision_mode and trace_id`);
+      } else {
+        pass(`Phase 4 compatibility fixture intentional: ${relPath}`);
+      }
     }
   }
 }
@@ -570,29 +612,22 @@ for (const file of scenarioFiles) {
     }
   }
 
-  // Check Planner terminal-status scenarios assert plan_file_created: true
+  // Check Planner terminal-status scenarios assert persisted_artifact: true
   if (targetAgent === 'Planner') {
-    const terminalChecks = [];
-    if (scenario.expected) terminalChecks.push({ exp: scenario.expected, label: '' });
-    if (Array.isArray(scenario.inputs)) {
-      for (const inp of scenario.inputs) {
-        if (inp.expected) terminalChecks.push({ exp: inp.expected, label: inp.label ? `input "${inp.label}" — ` : '' });
-      }
-    }
-    for (const { exp, label } of terminalChecks) {
+    for (const { exp, label } of collectExpectedBlocks(scenario)) {
       const isTerminal = exp.required_status === 'ABSTAIN' || exp.required_status === 'REPLAN_REQUIRED';
-      if (isTerminal && exp.plan_file_created !== true) {
-        fail(`${file}: ${label}terminal Planner status "${exp.required_status}" must assert plan_file_created: true`);
+      if (isTerminal && exp.persisted_artifact !== true) {
+        fail(`${file}: ${label}terminal Planner status "${exp.required_status}" must assert persisted_artifact: true`);
       }
     }
   }
 
   // ── Phase 1 remediation: targeted structural assertion enforcement ────────────
-  // Planner: planner-schema-output must assert handoff-only output, no inline/todo leakage, and ready-path artifact creation
+  // Planner: planner-schema-output must assert handoff-only output, no inline/todo leakage, and ready-path artifact persistence
   if (targetAgent === 'Planner' && id === 'planner-schema-output') {
     const exp = scenario.expected || {};
-    if (exp.plan_file_created !== true) {
-      fail(`${file}: planner-schema-output must assert plan_file_created: true`);
+    if (exp.persisted_artifact !== true) {
+      fail(`${file}: planner-schema-output must assert persisted_artifact: true`);
     }
     if (!exp.must_not_inline_plan_in_chat) {
       fail(`${file}: planner-schema-output must assert must_not_inline_plan_in_chat: true`);
@@ -621,8 +656,8 @@ for (const file of scenarioFiles) {
   // Planner: planner-reviewed-flow-routing must assert all architecture-preserving handoff contract keys
   if (targetAgent === 'Planner' && id === 'planner-reviewed-flow-routing') {
     const exp = scenario.expected || {};
-    if (exp.plan_file_created !== true) {
-      fail(`${file}: planner-reviewed-flow-routing must assert plan_file_created: true`);
+    if (exp.persisted_artifact !== true) {
+      fail(`${file}: planner-reviewed-flow-routing must assert persisted_artifact: true`);
     }
     if (!exp.plan_path_produced) {
       fail(`${file}: planner-reviewed-flow-routing must assert plan_path_produced: true`);
@@ -638,6 +673,87 @@ for (const file of scenarioFiles) {
     }
     if (!exp.must_not_inline_plan_in_chat) {
       fail(`${file}: planner-reviewed-flow-routing must assert must_not_inline_plan_in_chat: true`);
+    }
+  }
+
+  // Phase 4: Planner initial-create handoff must use persisted-artifact vocabulary and not require an active path.
+  if (targetAgent === 'Planner' && id === 'planner-orchestrator-handoff') {
+    for (const { exp, label } of collectExpectedBlocks(scenario)) {
+      if (exp.persisted_artifact !== true) {
+        fail(`${file}: ${label}initial Planner handoff must assert persisted_artifact: true`);
+      }
+      if (exp.revision_mode !== 'initial_create') {
+        fail(`${file}: ${label}initial Planner handoff must assert revision_mode: initial_create`);
+      }
+      if (exp.active_plan_path_absent !== true) {
+        fail(`${file}: ${label}initial Planner handoff must assert active_plan_path_absent: true`);
+      }
+    }
+  }
+
+  // Phase 4: terminal artifacts may persist to the active path without forcing a new artifact.
+  if (targetAgent === 'Planner' && id === 'planner-terminal-status-artifacts') {
+    const activePathCase = collectExpectedBlocks(scenario).find(({ exp }) => exp.revision_mode === 'in_place_update');
+    if (!activePathCase) {
+      fail(`${file}: planner-terminal-status-artifacts must include an in_place_update active-plan terminal case`);
+    } else {
+      const { exp, input } = activePathCase;
+      if (!input.active_plan_path || exp.active_plan_path !== input.active_plan_path) {
+        fail(`${file}: active terminal case must reference and expect the supplied active_plan_path`);
+      }
+      if (exp.plan_path_matches_active_plan_path !== true || exp.must_not_create_new_plan_path !== true) {
+        fail(`${file}: active terminal case must assert same-path persistence without forcing a new path`);
+      }
+    }
+  }
+
+  // Phase 4: focused in-place revision scenario enforces payload fields and token economy.
+  if (targetAgent === 'Planner' && id === 'planner-in-place-plan-revision') {
+    const exp = scenario.expected || {};
+    const input = scenario.input || {};
+    const revisionRequest = typeof input.revision_request === 'string' ? input.revision_request : '';
+    const maxChars = exp.max_revision_request_chars ?? 1500;
+    if (exp.persisted_artifact !== true) {
+      fail(`${file}: planner-in-place-plan-revision must assert persisted_artifact: true`);
+    }
+    for (const field of ['active_plan_path', 'trace_id', 'iteration_index', 'revision_reason', 'revision_mode']) {
+      if (!hasOwn(input, field)) {
+        fail(`${file}: planner-in-place-plan-revision input missing ${field}`);
+      }
+    }
+    if (input.revision_mode !== 'in_place_update' || exp.revision_mode !== 'in_place_update') {
+      fail(`${file}: planner-in-place-plan-revision must use revision_mode: in_place_update`);
+    }
+    if (exp.planner_replan_payload_trace_id_required !== true) {
+      fail(`${file}: planner-in-place-plan-revision must assert planner_replan_payload_trace_id_required: true`);
+    }
+    if (exp.planner_replan_payload_iteration_index_required !== true) {
+      fail(`${file}: planner-in-place-plan-revision must assert planner_replan_payload_iteration_index_required: true`);
+    }
+    if (!Array.isArray(input.review_finding_ids) || input.review_finding_ids.length === 0 || exp.review_finding_ids_ref_only !== true) {
+      fail(`${file}: planner-in-place-plan-revision must reference review_finding_ids instead of embedding prior plan text`);
+    }
+    if (hasOwn(input, 'prior_plan_body') || hasOwn(input, 'previous_plan_body') || hasOwn(input, 'plan_body')) {
+      fail(`${file}: planner-in-place-plan-revision must not embed a prior plan body field`);
+    }
+    if (revisionRequest.length === 0 || revisionRequest.length > maxChars || maxChars > 1500) {
+      fail(`${file}: planner-in-place-plan-revision revision_request must be non-empty and capped at 1500 characters`);
+    }
+    if (exp.plan_path_matches_active_plan_path !== true) {
+      fail(`${file}: planner-in-place-plan-revision must assert plan_path_matches_active_plan_path: true`);
+    }
+  }
+
+  // Phase 4: supersession requires revision_of, while in-place update uses the same active path without revision_of.
+  if (targetAgent === 'Planner' && id === 'plan-revision-lineage') {
+    const blocks = collectExpectedBlocks(scenario);
+    const supersession = blocks.find(({ exp }) => exp.revision_mode === 'new_artifact_supersession');
+    const inPlace = blocks.find(({ exp }) => exp.revision_mode === 'in_place_update');
+    if (!supersession || supersession.exp.new_artifact_supersession_requires_revision_of !== true || supersession.exp.revision_of_present !== true) {
+      fail(`${file}: plan-revision-lineage must assert new_artifact_supersession_requires_revision_of with revision_of_present: true`);
+    }
+    if (!inPlace || inPlace.exp.persisted_artifact !== true || inPlace.exp.revision_of_present !== false || inPlace.exp.plan_path_matches_active_plan_path !== true) {
+      fail(`${file}: plan-revision-lineage must assert same-path in_place_update without revision_of`);
     }
   }
 
@@ -871,6 +987,69 @@ for (const agentFile of agentFiles) {
     fail(`${agentFile}: tool-set drift detected — expected [${expected.join(', ')}] (governance/tool-grants.json), got [${actual.join(', ')}]`);
   } else {
     pass(`Tool grants canonical: ${agentFile}`);
+  }
+}
+
+// ─── Pass 3c.1: Independent Read-Only Edit-Tool Denylist ───────────────────
+header('Pass 3c.1: Read-Only Edit-Tool Denylist');
+
+{
+  const denylistScenarioPath = join(SCENARIOS_DIR, 'read-only-agent-tool-denylist.json');
+  let denylistScenario = null;
+  try {
+    denylistScenario = JSON.parse(readFileSync(denylistScenarioPath, 'utf8'));
+  } catch (e) {
+    fail(`read-only-agent-tool-denylist.json: could not load — ${e.message}`);
+  }
+
+  const requiredNoEditAgents = [
+    'PlanAuditor-subagent.agent.md',
+    'AssumptionVerifier-subagent.agent.md',
+    'ExecutabilityVerifier-subagent.agent.md',
+    'CodeMapper-subagent.agent.md',
+    'Researcher-subagent.agent.md',
+    'CodeReviewer-subagent.agent.md',
+  ];
+  const denylistedAgents = denylistScenario?.input?.no_edit_agents ?? [];
+  const missingDenylistAgents = requiredNoEditAgents.filter(agent => !denylistedAgents.includes(agent));
+  const extraDenylistAgents = denylistedAgents.filter(agent => !requiredNoEditAgents.includes(agent));
+  if (missingDenylistAgents.length > 0 || extraDenylistAgents.length > 0) {
+    fail(`read-only-agent-tool-denylist.json: denylist mismatch — missing [${missingDenylistAgents.join(', ')}], extra [${extraDenylistAgents.join(', ')}]`);
+  } else {
+    pass('Read-only denylist fixture covers all required agents');
+  }
+
+  const syntheticCase = denylistScenario?.input?.synthetic_consistent_drift_case;
+  const syntheticFrontmatterEditTokens = (syntheticCase?.frontmatter_tools ?? []).filter(isEditTool);
+  const syntheticGovernanceEditTokens = (syntheticCase?.governance_tools ?? []).filter(isEditTool);
+  if (denylistScenario?.expected?.fail_even_if_frontmatter_and_governance_match !== true || syntheticFrontmatterEditTokens.length === 0 || syntheticGovernanceEditTokens.length === 0) {
+    fail('read-only-agent-tool-denylist.json: synthetic consistent-drift case must demonstrate edit-tool denial independent of grant consistency');
+  } else {
+    pass('Read-only denylist synthetic consistent-drift guard present');
+  }
+
+  for (const agentFile of requiredNoEditAgents) {
+    const fp = join(ROOT, agentFile);
+    if (!existsSync(fp)) {
+      fail(`${agentFile}: denylisted read-only agent file missing`);
+      continue;
+    }
+
+    const frontmatterTools = parseFrontmatterTools(readFileSync(fp, 'utf8')) || [];
+    const frontmatterEditTools = frontmatterTools.filter(isEditTool);
+    if (frontmatterEditTools.length > 0) {
+      fail(`${agentFile}: read-only denylist violation in frontmatter tools — [${frontmatterEditTools.join(', ')}]`);
+    } else {
+      pass(`Read-only frontmatter edit-free: ${agentFile}`);
+    }
+
+    const manifestTools = canonicalToolGrants[agentFile] || [];
+    const manifestEditTools = manifestTools.filter(isEditTool);
+    if (manifestEditTools.length > 0) {
+      fail(`${agentFile}: read-only denylist violation in governance/tool-grants.json — [${manifestEditTools.join(', ')}]`);
+    } else {
+      pass(`Read-only governance edit-free: ${agentFile}`);
+    }
   }
 }
 

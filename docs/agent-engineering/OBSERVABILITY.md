@@ -16,13 +16,15 @@ ControlFlow delegates a single user task across up to 13 agents. Without a share
 1. Orchestrator writes `trace_id` into every delegation payload.
 2. Each subagent copies the received `trace_id` into its return report (optional but recommended).
 3. Orchestrator writes `trace_id` into every emitted gate event.
-4. Planner carries `trace_id` forward when authoring a plan for a traced task.
+4. Planner carries `trace_id` forward when authoring a plan for a traced task via `new_artifact_supersession` or when refining an active `persisted_artifact` via `in_place_update`.
+   *(Note: This does not imply Phase 3 makes `trace_id` unconditionally required for all base Planner payloads before fixture migration. It remains optional in legacy contexts.)*
 
 ## Schema Surface
 
 ### Required
 
-- `schemas/orchestrator.delegation-protocol.schema.json` — `trace_id` required in every delegation branch.
+- Orchestrator policy — `trace_id` is propagated in live delegation payloads for correlation.
+- `schemas/orchestrator.delegation-protocol.schema.json` — Planner replan/update modes require `trace_id` conditionally for `in_place_update` and `new_artifact_supersession`; legacy/base Planner payloads remain compatible and do not require `trace_id` unconditionally.
 - `schemas/orchestrator.gate-event.schema.json` — `trace_id` required on every gate event.
 
 ### Optional (additive, no fixture breakage)

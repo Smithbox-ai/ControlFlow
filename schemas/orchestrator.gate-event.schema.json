@@ -53,7 +53,7 @@
     "iteration_index": {
       "type": "integer",
       "minimum": 0,
-      "description": "Current iteration index in plan-review loop. Incremented on REPLAN-with-new-plan-path events; the revised plan should carry revision_of referencing the prior plan path."
+      "description": "Current iteration index in the plan-review loop. Incremented on Planner revision dispatches; correlated iteration records may refer to the same plan_path for in-place updates, while new-artifact supersession records carry revision_of lineage to the prior plan path."
     },
     "max_iterations": {
       "type": "integer",
