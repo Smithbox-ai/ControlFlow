@@ -49,31 +49,7 @@
             "complexity": { "type": "string", "enum": ["simple", "medium", "complex"] },
             "runtime_model_mode": { "$ref": "#/$defs/runtimeModelMode" },
             "model": { "$ref": "#/$defs/payloadModelField" },
-            "context_packet": {
-              "type": "object",
-              "description": "Optional compact research digest. When present, executor should read artifact_path before opening raw source files and skip paths in do_not_re_read unless contradicting evidence is found.",
-              "additionalProperties": false,
-              "properties": {
-                "artifact_path": {
-                  "type": "string",
-                  "description": "Path to a markdown research digest file produced by Researcher or Planner."
-                },
-                "summary": {
-                  "type": "string",
-                  "description": "3\u20135 bullet overview of research findings for quick orientation."
-                },
-                "key_findings": {
-                  "type": "array",
-                  "items": { "type": "string" },
-                  "description": "High-signal facts the executing agent should read before touching source files."
-                },
-                "do_not_re_read": {
-                  "type": "array",
-                  "items": { "type": "string" },
-                  "description": "Already-explored file paths the executing agent should skip unless contradicting evidence is found."
-                }
-              }
-            }
+            "context_packet": { "$ref": "#/$defs/contextPacket" }
           },
           "allOf": [{ "$ref": "#/$defs/modelRequirementByRuntimeMode" }]
         },
@@ -156,31 +132,7 @@
             "context_files": { "type": "array", "items": { "type": "string" } },
             "runtime_model_mode": { "$ref": "#/$defs/runtimeModelMode" },
             "model": { "$ref": "#/$defs/payloadModelField" },
-            "context_packet": {
-              "type": "object",
-              "description": "Optional compact research digest. When present, executor should read artifact_path before opening raw source files and skip paths in do_not_re_read unless contradicting evidence is found.",
-              "additionalProperties": false,
-              "properties": {
-                "artifact_path": {
-                  "type": "string",
-                  "description": "Path to a markdown research digest file produced by Researcher or Planner."
-                },
-                "summary": {
-                  "type": "string",
-                  "description": "3\u20135 bullet overview of research findings for quick orientation."
-                },
-                "key_findings": {
-                  "type": "array",
-                  "items": { "type": "string" },
-                  "description": "High-signal facts the executing agent should read before touching source files."
-                },
-                "do_not_re_read": {
-                  "type": "array",
-                  "items": { "type": "string" },
-                  "description": "Already-explored file paths the executing agent should skip unless contradicting evidence is found."
-                }
-              }
-            }
+            "context_packet": { "$ref": "#/$defs/contextPacket" }
           },
           "allOf": [{ "$ref": "#/$defs/modelRequirementByRuntimeMode" }]
         },
@@ -200,31 +152,7 @@
             "design_refs": { "type": "array", "items": { "type": "string" } },
             "runtime_model_mode": { "$ref": "#/$defs/runtimeModelMode" },
             "model": { "$ref": "#/$defs/payloadModelField" },
-            "context_packet": {
-              "type": "object",
-              "description": "Optional compact research digest. When present, executor should read artifact_path before opening raw source files and skip paths in do_not_re_read unless contradicting evidence is found.",
-              "additionalProperties": false,
-              "properties": {
-                "artifact_path": {
-                  "type": "string",
-                  "description": "Path to a markdown research digest file produced by Researcher or Planner."
-                },
-                "summary": {
-                  "type": "string",
-                  "description": "3\u20135 bullet overview of research findings for quick orientation."
-                },
-                "key_findings": {
-                  "type": "array",
-                  "items": { "type": "string" },
-                  "description": "High-signal facts the executing agent should read before touching source files."
-                },
-                "do_not_re_read": {
-                  "type": "array",
-                  "items": { "type": "string" },
-                  "description": "Already-explored file paths the executing agent should skip unless contradicting evidence is found."
-                }
-              }
-            }
+            "context_packet": { "$ref": "#/$defs/contextPacket" }
           },
           "allOf": [{ "$ref": "#/$defs/modelRequirementByRuntimeMode" }]
         },
@@ -246,31 +174,7 @@
             "security_sensitive": { "type": "boolean" },
             "runtime_model_mode": { "$ref": "#/$defs/runtimeModelMode" },
             "model": { "$ref": "#/$defs/payloadModelField" },
-            "context_packet": {
-              "type": "object",
-              "description": "Optional compact research digest. When present, executor should read artifact_path before opening raw source files and skip paths in do_not_re_read unless contradicting evidence is found.",
-              "additionalProperties": false,
-              "properties": {
-                "artifact_path": {
-                  "type": "string",
-                  "description": "Path to a markdown research digest file produced by Researcher or Planner."
-                },
-                "summary": {
-                  "type": "string",
-                  "description": "3\u20135 bullet overview of research findings for quick orientation."
-                },
-                "key_findings": {
-                  "type": "array",
-                  "items": { "type": "string" },
-                  "description": "High-signal facts the executing agent should read before touching source files."
-                },
-                "do_not_re_read": {
-                  "type": "array",
-                  "items": { "type": "string" },
-                  "description": "Already-explored file paths the executing agent should skip unless contradicting evidence is found."
-                }
-              }
-            }
+            "context_packet": { "$ref": "#/$defs/contextPacket" }
           },
           "allOf": [{ "$ref": "#/$defs/modelRequirementByRuntimeMode" }]
         },
@@ -291,31 +195,7 @@
             "coverage_matrix": { "type": "array", "items": { "type": "string" } },
             "runtime_model_mode": { "$ref": "#/$defs/runtimeModelMode" },
             "model": { "$ref": "#/$defs/payloadModelField" },
-            "context_packet": {
-              "type": "object",
-              "description": "Optional compact research digest. When present, executor should read artifact_path before opening raw source files and skip paths in do_not_re_read unless contradicting evidence is found.",
-              "additionalProperties": false,
-              "properties": {
-                "artifact_path": {
-                  "type": "string",
-                  "description": "Path to a markdown research digest file produced by Researcher or Planner."
-                },
-                "summary": {
-                  "type": "string",
-                  "description": "3\u20135 bullet overview of research findings for quick orientation."
-                },
-                "key_findings": {
-                  "type": "array",
-                  "items": { "type": "string" },
-                  "description": "High-signal facts the executing agent should read before touching source files."
-                },
-                "do_not_re_read": {
-                  "type": "array",
-                  "items": { "type": "string" },
-                  "description": "Already-explored file paths the executing agent should skip unless contradicting evidence is found."
-                }
-              }
-            }
+            "context_packet": { "$ref": "#/$defs/contextPacket" }
           },
           "allOf": [{ "$ref": "#/$defs/modelRequirementByRuntimeMode" }]
         },
@@ -348,31 +228,7 @@
             },
             "runtime_model_mode": { "$ref": "#/$defs/runtimeModelMode" },
             "model": { "$ref": "#/$defs/payloadModelField" },
-            "context_packet": {
-              "type": "object",
-              "description": "Optional compact research digest. When present, executor should read artifact_path before opening raw source files and skip paths in do_not_re_read unless contradicting evidence is found.",
-              "additionalProperties": false,
-              "properties": {
-                "artifact_path": {
-                  "type": "string",
-                  "description": "Path to a markdown research digest file produced by Researcher or Planner."
-                },
-                "summary": {
-                  "type": "string",
-                  "description": "3\u20135 bullet overview of research findings for quick orientation."
-                },
-                "key_findings": {
-                  "type": "array",
-                  "items": { "type": "string" },
-                  "description": "High-signal facts the executing agent should read before touching source files."
-                },
-                "do_not_re_read": {
-                  "type": "array",
-                  "items": { "type": "string" },
-                  "description": "Already-explored file paths the executing agent should skip unless contradicting evidence is found."
-                }
-              }
-            }
+            "context_packet": { "$ref": "#/$defs/contextPacket" }
           },
           "allOf": [{ "$ref": "#/$defs/modelRequirementByRuntimeMode" }]
         },
@@ -571,6 +427,31 @@
     "payloadModelField": {
       "type": "string",
       "description": "Payload-level model field carrying governance-resolved model context for delegation contract, validation, and audit context. Runtime enforcement is the outer tool-call model parameter passed to agent/runSubagent; this payload field does not by itself override frontmatter or select the runtime model. Deterministic mode requires this payload field; auto mode may omit it when runtime_model_mode is auto."
+    },
+    "contextPacket": {
+      "type": "object",
+      "description": "Optional compact research digest. When present, executor should read artifact_path before opening raw source files and skip paths in do_not_re_read unless contradicting evidence is found.",
+      "additionalProperties": false,
+      "properties": {
+        "artifact_path": {
+          "type": "string",
+          "description": "Path to a markdown research digest file produced by Researcher or Planner."
+        },
+        "summary": {
+          "type": "string",
+          "description": "3–5 bullet overview of research findings for quick orientation."
+        },
+        "key_findings": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "High-signal facts the executing agent should read before touching source files."
+        },
+        "do_not_re_read": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Already-explored file paths the executing agent should skip unless contradicting evidence is found."
+        }
+      }
     },
     "modelRequirementByRuntimeMode": {
       "if": {

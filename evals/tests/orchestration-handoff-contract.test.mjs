@@ -16,6 +16,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
+import { REQUIRED_MODEL_RESOLUTION_NEGATIVE_CASES } from '../drift-checks.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..', '..');
@@ -136,16 +137,6 @@ const plannerResearchDispatchRule = extractBetween(
   '6. Research (delegate CodeMapper-subagent/Researcher-subagent when scope is large).',
   '7. Design'
 );
-
-const requiredModelRoutingContractCases = [
-  'missing-outer-agentName',
-  'missing-outer-model',
-  'payload-only-model',
-  'auto-mode-missing-outer-model-allowed',
-  'wrong-effective-review-tier',
-  'unconfigured-fallback',
-  'omitted-model-due-missing-tier-context',
-];
 
 check(
   'Runtime policy: model_dispatch.default_mode exists and defaults to deterministic',
@@ -1098,11 +1089,11 @@ check(
 
 check(
   'Model resolution scenario: all required dispatch contract cases are documented',
-  requiredModelRoutingContractCases.every(caseId => negativeCases.some(c => c.case_id === caseId)) &&
-  modelResScenario.expected?.negative_cases_documented === requiredModelRoutingContractCases.length
+  REQUIRED_MODEL_RESOLUTION_NEGATIVE_CASES.every(caseId => negativeCases.some(c => c.case_id === caseId)) &&
+  modelResScenario.expected?.negative_cases_documented === REQUIRED_MODEL_RESOLUTION_NEGATIVE_CASES.length
 );
 
-for (const caseId of requiredModelRoutingContractCases) {
+for (const caseId of REQUIRED_MODEL_RESOLUTION_NEGATIVE_CASES) {
   const negativeCase = negativeCases.find(c => c.case_id === caseId);
   check(
     `Model resolution contract scenario: ${caseId} preserves structural contract expectations`,

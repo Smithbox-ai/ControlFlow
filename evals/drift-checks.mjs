@@ -104,6 +104,28 @@ export function validateFrontmatterModelDefaults(agentFileName, agentFrontmatter
   return { ok: errors.length === 0, errors };
 }
 
+function resolveLocalSchemaRef(schemaRoot, schemaNode, visitedRefs = new Set()) {
+  if (!schemaNode || typeof schemaNode !== 'object' || Array.isArray(schemaNode) || typeof schemaNode.$ref !== 'string') {
+    return schemaNode;
+  }
+
+  const ref = schemaNode.$ref;
+  if (!ref.startsWith('#/') || visitedRefs.has(ref)) {
+    return schemaNode;
+  }
+
+  const resolvedNode = ref
+    .slice(2)
+    .split('/')
+    .reduce((current, key) => current?.[key.replace(/~1/g, '/').replace(/~0/g, '~')], schemaRoot);
+
+  if (!resolvedNode || typeof resolvedNode !== 'object' || Array.isArray(resolvedNode)) {
+    return schemaNode;
+  }
+
+  return resolveLocalSchemaRef(schemaRoot, resolvedNode, new Set([...visitedRefs, ref]));
+}
+
 /**
  * Validate payload-level model description semantics in the Orchestrator
  * delegation protocol schema.
@@ -119,16 +141,10 @@ export function validatePayloadModelDescriptionSemantics(delegationProtocolSchem
 
   for (const [agentName, agentSchema] of Object.entries(agentSchemas)) {
     const required = agentSchema?.required;
-    const modelSchema = agentSchema?.properties?.model;
-    const runtimeModeSchema = agentSchema?.properties?.runtime_model_mode;
-    const modelRequirementDef = delegationProtocolSchema?.$defs?.modelRequirementByRuntimeMode;
-    const hasDefConditionalRequirement = Array.isArray(modelRequirementDef?.else?.required) &&
-      modelRequirementDef.else.required.includes('model');
+    const modelSchema = resolveLocalSchemaRef(delegationProtocolSchema, agentSchema?.properties?.model);
+    const runtimeModeSchema = resolveLocalSchemaRef(delegationProtocolSchema, agentSchema?.properties?.runtime_model_mode);
     const hasConditionalRequirement = Array.isArray(agentSchema?.allOf) && agentSchema.allOf.some(block => {
-      if (block?.$ref === '#/$defs/modelRequirementByRuntimeMode') {
-        return hasDefConditionalRequirement;
-      }
-      const elseRequired = block?.else?.required;
+      const elseRequired = resolveLocalSchemaRef(delegationProtocolSchema, block)?.else?.required;
       return Array.isArray(elseRequired) && elseRequired.includes('model');
     });
 
@@ -141,10 +157,7 @@ export function validatePayloadModelDescriptionSemantics(delegationProtocolSchem
     if (!runtimeModeSchema || typeof runtimeModeSchema !== 'object') {
       errors.push(`${agentName}: runtime_model_mode property missing`);
     } else {
-      const runtimeEnum = runtimeModeSchema.enum ??
-        (runtimeModeSchema.$ref === '#/$defs/runtimeModelMode'
-          ? delegationProtocolSchema?.$defs?.runtimeModelMode?.enum
-          : undefined);
+      const runtimeEnum = runtimeModeSchema.enum;
       if (!Array.isArray(runtimeEnum) || !runtimeEnum.includes('deterministic') || !runtimeEnum.includes('auto')) {
         errors.push(`${agentName}: runtime_model_mode enum must include deterministic and auto`);
       }
@@ -154,15 +167,7 @@ export function validatePayloadModelDescriptionSemantics(delegationProtocolSchem
       continue;
     }
 
-    const resolvedModelSchema = modelSchema.$ref === '#/$defs/payloadModelField'
-      ? delegationProtocolSchema?.$defs?.payloadModelField
-      : modelSchema;
-    if (!resolvedModelSchema || typeof resolvedModelSchema !== 'object') {
-      errors.push(`${agentName}: payload-level model $ref could not be resolved`);
-      continue;
-    }
-
-    const description = String(resolvedModelSchema.description || '');
+    const description = String(modelSchema.description || '');
     const lower = description.toLowerCase();
     if (!lower.includes('payload-level')) {
       errors.push(`${agentName}: payload model description must include "payload-level"`);
@@ -190,7 +195,7 @@ export function validatePayloadModelDescriptionSemantics(delegationProtocolSchem
   return { ok: errors.length === 0, errors };
 }
 
-const REQUIRED_MODEL_RESOLUTION_NEGATIVE_CASES = [
+export const REQUIRED_MODEL_RESOLUTION_NEGATIVE_CASES = Object.freeze([
   'missing-outer-agentName',
   'missing-outer-model',
   'payload-only-model',
@@ -198,7 +203,7 @@ const REQUIRED_MODEL_RESOLUTION_NEGATIVE_CASES = [
   'wrong-effective-review-tier',
   'unconfigured-fallback',
   'omitted-model-due-missing-tier-context',
-];
+]);
 
 function requireRejectedNegativeCase(caseId, negativeCase, errors) {
   const expected = negativeCase?.expected ?? {};
