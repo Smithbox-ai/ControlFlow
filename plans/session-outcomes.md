@@ -12,6 +12,70 @@ Archive old entries when the log exceeds 50 entries (see `plans/templates/sessio
 
 ## Entry
 
+**Plan ID:** `capability-matrix-registry-followup-cleanup-plan`  
+**Date:** `2026-05-25`  
+**Complexity Tier:** `SMALL`  
+**Total Phases:** `3 / 3`  
+
+### Review Pipeline
+
+| Agent | Result | Notes |
+| --- | --- | --- |
+| AssumptionVerifier-subagent | ABSTAIN | Not in scope for SMALL tier review pipeline |
+| PlanAuditor-subagent | APPROVED | Approved after one in-place amendment; final confidence 0.93 |
+| ExecutabilityVerifier-subagent | N/A | Not in scope for SMALL tier review pipeline |
+| CodeReviewer-subagent | APPROVED | Final cleanup review approved; validated blocking issues: 0 |
+
+**Total review iterations:** `2` / `2`  
+**Convergence:** `Converged`  
+
+### Outcome
+
+**Status:** `SUCCESS`  
+**CodeReviewer false positive rate:** `0 / 0` (`0%`)  
+
+### Lessons Learned
+
+1. Removing a legacy parser should include a source-scan guard for the old symbol, not only a behavior test for the new path.
+2. Shared anchor maps need explicit file or directory coverage; consumer-only maps can mask unrelated overlaps.
+3. Pass 10 should ignore tool identifiers such as `edit/editFiles` and `agent/runSubagent` so tool grants do not masquerade as file overlaps.
+
+---
+
+## Entry
+
+**Plan ID:** `project-context-metadata-registry-plan`  
+**Date:** `2026-05-25`  
+**Complexity Tier:** `SMALL`  
+**Total Phases:** `4 / 4`  
+
+### Review Pipeline
+
+| Agent | Result | Notes |
+| --- | --- | --- |
+| AssumptionVerifier-subagent | ABSTAIN | Not in scope for SMALL tier review pipeline |
+| PlanAuditor-subagent | APPROVED | Approved the plan with one fixable gap; planner amended Phase 2 canonical-source-matrix mirroring before execution |
+| ExecutabilityVerifier-subagent | N/A | Not in scope for SMALL tier review pipeline |
+| CodeReviewer-subagent | APPROVED | Registry migration review approved; validated blocking issues: 0 |
+
+**Total review iterations:** `1` / `2`  
+**Convergence:** `Converged`  
+
+### Outcome
+
+**Status:** `SUCCESS`  
+**CodeReviewer false positive rate:** `0 / 0` (`0%`)  
+
+### Lessons Learned
+
+1. Replacing hand-maintained metadata works best when the machine-readable source, human-readable mirror, and drift contract land in the same wave.
+2. Pass 10 requires a shared anchor-map for any new plan that reuses files already claimed by historical plans, even when the implementation itself is correct.
+3. Synthetic drift fixtures should be updated alongside canonical authority changes so tests continue to model the real repo state.
+
+---
+
+## Entry
+
 **Plan ID:** `plan-editing-policy-reform-plan-iter6`  
 **Date:** `2026-05-23`  
 **Complexity Tier:** `LARGE`  

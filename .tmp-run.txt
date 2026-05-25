@@ -1,1 +1,0 @@
-cd evals && npm test

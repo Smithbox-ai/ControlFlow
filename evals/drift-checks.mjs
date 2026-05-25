@@ -553,6 +553,7 @@ export function parseResourcesSchemaPaths(agentContent) {
 
 // ── Check #4: Cross-plan file-overlap ────────────────────────────────────────
 const ANNOTATION_RX = /\s*\([^)]*\)\s*$/;
+const TOOL_PATH_RX = /^(agent|edit|execute|read|search|vscode)\//;
 
 export function stripAnnotations(path) {
   return path.replace(ANNOTATION_RX, '').trim();
@@ -574,6 +575,7 @@ export function parsePlanFilesSection(content) {
       const raw = m[1].trim();
       if (!raw) continue;
       if (/\s/.test(raw)) continue;
+      if (TOOL_PATH_RX.test(raw)) continue;
       if (!/[./]/.test(raw)) continue;
       files.push(stripAnnotations(raw));
     }
@@ -638,20 +640,32 @@ export function buildPlanFileMap(planPathsRelative, rootDir, opts = {}) {
   return map;
 }
 
-// Minimal YAML line-parser: extract a top-level list under "consumers:".
-export function parseYamlConsumers(text) {
+function parseTopLevelYamlList(text, key) {
+  const keyRx = new RegExp(`^${key}:\\s*$`);
+  const values = [];
   const lines = text.split('\n');
-  const consumers = [];
   let inBlock = false;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (!inBlock && /^consumers:\s*$/.test(line)) { inBlock = true; continue; }
+  for (const line of lines) {
+    if (!inBlock && keyRx.test(line)) { inBlock = true; continue; }
     if (!inBlock) continue;
     if (/^\S/.test(line)) break; // next top-level key
     const m = line.match(/^\s+-\s+["']?([^"'\s#]+)["']?\s*(?:#.*)?$/);
-    if (m) consumers.push(m[1]);
+    if (m) values.push(m[1]);
   }
-  return consumers;
+  return values;
+}
+
+// Minimal YAML line-parser: extract explicit file-level coverage lists.
+export function parseYamlSharedFiles(text) {
+  return [
+    ...parseTopLevelYamlList(text, 'shared_files'),
+    ...parseTopLevelYamlList(text, 'shared_surfaces'),
+  ];
+}
+
+// Minimal YAML line-parser: extract a top-level list under "consumers:".
+export function parseYamlConsumers(text) {
+  return parseTopLevelYamlList(text, 'consumers');
 }
 
 export function hasSharedAnchorMapFlag(text) {
@@ -678,6 +692,7 @@ export function findSharedAnchorMaps(rootDir, artifactsDir = 'plans/artifacts') 
       anchorMaps.push({
         path: `${artifactsDir}/${sub.name}/${f}`.replace(/\\/g, '/'),
         consumers,
+        sharedFiles: parseYamlSharedFiles(text),
       });
     }
   }
@@ -693,7 +708,10 @@ export function findUnresolvedOverlaps(planFileMap, anchorMaps) {
       for (let j = i + 1; j < plans.length; j++) {
         const a = plans[i], b = plans[j];
         const covered = anchorMaps.some(am =>
-          am.consumers.includes(a) && am.consumers.includes(b));
+          am.consumers.includes(a) && am.consumers.includes(b) &&
+          Array.isArray(am.sharedFiles) && am.sharedFiles.some(sharedFile =>
+            sharedFile === file || (sharedFile.endsWith('/') && file.startsWith(sharedFile))
+          ));
         if (!covered) unresolved.push({ file, planA: a, planB: b });
       }
     }
@@ -1233,4 +1251,202 @@ export function validateCanonicalSourceMatrixHeading(projectContextContent) {
     };
   }
   return { pass: true };
+}
+
+function escapeRegex(str) {
+  return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Validate that canonical ownership entries declared in governance/canonical-source-matrix.json
+ * are present in the markdown Canonical Source Matrix table.
+ * @param {string} projectContextContent - Full text of plans/project-context.md
+ * @param {object} canonicalMatrixJson - Parsed governance/canonical-source-matrix.json
+ * @returns {{ ok: boolean, errors: string[] }}
+ */
+export function validateCanonicalSourceMatrixContract(projectContextContent, canonicalMatrixJson) {
+  const errors = [];
+  const entries = canonicalMatrixJson?.entries;
+
+  if (!canonicalMatrixJson || typeof canonicalMatrixJson !== 'object') {
+    return { ok: false, errors: ['canonical-source-matrix: JSON object missing'] };
+  }
+  if (!Array.isArray(entries) || entries.length === 0) {
+    return { ok: false, errors: ['canonical-source-matrix: entries[] missing or empty'] };
+  }
+
+  const seenConcerns = new Set();
+  for (const [idx, entry] of entries.entries()) {
+    if (!entry || typeof entry !== 'object') {
+      errors.push(`canonical-source-matrix: entries[${idx}] must be an object`);
+      continue;
+    }
+
+    const concern = entry.concern;
+    const authoritativeFile = entry.authoritative_file;
+
+    if (typeof concern !== 'string' || concern.trim().length === 0) {
+      errors.push(`canonical-source-matrix: entries[${idx}].concern must be a non-empty string`);
+      continue;
+    }
+    if (typeof authoritativeFile !== 'string' || authoritativeFile.trim().length === 0) {
+      errors.push(`canonical-source-matrix: entries[${idx}].authoritative_file must be a non-empty string`);
+      continue;
+    }
+
+    if (seenConcerns.has(concern)) {
+      errors.push(`canonical-source-matrix: duplicate concern "${concern}"`);
+    }
+    seenConcerns.add(concern);
+
+    const rowPattern = '^\\|\\s*' +
+      escapeRegex(concern) +
+      '\\s*\\|\\s*`' +
+      escapeRegex(authoritativeFile) +
+      '`\\s*\\|';
+    const rowRegex = new RegExp(rowPattern, 'm');
+    if (!rowRegex.test(projectContextContent)) {
+      errors.push(
+        `Canonical Source Matrix row missing or drifted for concern "${concern}" with authoritative file "${authoritativeFile}"`
+      );
+    }
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+
+function normalizeMarkdownCell(value) {
+  return String(value).trim().replace(/^`(.+)`$/, '$1');
+}
+
+function extractMarkdownTableRowsByHeading(content, heading) {
+  const lines = String(content).split('\n');
+  const startIdx = lines.findIndex(line => line.trim() === heading);
+  if (startIdx === -1) {
+    return null;
+  }
+
+  const tableLines = [];
+  for (let i = startIdx + 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^##\s/.test(line)) {
+      break;
+    }
+    if (line.trim().startsWith('|')) {
+      tableLines.push(line);
+    }
+  }
+
+  if (tableLines.length === 0) {
+    return [];
+  }
+
+  const parsedRows = tableLines
+    .map(line => line.split('|').slice(1, -1).map(cell => normalizeMarkdownCell(cell)))
+    .filter(cells => cells.length > 0);
+
+  if (parsedRows.length === 0) {
+    return [];
+  }
+
+  const dataRows = parsedRows.filter((cells, idx) => {
+    if (idx === 0) {
+      return false;
+    }
+    return !cells.every(cell => /^:?-{3,}:?$/.test(cell));
+  });
+
+  return dataRows;
+}
+
+/**
+ * Validate that selected project-context markdown tables mirror the machine-readable
+ * governance/project-context-registry.json entries row-for-row.
+ * @param {string} projectContextContent - Full text of plans/project-context.md
+ * @param {object} registryJson - Parsed governance/project-context-registry.json
+ * @returns {{ ok: boolean, errors: string[] }}
+ */
+export function validateProjectContextRegistryMirror(projectContextContent, registryJson) {
+  const errors = [];
+  const sectionSpecs = [
+    {
+      name: 'Phase Executor Agents',
+      heading: '## Phase Executor Agents',
+      registryKey: 'phase_executor_agents',
+      fields: ['agent', 'role', 'primary_use_case', 'model_routing_role'],
+    },
+    {
+      name: 'Review Pipeline Agents',
+      heading: '## Review Pipeline Agents',
+      registryKey: 'review_pipeline_agents',
+      fields: ['agent', 'role', 'primary_use_case', 'model_routing_role'],
+    },
+    {
+      name: 'Agent Role Matrix',
+      heading: '## Agent Role Matrix',
+      registryKey: 'agent_role_matrix',
+      fields: ['agent', 'schema_output', 'tools_profile', 'delegation_source'],
+    },
+  ];
+
+  if (!registryJson || typeof registryJson !== 'object') {
+    return { ok: false, errors: ['project-context-registry: JSON object missing'] };
+  }
+
+  for (const spec of sectionSpecs) {
+    const entries = registryJson?.[spec.registryKey];
+    if (!Array.isArray(entries) || entries.length === 0) {
+      errors.push(`project-context-registry: ${spec.registryKey}[] missing or empty`);
+      continue;
+    }
+
+    const seenAgents = new Set();
+    const expectedRows = [];
+    for (const [idx, entry] of entries.entries()) {
+      if (!entry || typeof entry !== 'object') {
+        errors.push(`${spec.name}: registry entry ${idx + 1} must be an object`);
+        continue;
+      }
+      if (typeof entry.agent !== 'string' || entry.agent.trim().length === 0) {
+        errors.push(`${spec.name}: registry entry ${idx + 1} missing non-empty agent`);
+      } else if (seenAgents.has(entry.agent)) {
+        errors.push(`${spec.name}: duplicate agent "${entry.agent}" in registry`);
+      } else {
+        seenAgents.add(entry.agent);
+      }
+
+      const expectedRow = spec.fields.map(field => {
+        const value = entry?.[field];
+        if (typeof value !== 'string' || value.trim().length === 0) {
+          errors.push(`${spec.name}: registry entry ${idx + 1} missing non-empty ${field}`);
+          return '';
+        }
+        return normalizeMarkdownCell(value);
+      });
+      expectedRows.push(expectedRow);
+    }
+
+    const actualRows = extractMarkdownTableRowsByHeading(projectContextContent, spec.heading);
+    if (actualRows === null) {
+      errors.push(`${spec.name}: heading "${spec.heading}" missing in plans/project-context.md`);
+      continue;
+    }
+
+    if (actualRows.length !== expectedRows.length) {
+      errors.push(`${spec.name}: expected ${expectedRows.length} row(s) but found ${actualRows.length}`);
+    }
+
+    const rowCount = Math.min(actualRows.length, expectedRows.length);
+    for (let i = 0; i < rowCount; i++) {
+      const actual = actualRows[i].map(normalizeMarkdownCell);
+      const expected = expectedRows[i];
+      if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+        errors.push(
+          `${spec.name}: row ${i + 1} mismatch — expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`
+        );
+      }
+    }
+  }
+
+  return { ok: errors.length === 0, errors };
 }

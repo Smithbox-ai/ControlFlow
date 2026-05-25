@@ -1,0 +1,51 @@
+{
+  "version": "1.0.0",
+  "description": "Machine-readable canonical ownership map mirrored in plans/project-context.md Canonical Source Matrix.",
+  "entries": [
+    {
+      "concern": "Executor roster",
+      "authoritative_file": "governance/project-context-registry.json",
+      "notes": "Defines allowed executor_agent names for phases."
+    },
+    {
+      "concern": "Review pipeline roster",
+      "authoritative_file": "governance/project-context-registry.json",
+      "notes": "Defines PLAN_REVIEW-only auditing agents and their routing roles."
+    },
+    {
+      "concern": "Agent role matrix",
+      "authoritative_file": "governance/project-context-registry.json",
+      "notes": "Defines schema outputs, tool profiles, and delegation sources for project agents."
+    },
+    {
+      "concern": "Complexity tiers",
+      "authoritative_file": "plans/project-context.md",
+      "notes": "Maps file counts/risk to pipeline depth."
+    },
+    {
+      "concern": "Semantic-risk taxonomy",
+      "authoritative_file": "plans/project-context.md",
+      "notes": "Defines the 7 risk categories evaluated during planning."
+    },
+    {
+      "concern": "Review routing",
+      "authoritative_file": "governance/runtime-policy.json",
+      "notes": "Active rules for PLAN_REVIEW and Completion Gate execution."
+    },
+    {
+      "concern": "Retry budgets",
+      "authoritative_file": "governance/runtime-policy.json",
+      "notes": "Exact numeric limits, backoffs, and escalation thresholds."
+    },
+    {
+      "concern": "Shared evidence discipline",
+      "authoritative_file": "docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md",
+      "notes": "Mandates evidence citations for claims across all agents."
+    },
+    {
+      "concern": "Gate-event contract",
+      "authoritative_file": "docs/agent-engineering/RELIABILITY-GATES.md",
+      "notes": "Governs PreFlect, Completion, and validation structural rules."
+    }
+  ]
+}

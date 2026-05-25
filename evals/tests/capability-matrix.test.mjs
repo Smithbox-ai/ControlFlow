@@ -3,7 +3,7 @@
  *
  * Covers:
  *   - parseAgentFrontmatter: positive and negative fixture cases
- *   - parseProjectContextRoster: positive and negative fixture cases
+ *   - loadRosterFromRegistry: positive, negative, and live registry cases
  *   - buildCapabilityMatrix: clean agent, each drift flag variant, meta-key filtering
  *   - renderMatrixMarkdown: deterministic output, drift flag surfacing
  *   - Smoke test against live tree: row count equals non-meta tool-grants keys
@@ -16,13 +16,14 @@
  * (Phase 4 wires this file into the `npm test` chain.)
  */
 
-import { readFileSync } from 'fs';
+import { readFileSync, writeFileSync, unlinkSync } from 'fs';
+import { tmpdir } from 'os';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 import {
   parseAgentFrontmatter,
-  parseProjectContextRoster,
+  loadRosterFromRegistry,
   buildCapabilityMatrix,
   renderMatrixMarkdown,
 } from '../capability-matrix.mjs';
@@ -97,71 +98,77 @@ console.log('\n=== capability-matrix: parseAgentFrontmatter ===');
   assert(r.tools.length === 0, 'tools is empty when missing from frontmatter');
 }
 
-// ── parseProjectContextRoster ─────────────────────────────────────────────────
+// ── loadRosterFromRegistry ────────────────────────────────────────────────────
 
-console.log('\n=== capability-matrix: parseProjectContextRoster ===');
+console.log('\n=== capability-matrix: loadRosterFromRegistry ===');
 
 {
-  // Positive: minimal fixture with all three sections
-  const content = [
-    '# Project Context',
-    '',
-    '## Phase Executor Agents',
-    '',
-    '| Agent | Role | Primary Use Case | Model Recommendation |',
-    '| --- | --- | --- | --- |',
-    '| AgentAlpha | Executor role | Implementation | Fast model |',
-    '| AgentBeta | Another role | Testing | Capable model |',
-    '',
-    '## Review Pipeline Agents',
-    '',
-    '| Agent | Role | Primary Use Case | Model Recommendation |',
-    '| --- | --- | --- | --- |',
-    '| AgentGamma | Review role | Auditing | Read-only |',
-    '',
-    '## Agent Role Matrix',
-    '',
-    '| Agent | Schema Output | Tools Profile | Delegation Source |',
-    '| --- | --- | --- | --- |',
-    '| AgentAlpha | alpha.schema.json | Full (5 tools) | Orchestrator |',
-    '| AgentBeta | beta.schema.json | Partial (3 tools) | Orchestrator |',
-    '| AgentGamma | gamma.schema.json | Read-only (2 tools) | Orchestrator |',
-    '',
-    '## Other Section',
-    '',
-    'Should not be parsed.',
-  ].join('\n');
-
-  const r = parseProjectContextRoster(content);
-  assert(r.executors.length === 2, 'parses 2 executors');
-  assert(r.executors.includes('AgentAlpha'), 'executors includes AgentAlpha');
-  assert(r.executors.includes('AgentBeta'), 'executors includes AgentBeta');
-  assert(r.reviewPipeline.length === 1, 'parses 1 review pipeline agent');
-  assert(r.reviewPipeline.includes('AgentGamma'), 'reviewPipeline includes AgentGamma');
-  assert(r.roleMatrix.size === 3, 'roleMatrix has 3 entries');
-  assert(
-    r.roleMatrix.get('AgentAlpha')?.schemaOutput === 'alpha.schema.json',
-    'roleMatrix has correct schemaOutput for AgentAlpha'
-  );
-  assert(
-    r.roleMatrix.get('AgentGamma')?.schemaOutput === 'gamma.schema.json',
-    'roleMatrix has correct schemaOutput for AgentGamma'
-  );
+  // Positive: minimal fixture with all three arrays — verifies snake_case → camelCase mapping
+  const fixture = {
+    phase_executor_agents: [
+      { agent: 'AgentAlpha', role: 'Executor role', primary_use_case: 'Implementation', model_routing_role: 'fast' },
+      { agent: 'AgentBeta', role: 'Another role', primary_use_case: 'Testing', model_routing_role: 'capable' },
+    ],
+    review_pipeline_agents: [
+      { agent: 'AgentGamma', role: 'Review role', primary_use_case: 'Auditing', model_routing_role: 'reviewer' },
+    ],
+    agent_role_matrix: [
+      { agent: 'AgentAlpha', schema_output: 'alpha.schema.json', tools_profile: 'Full (5 tools)', delegation_source: 'Orchestrator' },
+      { agent: 'AgentBeta', schema_output: 'beta.schema.json', tools_profile: 'Partial (3 tools)', delegation_source: 'Orchestrator' },
+      { agent: 'AgentGamma', schema_output: 'gamma.schema.json', tools_profile: 'Read-only (2 tools)', delegation_source: 'Orchestrator' },
+    ],
+  };
+  const tmpPath = join(tmpdir(), `registry-fixture-${Date.now()}.json`);
+  writeFileSync(tmpPath, JSON.stringify(fixture));
+  try {
+    const r = loadRosterFromRegistry(tmpPath);
+    assert(r.executors.length === 2, 'registry: parses 2 executors from phase_executor_agents');
+    assert(r.executors.includes('AgentAlpha'), 'registry: executors includes AgentAlpha');
+    assert(r.executors.includes('AgentBeta'), 'registry: executors includes AgentBeta');
+    assert(r.reviewPipeline.length === 1, 'registry: parses 1 review pipeline agent from review_pipeline_agents');
+    assert(r.reviewPipeline.includes('AgentGamma'), 'registry: reviewPipeline includes AgentGamma');
+    assert(r.roleMatrix.size === 3, 'registry: roleMatrix has 3 entries from agent_role_matrix');
+    // Verify snake_case → camelCase field mapping
+    const alpha = r.roleMatrix.get('AgentAlpha');
+    assert(alpha !== undefined, 'registry: roleMatrix has entry for AgentAlpha');
+    assert(alpha.schemaOutput === 'alpha.schema.json', 'registry: schema_output mapped to schemaOutput');
+    assert(alpha.toolsProfile === 'Full (5 tools)', 'registry: tools_profile mapped to toolsProfile');
+    assert(alpha.delegationSource === 'Orchestrator', 'registry: delegation_source mapped to delegationSource');
+    const gamma = r.roleMatrix.get('AgentGamma');
+    assert(gamma?.schemaOutput === 'gamma.schema.json', 'registry: reviewer roleMatrix entry has correct schemaOutput');
+  } finally {
+    unlinkSync(tmpPath);
+  }
 }
 
 {
-  // Negative: empty content
-  const r = parseProjectContextRoster('');
-  assert(r.executors.length === 0, 'executors empty for empty content');
-  assert(r.reviewPipeline.length === 0, 'reviewPipeline empty for empty content');
-  assert(r.roleMatrix.size === 0, 'roleMatrix empty for empty content');
+  // Negative: empty arrays produce empty roster
+  const fixture = { phase_executor_agents: [], review_pipeline_agents: [], agent_role_matrix: [] };
+  const tmpPath = join(tmpdir(), `registry-empty-${Date.now()}.json`);
+  writeFileSync(tmpPath, JSON.stringify(fixture));
+  try {
+    const r = loadRosterFromRegistry(tmpPath);
+    assert(r.executors.length === 0, 'registry: empty phase_executor_agents → empty executors');
+    assert(r.reviewPipeline.length === 0, 'registry: empty review_pipeline_agents → empty reviewPipeline');
+    assert(r.roleMatrix.size === 0, 'registry: empty agent_role_matrix → empty roleMatrix');
+  } finally {
+    unlinkSync(tmpPath);
+  }
 }
 
 {
-  // Negative: content with no recognised section headers
-  const r = parseProjectContextRoster('# Heading\n\nSome prose without sections.');
-  assert(r.executors.length === 0, 'executors empty when no matching section headers');
-  assert(r.reviewPipeline.length === 0, 'reviewPipeline empty when no matching section headers');
+  // Live registry: loadRosterFromRegistry against actual governance/project-context-registry.json
+  const registryPath = join(ROOT, 'governance', 'project-context-registry.json');
+  const r = loadRosterFromRegistry(registryPath);
+  assert(r.executors.length > 0, 'live registry: executors is non-empty');
+  assert(r.reviewPipeline.length > 0, 'live registry: reviewPipeline is non-empty');
+  assert(r.roleMatrix.size > 0, 'live registry: roleMatrix is non-empty');
+  // Every executor entry should have a matching roleMatrix entry with a schemaOutput
+  const missingSchema = r.executors.filter((a) => !r.roleMatrix.get(a)?.schemaOutput);
+  assert(missingSchema.length === 0, `live registry: all executors have schemaOutput in roleMatrix (missing: ${missingSchema.join(', ') || 'none'})`);
+  // Verify at least one known agent appears
+  assert(r.executors.includes('CoreImplementer-subagent'), 'live registry: executors includes CoreImplementer-subagent');
+  assert(r.reviewPipeline.includes('PlanAuditor-subagent'), 'live registry: reviewPipeline includes PlanAuditor-subagent');
 }
 
 // ── buildCapabilityMatrix ─────────────────────────────────────────────────────
@@ -418,10 +425,9 @@ console.log('\n=== capability-matrix: live tree smoke test ===');
 
 {
   const grantsPath = join(ROOT, 'governance', 'tool-grants.json');
-  const projectContextPath = join(ROOT, 'plans', 'project-context.md');
+  const registryPath = join(ROOT, 'governance', 'project-context-registry.json');
 
   const grantsRaw = JSON.parse(readFileSync(grantsPath, 'utf8'));
-  const projectContextContent = readFileSync(projectContextPath, 'utf8');
 
   const nonMetaKeys = Object.keys(grantsRaw).filter((k) => !k.startsWith('_'));
 
@@ -437,7 +443,7 @@ console.log('\n=== capability-matrix: live tree smoke test ===');
     }
   }
 
-  const roster = parseProjectContextRoster(projectContextContent);
+  const roster = loadRosterFromRegistry(registryPath);
   const rows = buildCapabilityMatrix({ grants: grantsRaw, agents, roster });
 
   // Each non-meta grants key produces exactly one row; in the live tree no
@@ -474,6 +480,41 @@ console.log('\n=== capability-matrix: live tree smoke test ===');
   assert(md.includes('| Agent |'), 'live tree markdown includes table header');
   const allAgentsInMd = rows.every((r) => md.includes(r.agent));
   assert(allAgentsInMd, 'every agent appears in rendered live-tree markdown');
+}
+
+// ── Source-scan guard: old markdown-table parser path removed from runtime ─────
+
+console.log('\n=== capability-matrix: source-scan guard ===');
+
+{
+  const capabilityMatrixSrc = readFileSync(
+    join(ROOT, 'evals', 'capability-matrix.mjs'),
+    'utf8'
+  );
+
+  // Guard 1: the old CLI variable name must not appear in the source
+  assert(
+    !capabilityMatrixSrc.includes('projectContextPath'),
+    'source-scan: "projectContextPath" variable is absent (old CLI path removed)'
+  );
+
+  // Guard 2: the obsolete markdown-table parser symbol must not appear in the runtime module
+  assert(
+    !capabilityMatrixSrc.includes('parseProjectContextRoster'),
+    'source-scan: "parseProjectContextRoster" symbol is absent from runtime'
+  );
+
+  // Guard 3: the new registry loader must be present and used in the CLI section
+  assert(
+    capabilityMatrixSrc.includes('loadRosterFromRegistry'),
+    'source-scan: "loadRosterFromRegistry" function is present in source'
+  );
+
+  // Guard 4: the registry path is referenced in the CLI section (not project-context.md)
+  assert(
+    capabilityMatrixSrc.includes('project-context-registry.json'),
+    'source-scan: "project-context-registry.json" is referenced in source'
+  );
 }
 
 // ── Final summary ─────────────────────────────────────────────────────────────

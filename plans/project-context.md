@@ -4,6 +4,8 @@
 
 The following agents are available for Orchestrator phase dispatch. The `executor_agent` field in Planner plans must use one of these exact names.
 
+These metadata tables are maintained as semantic mirrors of `governance/project-context-registry.json` in this optimization wave.
+
 | Agent | Role | Primary Use Case | Model Routing Role |
 | --- | --- | --- | --- |
 | CodeMapper-subagent | Read-only discovery | Codebase exploration, file mapping | `fast-readonly` |
@@ -111,7 +113,9 @@ When a semantic risk entry triggers PlanAuditor review, Orchestrator maps the ri
 
 | Concern | Authoritative File | Notes |
 | --- | --- | --- |
-| Executor roster | `plans/project-context.md` | Defines allowed `executor_agent` names for phases. |
+| Executor roster | `governance/project-context-registry.json` | Defines allowed `executor_agent` names for phases. |
+| Review pipeline roster | `governance/project-context-registry.json` | Defines PLAN_REVIEW-only auditing agents and their routing roles. |
+| Agent role matrix | `governance/project-context-registry.json` | Defines schema outputs, tool profiles, and delegation sources for project agents. |
 | Complexity tiers | `plans/project-context.md` | Maps file counts/risk to pipeline depth. |
 | Semantic-risk taxonomy | `plans/project-context.md` | Defines the 7 risk categories evaluated during planning. |
 | Review routing | `governance/runtime-policy.json` | Active rules for PLAN_REVIEW and Completion Gate execution. |

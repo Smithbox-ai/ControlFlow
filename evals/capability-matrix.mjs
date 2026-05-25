@@ -6,7 +6,7 @@
  * Reconciles:
  *   - governance/tool-grants.json (meta keys filtered via key.startsWith('_'))
  *   - Each *.agent.md file's frontmatter (model_role, tools)
- *   - plans/project-context.md executor / review-pipeline / Agent Role Matrix tables
+ *   - governance/project-context-registry.json executor / review-pipeline / Agent Role Matrix
  *
  * Exported helpers are covered by evals/tests/capability-matrix.test.mjs.
  *
@@ -59,77 +59,38 @@ export function parseAgentFrontmatter(content) {
   return { modelRole, tools };
 }
 
-// ── parseProjectContextRoster ─────────────────────────────────────────────────
+// ── loadRosterFromRegistry ──────────────────────────────────────────────────────
 
 /**
- * Parse plans/project-context.md to extract executor agents, review-pipeline
- * agents, and the Agent Role Matrix table.
+ * Load executor/review roster and role matrix metadata from the machine-readable
+ * governance registry (governance/project-context-registry.json).
  *
- * Recognised section headers (exact markdown `##` headings):
- *   - "Phase Executor Agents"
- *   - "Review Pipeline Agents"
- *   - "Agent Role Matrix"
+ * Maps registry snake_case fields to the camelCase roleMatrix shape used by
+ * buildCapabilityMatrix:
+ *   schema_output      → schemaOutput
+ *   tools_profile      → toolsProfile
+ *   delegation_source  → delegationSource
  *
- * Agent names are stored without the `.agent.md` suffix (matching table values).
- *
- * @param {string} content - Raw file content of project-context.md.
+ * @param {string} registryPath - Absolute path to project-context-registry.json.
  * @returns {{
  *   executors: string[],
  *   reviewPipeline: string[],
  *   roleMatrix: Map<string, { schemaOutput: string, toolsProfile: string, delegationSource: string }>
  * }}
  */
-export function parseProjectContextRoster(content) {
-  const lines = content.split('\n');
+export function loadRosterFromRegistry(registryPath) {
+  const registry = JSON.parse(readFileSync(registryPath, 'utf8'));
 
-  const executors = [];
-  const reviewPipeline = [];
+  const executors = (registry.phase_executor_agents || []).map((e) => e.agent);
+  const reviewPipeline = (registry.review_pipeline_agents || []).map((r) => r.agent);
+
   const roleMatrix = new Map();
-
-  let section = null;
-
-  for (const line of lines) {
-    // Detect targeted section headers first (continue to skip generic ## check)
-    if (/^##\s+Phase Executor Agents/.test(line)) {
-      section = 'executors';
-      continue;
-    }
-    if (/^##\s+Review Pipeline Agents/.test(line)) {
-      section = 'reviewPipeline';
-      continue;
-    }
-    if (/^##\s+Agent Role Matrix/.test(line)) {
-      section = 'roleMatrix';
-      continue;
-    }
-    // Any other ## heading exits the tracked sections
-    if (/^##/.test(line)) {
-      section = null;
-      continue;
-    }
-
-    if (!section || !line.includes('|')) continue;
-
-    // Skip markdown separator rows (only -, |, :, space)
-    if (/^\s*\|[\s|:-]+\|\s*$/.test(line)) continue;
-
-    // Split pipe-bordered row; meaningful cells start at index 1
-    const cells = line.split('|').map((c) => c.trim());
-    if (cells.length < 3) continue;
-
-    const agentName = cells[1];
-    if (!agentName || agentName === 'Agent') continue; // skip header row
-
-    if (section === 'executors') {
-      executors.push(agentName);
-    } else if (section === 'reviewPipeline') {
-      reviewPipeline.push(agentName);
-    } else if (section === 'roleMatrix') {
-      const schemaOutput = cells[2] ? cells[2].trim() : '';
-      const toolsProfile = cells[3] ? cells[3].trim() : '';
-      const delegationSource = cells[4] ? cells[4].trim() : '';
-      roleMatrix.set(agentName, { schemaOutput, toolsProfile, delegationSource });
-    }
+  for (const entry of registry.agent_role_matrix || []) {
+    roleMatrix.set(entry.agent, {
+      schemaOutput: entry.schema_output || '',
+      toolsProfile: entry.tools_profile || '',
+      delegationSource: entry.delegation_source || '',
+    });
   }
 
   return { executors, reviewPipeline, roleMatrix };
@@ -268,10 +229,10 @@ const isMain = process.argv[1] && resolve(process.argv[1]) === resolve(__filenam
 
 if (isMain) {
   const grantsPath = join(ROOT, 'governance', 'tool-grants.json');
-  const projectContextPath = join(ROOT, 'plans', 'project-context.md');
+  const registryPath = join(ROOT, 'governance', 'project-context-registry.json');
 
   const grants = JSON.parse(readFileSync(grantsPath, 'utf8'));
-  const roster = parseProjectContextRoster(readFileSync(projectContextPath, 'utf8'));
+  const roster = loadRosterFromRegistry(registryPath);
 
   const agents = new Map();
   for (const agentFile of Object.keys(grants)) {

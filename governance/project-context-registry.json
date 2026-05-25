@@ -1,0 +1,142 @@
+{
+  "version": "1.0.0",
+  "description": "Machine-readable source of truth for selected project-context metadata tables mirrored in plans/project-context.md.",
+  "phase_executor_agents": [
+    {
+      "agent": "CodeMapper-subagent",
+      "role": "Read-only discovery",
+      "primary_use_case": "Codebase exploration, file mapping",
+      "model_routing_role": "fast-readonly"
+    },
+    {
+      "agent": "Researcher-subagent",
+      "role": "Research & evidence",
+      "primary_use_case": "Deep investigation, evidence extraction",
+      "model_routing_role": "research-capable"
+    },
+    {
+      "agent": "CoreImplementer-subagent",
+      "role": "Backend implementation",
+      "primary_use_case": "Code creation, modification, testing",
+      "model_routing_role": "capable-implementer"
+    },
+    {
+      "agent": "UIImplementer-subagent",
+      "role": "UI implementation",
+      "primary_use_case": "Components, styling, accessibility",
+      "model_routing_role": "ui-implementer"
+    },
+    {
+      "agent": "PlatformEngineer-subagent",
+      "role": "Infrastructure",
+      "primary_use_case": "CI/CD, containers, deployment",
+      "model_routing_role": "capable-implementer"
+    },
+    {
+      "agent": "TechnicalWriter-subagent",
+      "role": "Documentation",
+      "primary_use_case": "Docs, diagrams, walkthroughs",
+      "model_routing_role": "documentation"
+    },
+    {
+      "agent": "BrowserTester-subagent",
+      "role": "E2E testing",
+      "primary_use_case": "Browser tests, accessibility audits",
+      "model_routing_role": "browser-testing"
+    },
+    {
+      "agent": "CodeReviewer-subagent",
+      "role": "Post-impl verification",
+      "primary_use_case": "Code review, quality gates",
+      "model_routing_role": "capable-reviewer"
+    }
+  ],
+  "review_pipeline_agents": [
+    {
+      "agent": "PlanAuditor-subagent",
+      "role": "Pre-impl plan audit",
+      "primary_use_case": "Architecture, security, risk review",
+      "model_routing_role": "capable-reviewer"
+    },
+    {
+      "agent": "AssumptionVerifier-subagent",
+      "role": "Mirage detection",
+      "primary_use_case": "Assumption verification, hallucination hunting",
+      "model_routing_role": "capable-reviewer"
+    },
+    {
+      "agent": "ExecutabilityVerifier-subagent",
+      "role": "Executability verification",
+      "primary_use_case": "Cold-start plan simulation",
+      "model_routing_role": "review-readonly"
+    }
+  ],
+  "agent_role_matrix": [
+    {
+      "agent": "CodeMapper-subagent",
+      "schema_output": "code-mapper.discovery.schema.json",
+      "tools_profile": "Read-only (5 tools)",
+      "delegation_source": "Orchestrator, Researcher, Planner"
+    },
+    {
+      "agent": "Researcher-subagent",
+      "schema_output": "researcher.research-findings.schema.json",
+      "tools_profile": "Read + fetch (6 tools)",
+      "delegation_source": "Orchestrator, Planner"
+    },
+    {
+      "agent": "CoreImplementer-subagent",
+      "schema_output": "core-implementer.execution-report.schema.json",
+      "tools_profile": "Full implementation (10 tools)",
+      "delegation_source": "Orchestrator"
+    },
+    {
+      "agent": "UIImplementer-subagent",
+      "schema_output": "ui-implementer.execution-report.schema.json",
+      "tools_profile": "Full implementation (10 tools)",
+      "delegation_source": "Orchestrator"
+    },
+    {
+      "agent": "PlatformEngineer-subagent",
+      "schema_output": "platform-engineer.execution-report.schema.json",
+      "tools_profile": "Full implementation (10 tools)",
+      "delegation_source": "Orchestrator"
+    },
+    {
+      "agent": "TechnicalWriter-subagent",
+      "schema_output": "technical-writer.execution-report.schema.json",
+      "tools_profile": "Edit + search (7 tools)",
+      "delegation_source": "Orchestrator"
+    },
+    {
+      "agent": "BrowserTester-subagent",
+      "schema_output": "browser-tester.execution-report.schema.json",
+      "tools_profile": "Search + edit evidence (8 tools)",
+      "delegation_source": "Orchestrator"
+    },
+    {
+      "agent": "CodeReviewer-subagent",
+      "schema_output": "code-reviewer.verdict.schema.json",
+      "tools_profile": "Search + run (6 tools)",
+      "delegation_source": "Orchestrator"
+    },
+    {
+      "agent": "PlanAuditor-subagent",
+      "schema_output": "plan-auditor.plan-audit.schema.json",
+      "tools_profile": "Read-only (7 tools)",
+      "delegation_source": "Orchestrator"
+    },
+    {
+      "agent": "AssumptionVerifier-subagent",
+      "schema_output": "assumption-verifier.plan-audit.schema.json",
+      "tools_profile": "Read-only (6 tools)",
+      "delegation_source": "Orchestrator"
+    },
+    {
+      "agent": "ExecutabilityVerifier-subagent",
+      "schema_output": "executability-verifier.execution-report.schema.json",
+      "tools_profile": "Read-only (5 tools)",
+      "delegation_source": "Orchestrator"
+    }
+  ]
+}

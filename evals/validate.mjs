@@ -67,6 +67,8 @@ import {
   validateOrchestratorMemoryPromotionOrder,
   validateCodeReviewerSecurityModeSameLine,
   validateCanonicalSourceMatrixHeading,
+  validateCanonicalSourceMatrixContract,
+  validateProjectContextRegistryMirror,
 } from './drift-checks.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -1805,6 +1807,8 @@ header('Pass 13: Drift Detection — review_scope=final Bidirectional Coupling')
 header('Pass 14: Drift Detection — Canonical Source Matrix Heading');
 {
   const ctxPath = join(ROOT, 'plans', 'project-context.md');
+  const matrixPath = join(ROOT, 'governance', 'canonical-source-matrix.json');
+  const registryPath = join(ROOT, 'governance', 'project-context-registry.json');
   if (!existsSync(ctxPath)) {
     fail('Pass 14: plans/project-context.md missing');
   } else {
@@ -1814,6 +1818,50 @@ header('Pass 14: Drift Detection — Canonical Source Matrix Heading');
       pass('Canonical Source Matrix: heading present in plans/project-context.md');
     } else {
       fail(`Pass 14: ${result.reason}`);
+    }
+
+    if (!existsSync(matrixPath)) {
+      fail('Pass 14: governance/canonical-source-matrix.json missing');
+    } else {
+      let matrixJson = null;
+      try {
+        matrixJson = JSON.parse(readFileSync(matrixPath, 'utf8'));
+      } catch (e) {
+        fail(`Pass 14: cannot parse governance/canonical-source-matrix.json — ${e.message}`);
+      }
+
+      if (matrixJson) {
+        const contractResult = validateCanonicalSourceMatrixContract(ctxContent, matrixJson);
+        if (contractResult.ok) {
+          pass('Canonical Source Matrix: markdown table rows match governance/canonical-source-matrix.json');
+        } else {
+          for (const err of contractResult.errors) {
+            fail(`Pass 14: ${err}`);
+          }
+        }
+      }
+    }
+
+    if (!existsSync(registryPath)) {
+      fail('Pass 14: governance/project-context-registry.json missing');
+    } else {
+      let registryJson = null;
+      try {
+        registryJson = JSON.parse(readFileSync(registryPath, 'utf8'));
+      } catch (e) {
+        fail(`Pass 14: cannot parse governance/project-context-registry.json — ${e.message}`);
+      }
+
+      if (registryJson) {
+        const mirrorResult = validateProjectContextRegistryMirror(ctxContent, registryJson);
+        if (mirrorResult.ok) {
+          pass('Project context registry: markdown tables mirror governance/project-context-registry.json');
+        } else {
+          for (const err of mirrorResult.errors) {
+            fail(`Pass 14: ${err}`);
+          }
+        }
+      }
     }
   }
 }

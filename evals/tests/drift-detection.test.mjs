@@ -31,6 +31,7 @@ import {
   findSharedAnchorMaps,
   findUnresolvedOverlaps,
   parseYamlConsumers,
+  parseYamlSharedFiles,
   hasSharedAnchorMapFlag,
   validateByTierShape,
   validatePayloadModelDescriptionSemantics,
@@ -45,6 +46,8 @@ import {
   validateRepoMemoryHygieneChecklistC,
   validateRepoMemoryHygieneChecklistD,
   validateTutorialParity,
+  validateCanonicalSourceMatrixContract,
+  validateProjectContextRegistryMirror,
 } from '../drift-checks.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -297,6 +300,7 @@ console.log('\n=== Check #4 — Cross-plan file-overlap parser + anchor-map disc
   const planContent = [
     '### Phase 1',
     '- **Files:** `evals/validate.mjs`, `README.md` (new), `not-a-path`',
+    '- **Files:** `edit/editFiles`, `agent/runSubagent`',
     '- **Tests:** `cd evals && npm test`',
     '',
     '### Phase 2',
@@ -321,8 +325,11 @@ console.log('\n=== Check #4 — Cross-plan file-overlap parser + anchor-map disc
     parsed.includes('evals/tests/drift-detection.test.mjs') && parsed.includes('plans/project-context.md')
   );
   check(
-    'negative: non-path backtick token (no slash or dot) ignored',
-    !parsed.includes('not-a-path') && !parsed.includes('cd evals && npm test')
+    'negative: non-path and tool-id backtick tokens are ignored',
+    !parsed.includes('not-a-path') &&
+      !parsed.includes('cd evals && npm test') &&
+      !parsed.includes('edit/editFiles') &&
+      !parsed.includes('agent/runSubagent')
   );
 
   // Full overlap scenario using a temp dir as ROOT.
@@ -350,7 +357,33 @@ console.log('\n=== Check #4 — Cross-plan file-overlap parser + anchor-map disc
     unresolvedNoAnchor[0].planB === 'plans/plan-b.md'
   );
 
-  // Write an anchor map covering both consumers — overlap becomes coordinated.
+  // Negative: consumer-only anchor map (no shared_files) — file-level overlap stays unresolved.
+  writeFileSync(
+    join(tmpRoot, 'plans', 'artifacts', 'coord', 'anchor.yaml'),
+    [
+      'shared_anchor_map: true',
+      'consumers:',
+      '  - plans/plan-a.md',
+      '  - plans/plan-b.md',
+      '',
+    ].join('\n'),
+    'utf8'
+  );
+
+  {
+    const consumerOnlyMaps = findSharedAnchorMaps(tmpRoot);
+    check(
+      'negative: consumer-only anchor-map has empty sharedFiles array',
+      Array.isArray(consumerOnlyMaps[0]?.sharedFiles) && consumerOnlyMaps[0].sharedFiles.length === 0
+    );
+    const unresolvedConsumerOnly = findUnresolvedOverlaps(mapNoAnchor, consumerOnlyMaps);
+    check(
+      'negative: consumer-only anchor-map (no shared_files) does not mask file-level overlap',
+      unresolvedConsumerOnly.length === 1
+    );
+  }
+
+  // Write an anchor map covering both consumers with explicit shared_files — overlap becomes coordinated.
   writeFileSync(
     join(tmpRoot, 'plans', 'artifacts', 'coord', 'anchor.yaml'),
     [
@@ -359,6 +392,8 @@ console.log('\n=== Check #4 — Cross-plan file-overlap parser + anchor-map disc
       'consumers:',
       '  - plans/plan-a.md',
       '  - plans/plan-b.md',
+      'shared_files:',
+      '  - src/shared.ts',
       '',
     ].join('\n'),
     'utf8'
@@ -368,6 +403,24 @@ console.log('\n=== Check #4 — Cross-plan file-overlap parser + anchor-map disc
   check(
     'positive: anchor map is discovered under plans/artifacts/*/',
     anchorMaps.length === 1 && anchorMaps[0].consumers.length === 2
+  );
+  check(
+    'positive: anchor map sharedFiles is populated from shared_files YAML key',
+    Array.isArray(anchorMaps[0]?.sharedFiles) && anchorMaps[0].sharedFiles.includes('src/shared.ts')
+  );
+  check(
+    'positive: parseYamlSharedFiles reads list items under top-level shared_files',
+    (() => {
+      const sf = parseYamlSharedFiles('shared_files:\n  - a/b.ts\n  - c/d.ts\nother: 1\n');
+      return sf.length === 2 && sf[0] === 'a/b.ts' && sf[1] === 'c/d.ts';
+    })()
+  );
+  check(
+    'positive: parseYamlSharedFiles reads legacy shared_surfaces as explicit file coverage',
+    (() => {
+      const sf = parseYamlSharedFiles('shared_surfaces:\n  - docs/agent-engineering/\n  - Orchestrator.agent.md\nother: 1\n');
+      return sf.length === 2 && sf.includes('docs/agent-engineering/') && sf.includes('Orchestrator.agent.md');
+    })()
   );
   check(
     'positive: hasSharedAnchorMapFlag recognises the top-level flag',
@@ -390,6 +443,31 @@ console.log('\n=== Check #4 — Cross-plan file-overlap parser + anchor-map disc
   check(
     'positive: overlap disappears from unresolved set when anchor-map covers both plans',
     unresolvedWithAnchor.length === 0
+  );
+
+  writeFileSync(join(tmpRoot, 'plans', 'plan-c.md'),
+    '### Phase 1\n- **Files:** `docs/agent-engineering/MODEL-ROUTING.md`\n', 'utf8');
+  writeFileSync(join(tmpRoot, 'plans', 'plan-d.md'),
+    '### Phase 1\n- **Files:** `docs/agent-engineering/MODEL-ROUTING.md`\n', 'utf8');
+  writeFileSync(
+    join(tmpRoot, 'plans', 'artifacts', 'coord', 'dir-anchor.yaml'),
+    [
+      'shared_anchor_map: true',
+      'shared_files:',
+      '  - docs/agent-engineering/',
+      'consumers:',
+      '  - plans/plan-c.md',
+      '  - plans/plan-d.md',
+      '',
+    ].join('\n'),
+    'utf8'
+  );
+  const dirMap = buildPlanFileMap(['plans/plan-c.md', 'plans/plan-d.md'], tmpRoot);
+  const unresolvedDirAnchor = findUnresolvedOverlaps(dirMap, findSharedAnchorMaps(tmpRoot));
+  check(
+    'positive: shared_files directory entry covers files below that directory',
+    unresolvedDirAnchor.length === 0,
+    `unresolved=${JSON.stringify(unresolvedDirAnchor)}`
   );
 
   // Negative: anchor-map with only one of the two plans listed — still unresolved.
@@ -1156,6 +1234,196 @@ console.log('\n=== Check #12 — Phase 5 memory drift + parity negative tests ==
     'N12-6: validateTutorialParity with EN/RU heading divergence outside allowlist → pass=false',
     r.pass === false && (typeof r.reason === 'string' || (r.headingMismatches && r.headingMismatches.length > 0)),
     `pass=${r.pass}, reason=${r.reason}, mismatches=${JSON.stringify(r.headingMismatches)}`
+  );
+}
+
+// ──────────────────────────────────────────────
+// Check #13 — Canonical Source Matrix semantic contract
+// ──────────────────────────────────────────────
+console.log('\n=== Check #13 — canonical source matrix semantic contract ===');
+{
+  const projectContext = [
+    '## Canonical Source Matrix',
+    '',
+    '| Concern | Authoritative File | Notes |',
+    '| --- | --- | --- |',
+    '| Executor roster | `governance/project-context-registry.json` | Defines allowed executor_agent names for phases. |',
+    '| Review pipeline roster | `governance/project-context-registry.json` | Defines PLAN_REVIEW-only auditing agents and their routing roles. |',
+    '| Agent role matrix | `governance/project-context-registry.json` | Defines schema outputs, tool profiles, and delegation sources for project agents. |',
+    '| Complexity tiers | `plans/project-context.md` | Maps file counts/risk to pipeline depth. |',
+    '| Semantic-risk taxonomy | `plans/project-context.md` | Defines the 7 risk categories evaluated during planning. |',
+    '| Review routing | `governance/runtime-policy.json` | Active rules for PLAN_REVIEW and Completion Gate execution. |',
+    '| Retry budgets | `governance/runtime-policy.json` | Exact numeric limits, backoffs, and escalation thresholds. |',
+    '| Shared evidence discipline | `docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md` | Mandates evidence citations for claims across all agents. |',
+    '| Gate-event contract | `docs/agent-engineering/RELIABILITY-GATES.md` | Governs PreFlect, Completion, and validation structural rules. |',
+    '',
+  ].join('\n');
+
+  const matrixJson = {
+    entries: [
+      { concern: 'Executor roster', authoritative_file: 'governance/project-context-registry.json' },
+      { concern: 'Review pipeline roster', authoritative_file: 'governance/project-context-registry.json' },
+      { concern: 'Agent role matrix', authoritative_file: 'governance/project-context-registry.json' },
+      { concern: 'Complexity tiers', authoritative_file: 'plans/project-context.md' },
+      { concern: 'Semantic-risk taxonomy', authoritative_file: 'plans/project-context.md' },
+      { concern: 'Review routing', authoritative_file: 'governance/runtime-policy.json' },
+      { concern: 'Retry budgets', authoritative_file: 'governance/runtime-policy.json' },
+      { concern: 'Shared evidence discipline', authoritative_file: 'docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md' },
+      { concern: 'Gate-event contract', authoritative_file: 'docs/agent-engineering/RELIABILITY-GATES.md' },
+    ],
+  };
+
+  const positive = validateCanonicalSourceMatrixContract(projectContext, matrixJson);
+  check(
+    'positive: markdown canonical table matches machine-readable matrix entries',
+    positive.ok === true,
+    `ok=${positive.ok}, errors=${JSON.stringify(positive.errors)}`
+  );
+
+  const missingRowContext = projectContext.replace(
+    '| Retry budgets | `governance/runtime-policy.json` | Exact numeric limits, backoffs, and escalation thresholds. |\n',
+    ''
+  );
+  const missingRow = validateCanonicalSourceMatrixContract(missingRowContext, matrixJson);
+  check(
+    'negative: missing row in markdown matrix is detected',
+    missingRow.ok === false && missingRow.errors.some(e => e.includes('Retry budgets')),
+    `ok=${missingRow.ok}, errors=${JSON.stringify(missingRow.errors)}`
+  );
+
+  const duplicateConcernJson = JSON.parse(JSON.stringify(matrixJson));
+  duplicateConcernJson.entries.push({ concern: 'Retry budgets', authoritative_file: 'governance/runtime-policy.json' });
+  const duplicateConcern = validateCanonicalSourceMatrixContract(projectContext, duplicateConcernJson);
+  check(
+    'negative: duplicate concern in machine-readable matrix is detected',
+    duplicateConcern.ok === false && duplicateConcern.errors.some(e => e.includes('duplicate concern')),
+    `ok=${duplicateConcern.ok}, errors=${JSON.stringify(duplicateConcern.errors)}`
+  );
+}
+
+// ──────────────────────────────────────────────
+// Check #14 — project-context registry mirror contract
+// ──────────────────────────────────────────────
+console.log('\n=== Check #14 — project-context registry mirror contract ===');
+{
+  const projectContext = [
+    '## Phase Executor Agents',
+    '',
+    '| Agent | Role | Primary Use Case | Model Routing Role |',
+    '| --- | --- | --- | --- |',
+    '| CodeMapper-subagent | Read-only discovery | Codebase exploration, file mapping | `fast-readonly` |',
+    '| Researcher-subagent | Research & evidence | Deep investigation, evidence extraction | `research-capable` |',
+    '',
+    '## Review Pipeline Agents',
+    '',
+    '| Agent | Role | Primary Use Case | Model Routing Role |',
+    '| --- | --- | --- | --- |',
+    '| PlanAuditor-subagent | Pre-impl plan audit | Architecture, security, risk review | `capable-reviewer` |',
+    '| AssumptionVerifier-subagent | Mirage detection | Assumption verification, hallucination hunting | `capable-reviewer` |',
+    '',
+    '## Agent Role Matrix',
+    '',
+    '| Agent | Schema Output | Tools Profile | Delegation Source |',
+    '| --- | --- | --- | --- |',
+    '| CodeMapper-subagent | code-mapper.discovery.schema.json | Read-only (5 tools) | Orchestrator, Researcher, Planner |',
+    '| PlanAuditor-subagent | plan-auditor.plan-audit.schema.json | Read-only (7 tools) | Orchestrator |',
+    '',
+  ].join('\n');
+
+  const registryJson = {
+    phase_executor_agents: [
+      {
+        agent: 'CodeMapper-subagent',
+        role: 'Read-only discovery',
+        primary_use_case: 'Codebase exploration, file mapping',
+        model_routing_role: 'fast-readonly',
+      },
+      {
+        agent: 'Researcher-subagent',
+        role: 'Research & evidence',
+        primary_use_case: 'Deep investigation, evidence extraction',
+        model_routing_role: 'research-capable',
+      },
+    ],
+    review_pipeline_agents: [
+      {
+        agent: 'PlanAuditor-subagent',
+        role: 'Pre-impl plan audit',
+        primary_use_case: 'Architecture, security, risk review',
+        model_routing_role: 'capable-reviewer',
+      },
+      {
+        agent: 'AssumptionVerifier-subagent',
+        role: 'Mirage detection',
+        primary_use_case: 'Assumption verification, hallucination hunting',
+        model_routing_role: 'capable-reviewer',
+      },
+    ],
+    agent_role_matrix: [
+      {
+        agent: 'CodeMapper-subagent',
+        schema_output: 'code-mapper.discovery.schema.json',
+        tools_profile: 'Read-only (5 tools)',
+        delegation_source: 'Orchestrator, Researcher, Planner',
+      },
+      {
+        agent: 'PlanAuditor-subagent',
+        schema_output: 'plan-auditor.plan-audit.schema.json',
+        tools_profile: 'Read-only (7 tools)',
+        delegation_source: 'Orchestrator',
+      },
+    ],
+  };
+
+  const positive = validateProjectContextRegistryMirror(projectContext, registryJson);
+  check(
+    'positive: project-context metadata tables mirror registry rows exactly',
+    positive.ok === true,
+    `ok=${positive.ok}, errors=${JSON.stringify(positive.errors)}`
+  );
+
+  const missingExecutorRowContext = projectContext.replace(
+    '| Researcher-subagent | Research & evidence | Deep investigation, evidence extraction | `research-capable` |\n',
+    ''
+  );
+  const missingExecutorRow = validateProjectContextRegistryMirror(missingExecutorRowContext, registryJson);
+  check(
+    'negative: missing executor row is detected',
+    missingExecutorRow.ok === false && missingExecutorRow.errors.some(e => e.includes('Phase Executor Agents')),
+    `ok=${missingExecutorRow.ok}, errors=${JSON.stringify(missingExecutorRow.errors)}`
+  );
+
+  const reviewPipelineDriftContext = projectContext.replace(
+    '| AssumptionVerifier-subagent | Mirage detection | Assumption verification, hallucination hunting | `capable-reviewer` |',
+    '| AssumptionVerifier-subagent | Mirage detection | Assumption verification only | `capable-reviewer` |'
+  );
+  const reviewPipelineDrift = validateProjectContextRegistryMirror(reviewPipelineDriftContext, registryJson);
+  check(
+    'negative: edited review pipeline cell is detected',
+    reviewPipelineDrift.ok === false && reviewPipelineDrift.errors.some(e => e.includes('Review Pipeline Agents')),
+    `ok=${reviewPipelineDrift.ok}, errors=${JSON.stringify(reviewPipelineDrift.errors)}`
+  );
+
+  const roleMatrixDriftContext = projectContext.replace(
+    '| PlanAuditor-subagent | plan-auditor.plan-audit.schema.json | Read-only (7 tools) | Orchestrator |',
+    '| PlanAuditor-subagent | WRONG.schema.json | Read-only (7 tools) | Orchestrator |'
+  );
+  const roleMatrixDrift = validateProjectContextRegistryMirror(roleMatrixDriftContext, registryJson);
+  check(
+    'negative: edited role matrix cell is detected',
+    roleMatrixDrift.ok === false && roleMatrixDrift.errors.some(e => e.includes('Agent Role Matrix')),
+    `ok=${roleMatrixDrift.ok}, errors=${JSON.stringify(roleMatrixDrift.errors)}`
+  );
+
+  const reorderedExecutorContext = projectContext.replace(
+    '| CodeMapper-subagent | Read-only discovery | Codebase exploration, file mapping | `fast-readonly` |\n| Researcher-subagent | Research & evidence | Deep investigation, evidence extraction | `research-capable` |',
+    '| Researcher-subagent | Research & evidence | Deep investigation, evidence extraction | `research-capable` |\n| CodeMapper-subagent | Read-only discovery | Codebase exploration, file mapping | `fast-readonly` |'
+  );
+  const reorderedExecutor = validateProjectContextRegistryMirror(reorderedExecutorContext, registryJson);
+  check(
+    'negative: executor row reorder drift is detected',
+    reorderedExecutor.ok === false && reorderedExecutor.errors.some(e => e.includes('Phase Executor Agents')),
+    `ok=${reorderedExecutor.ok}, errors=${JSON.stringify(reorderedExecutor.errors)}`
   );
 }
 
