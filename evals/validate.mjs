@@ -1528,7 +1528,7 @@ if (MODEL_ROLE_CHECK_ENABLED) {
       allPass = false;
     }
     if (allPass) {
-      pass(`model_role/default-model resolution + by_tier shape + payload semantics + outer-dispatch negative cases: all ${agentFiles.length} agents align with governance and delegation schema wording`);
+      pass(`model_role/default-model resolution + by_tier shape + mode-aware payload semantics + dispatch contract cases: all ${agentFiles.length} agents align with governance and delegation schema wording`);
     }
   }
 }

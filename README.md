@@ -223,7 +223,7 @@ graph TB
 | **TechnicalWriter** | `TechnicalWriter-subagent.agent.md` | Documentation, diagrams, code-doc parity |
 | **BrowserTester** | `BrowserTester-subagent.agent.md` | Runs provided E2E/accessibility scripts or harnesses; abstains when no executable harness is supplied |
 
-VS Code Copilot defaults to reading the literal `model:` value from each agent frontmatter. However, for internal orchestrated dispatch (via `agent/runSubagent`), **ControlFlow actively resolves `governance/model-routing.json` at call time** (routing dynamically based on task complexity) — see [docs/agent-engineering/MODEL-ROUTING.md](docs/agent-engineering/MODEL-ROUTING.md).
+VS Code Copilot defaults to reading the literal `model:` value from each agent frontmatter. For internal orchestrated dispatch (via `agent/runSubagent`), **ControlFlow resolves `governance/model-routing.json` at call time** with deterministic mode as the default/backward-compatible path; when runtime mode is explicitly `auto`, outer `model` is intentionally omitted so Copilot can auto-select the subagent model — see [docs/agent-engineering/MODEL-ROUTING.md](docs/agent-engineering/MODEL-ROUTING.md).
 
 ---
 

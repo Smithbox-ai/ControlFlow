@@ -14,6 +14,7 @@
       "outer_model_field": "model",
       "outer_model_source": "agent/runSubagent outer tool-call parameter resolved from governance/model-routing.json",
       "payload_model_field": "model",
+      "payload_runtime_model_mode_field": "runtime_model_mode",
       "payload_model_purpose": "delegation payload contract, validation, and audit context",
       "payload_model_is_runtime_enforcement_boundary": false,
       "frontmatter_model_direct_invocation_fallback": true,
@@ -291,6 +292,34 @@
         }
       },
       {
+        "case_id": "auto-mode-missing-outer-model-allowed",
+        "description": "Auto mode dispatch intentionally omits outer model so Copilot platform selection chooses the subagent model.",
+        "input_context": {
+          "target_agent": "Researcher-subagent",
+          "runtime_model_mode": "auto"
+        },
+        "broken_dispatch": {
+          "outer_fields": {
+            "agentName_present": true,
+            "agentName": "Researcher-subagent",
+            "model_present": false
+          },
+          "payload_fields": {
+            "runtime_model_mode_present": true,
+            "runtime_model_mode": "auto",
+            "model_present": false
+          }
+        },
+        "expected": {
+          "rejected": false,
+          "resolution_mode": "platform_auto",
+          "runtime_model_mode_marker_required": true,
+          "reason": "In auto mode, omitting the outer model is intentional and allowed; Copilot performs runtime model selection.",
+          "offline_detection_scope": "structural_contract",
+          "live_runtime_assertion": false
+        }
+      },
+      {
         "case_id": "wrong-effective-review-tier",
         "description": "Broken review dispatch keeps MEDIUM routing even though unresolved HIGH risk requires LARGE effective review tier.",
         "input_context": {
@@ -371,6 +400,6 @@
     "live_runtime_behavior_out_of_scope": true,
     "behavioral_runtime_assertions_present": false,
     "reference_cases_documented": 10,
-    "negative_cases_documented": 6
+    "negative_cases_documented": 7
   }
 }

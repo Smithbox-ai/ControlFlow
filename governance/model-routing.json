@@ -1,5 +1,4 @@
 {
-  "$schema": null,
   "version": "1.0.0",
   "description": "Logical model-role routing for ControlFlow agents. Decouples agent files from hard-pinned model strings. Agents opt in via 'model_role:' frontmatter (alongside existing 'model:' during rollout). See docs/agent-engineering/MODEL-ROUTING.md.",
   "trace_id": "7d3f5a2e-1b4c-4e9f-9a8b-2c5d8e1f3a7b",
@@ -135,9 +134,7 @@
       "fallbacks": ["Claude Opus 4.7 (copilot)", "GPT-5.5 (copilot)"],
       "cost_tier": "medium",
       "latency_tier": "medium",
-      "consumers": [
-        "ExecutabilityVerifier-subagent.agent.md"
-      ],
+      "consumers": ["ExecutabilityVerifier-subagent.agent.md"],
       "reasoning_effort_hint": "high",
       "by_tier": {
         "TRIVIAL": { "inherit_from": "default" },

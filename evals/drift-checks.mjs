@@ -120,15 +120,49 @@ export function validatePayloadModelDescriptionSemantics(delegationProtocolSchem
   for (const [agentName, agentSchema] of Object.entries(agentSchemas)) {
     const required = agentSchema?.required;
     const modelSchema = agentSchema?.properties?.model;
-    if (!Array.isArray(required) || !required.includes('model')) {
-      errors.push(`${agentName}: payload-level model must remain required`);
+    const runtimeModeSchema = agentSchema?.properties?.runtime_model_mode;
+    const modelRequirementDef = delegationProtocolSchema?.$defs?.modelRequirementByRuntimeMode;
+    const hasDefConditionalRequirement = Array.isArray(modelRequirementDef?.else?.required) &&
+      modelRequirementDef.else.required.includes('model');
+    const hasConditionalRequirement = Array.isArray(agentSchema?.allOf) && agentSchema.allOf.some(block => {
+      if (block?.$ref === '#/$defs/modelRequirementByRuntimeMode') {
+        return hasDefConditionalRequirement;
+      }
+      const elseRequired = block?.else?.required;
+      return Array.isArray(elseRequired) && elseRequired.includes('model');
+    });
+
+    if (!Array.isArray(required)) {
+      errors.push(`${agentName}: required array missing`);
+    }
+    if (!hasConditionalRequirement) {
+      errors.push(`${agentName}: payload-level model must be conditionally required via runtime_model_mode contract`);
+    }
+    if (!runtimeModeSchema || typeof runtimeModeSchema !== 'object') {
+      errors.push(`${agentName}: runtime_model_mode property missing`);
+    } else {
+      const runtimeEnum = runtimeModeSchema.enum ??
+        (runtimeModeSchema.$ref === '#/$defs/runtimeModelMode'
+          ? delegationProtocolSchema?.$defs?.runtimeModelMode?.enum
+          : undefined);
+      if (!Array.isArray(runtimeEnum) || !runtimeEnum.includes('deterministic') || !runtimeEnum.includes('auto')) {
+        errors.push(`${agentName}: runtime_model_mode enum must include deterministic and auto`);
+      }
     }
     if (!modelSchema || typeof modelSchema !== 'object') {
       errors.push(`${agentName}: payload-level model property missing`);
       continue;
     }
 
-    const description = String(modelSchema.description || '');
+    const resolvedModelSchema = modelSchema.$ref === '#/$defs/payloadModelField'
+      ? delegationProtocolSchema?.$defs?.payloadModelField
+      : modelSchema;
+    if (!resolvedModelSchema || typeof resolvedModelSchema !== 'object') {
+      errors.push(`${agentName}: payload-level model $ref could not be resolved`);
+      continue;
+    }
+
+    const description = String(resolvedModelSchema.description || '');
     const lower = description.toLowerCase();
     if (!lower.includes('payload-level')) {
       errors.push(`${agentName}: payload model description must include "payload-level"`);
@@ -142,6 +176,12 @@ export function validatePayloadModelDescriptionSemantics(delegationProtocolSchem
     if (!lower.includes('does not by itself override frontmatter')) {
       errors.push(`${agentName}: payload model description must state it does not by itself override frontmatter`);
     }
+    if (!lower.includes('deterministic mode requires')) {
+      errors.push(`${agentName}: payload model description must state deterministic mode requires this field`);
+    }
+    if (!lower.includes('auto mode may omit')) {
+      errors.push(`${agentName}: payload model description must state auto mode may omit this field`);
+    }
     if (/sets this when dispatching to override/i.test(description)) {
       errors.push(`${agentName}: payload model description still implies Orchestrator overrides frontmatter through the nested payload field`);
     }
@@ -154,6 +194,7 @@ const REQUIRED_MODEL_RESOLUTION_NEGATIVE_CASES = [
   'missing-outer-agentName',
   'missing-outer-model',
   'payload-only-model',
+  'auto-mode-missing-outer-model-allowed',
   'wrong-effective-review-tier',
   'unconfigured-fallback',
   'omitted-model-due-missing-tier-context',
@@ -192,6 +233,9 @@ export function validateModelResolutionScenarioNegatives(scenario) {
   if (dispatchContract.payload_model_field !== 'model') {
     errors.push('dispatch_contract.payload_model_field must be "model"');
   }
+  if (dispatchContract.payload_runtime_model_mode_field !== 'runtime_model_mode') {
+    errors.push('dispatch_contract.payload_runtime_model_mode_field must be "runtime_model_mode"');
+  }
   if (dispatchContract.payload_model_is_runtime_enforcement_boundary !== false) {
     errors.push('dispatch_contract.payload_model_is_runtime_enforcement_boundary must be false');
   }
@@ -224,7 +268,9 @@ export function validateModelResolutionScenarioNegatives(scenario) {
       errors.push(`missing required model-resolution negative case "${caseId}"`);
       continue;
     }
-    requireRejectedNegativeCase(caseId, negativeCase, errors);
+    if (caseId !== 'auto-mode-missing-outer-model-allowed') {
+      requireRejectedNegativeCase(caseId, negativeCase, errors);
+    }
   }
 
   const missingOuterAgentName = byId.get('missing-outer-agentName');
@@ -263,6 +309,25 @@ export function validateModelResolutionScenarioNegatives(scenario) {
     }
     if (payloadOnlyModel?.expected?.violates !== 'payload_only_model') {
       errors.push('payload-only-model: expected.violates must be "payload_only_model"');
+    }
+  }
+
+  const autoModeOuterModelOmitted = byId.get('auto-mode-missing-outer-model-allowed');
+  if (autoModeOuterModelOmitted) {
+    if (autoModeOuterModelOmitted?.input_context?.runtime_model_mode !== 'auto') {
+      errors.push('auto-mode-missing-outer-model-allowed: input runtime_model_mode must be auto');
+    }
+    if (autoModeOuterModelOmitted?.broken_dispatch?.outer_fields?.model_present !== false) {
+      errors.push('auto-mode-missing-outer-model-allowed: outer model must be absent');
+    }
+    if (autoModeOuterModelOmitted?.expected?.rejected !== false) {
+      errors.push('auto-mode-missing-outer-model-allowed: expected.rejected must be false');
+    }
+    if (autoModeOuterModelOmitted?.expected?.resolution_mode !== 'platform_auto') {
+      errors.push('auto-mode-missing-outer-model-allowed: expected.resolution_mode must be "platform_auto"');
+    }
+    if (autoModeOuterModelOmitted?.expected?.runtime_model_mode_marker_required !== true) {
+      errors.push('auto-mode-missing-outer-model-allowed: expected.runtime_model_mode_marker_required must be true');
     }
   }
 

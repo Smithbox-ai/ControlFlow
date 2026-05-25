@@ -70,13 +70,16 @@ VS Code Copilot defaults to reading the literal `model:` value from frontmatter.
 When Orchestrator or Planner dispatch a subagent via `agent/runSubagent`, they actively execute model resolution:
 
 1. They load `governance/model-routing.json`.
-2. They look up the target agent in `agent_role_index`.
-3. They apply the `by_tier` complexity rule to determine the required model string. If no `complexity_tier` exists yet, they use the target role's top-level `primary` model rather than omitting model selection.
-4. They pass the verified target-agent field as the outer `agentName` parameter and the resolved `primary` explicitly as the outer `model` parameter to `agent/runSubagent`, overriding the agent's frontmatter at call time.
+2. They resolve `runtime_model_mode` from `governance/runtime-policy.json` (`model_dispatch.default_mode`) with deterministic as the default/backward-compatible mode.
+3. They look up the target agent in `agent_role_index`.
+4. They apply the `by_tier` complexity rule to determine the required model string. If no `complexity_tier` exists yet, they use the target role's top-level `primary` model rather than omitting model selection.
+5. They pass the verified target-agent field as the outer `agentName` parameter.
+6. In deterministic mode, they pass the resolved `primary` explicitly as the outer `model` parameter to `agent/runSubagent`, overriding the agent's frontmatter at call time.
+7. In auto mode, they intentionally omit the outer `model` parameter so Copilot platform model auto-selection chooses the subagent runtime model.
 
 ### Delegation Payload Contract
 
-The schema definition in `schemas/orchestrator.delegation-protocol.schema.json` requires a nested payload-level `model` field in all delegation objects. These payload-level fields carry resolved model context for validation, audit, and prompt-visible traceability, but they do not by themselves enforce the runtime model override. The outer `model` parameter on the tool call is the strict enforcement point.
+The schema definition in `schemas/orchestrator.delegation-protocol.schema.json` requires a nested payload-level `runtime_model_mode` marker (`deterministic` or `auto`) and conditionally requires payload-level `model` in deterministic mode. These payload-level fields carry resolved model context for validation, audit, and prompt-visible traceability, but they do not by themselves enforce runtime model selection. The outer tool-call boundary remains authoritative: deterministic mode requires outer `model`, while auto mode intentionally omits it.
 
 While global VS Code Copilot execution (e.g., triggering an agent directly from chat) still relies on the frontmatter fallback, all internal orchestrated pipeline dispatches strictly enforce the logical routing graph dynamically. It is important to note that offline evals do not prove live `runSubagent` execution; we distinguish structural tests and tool/API-shape evidence from real live subagent dispatch (as proven by the existing model override spike).
 
@@ -89,6 +92,7 @@ Current negative cases are documented in `evals/scenarios/orchestrator-model-res
 - Missing outer `agentName`, even if a payload/prose target is present.
 - Missing outer `model`, even if `agentName` is present.
 - Payload-only `model`, where the nested delegation payload carries model context but the outer runtime selector is omitted.
+- Auto-mode omission allowance: missing outer `model` is accepted only when `runtime_model_mode` is `auto`.
 - Wrong effective review tier, especially unresolved HIGH risk that must route capable-reviewer dispatch through `LARGE`.
 - Unconfigured fallback on `model_unavailable`, where retry models must come from the configured fallback list for the same effective tier.
 - Omitted model due to missing tier context, where the correct behavior is to use the target role's top-level `primary` model.

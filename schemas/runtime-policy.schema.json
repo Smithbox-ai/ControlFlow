@@ -55,6 +55,27 @@
         "LARGE":   { "type": "integer", "minimum": 1 }
       }
     },
+    "model_dispatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "default_mode",
+        "auto_mode_allow_outer_model_omission",
+        "auto_mode_requires_runtime_marker"
+      ],
+      "properties": {
+        "default_mode": {
+          "type": "string",
+          "enum": ["deterministic", "auto"]
+        },
+        "auto_mode_allow_outer_model_omission": {
+          "type": "boolean"
+        },
+        "auto_mode_requires_runtime_marker": {
+          "type": "boolean"
+        }
+      }
+    },
     "retry_budgets": {
       "type": "object",
       "additionalProperties": false,

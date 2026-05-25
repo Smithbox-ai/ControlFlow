@@ -29,29 +29,26 @@
         "CodeMapper-subagent": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["scope_description", "model"],
+          "required": ["scope_description"],
           "properties": {
             "scope_description": { "type": "string", "minLength": 5 },
             "focus_areas": { "type": "array", "items": { "type": "string" } },
             "conventions_requested": { "type": "boolean" },
-            "model": {
-              "type": "string",
-              "description": "Payload-level model field carrying the governance-resolved model for delegation contract, validation, and audit context. Runtime enforcement is the outer tool-call model parameter passed to agent/runSubagent; this payload field does not by itself override frontmatter or select the runtime model."
-            }
-          }
+            "runtime_model_mode": { "$ref": "#/$defs/runtimeModelMode" },
+            "model": { "$ref": "#/$defs/payloadModelField" }
+          },
+          "allOf": [{ "$ref": "#/$defs/modelRequirementByRuntimeMode" }]
         },
         "Researcher-subagent": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["research_query", "model"],
+          "required": ["research_query"],
           "properties": {
             "research_query": { "type": "string", "minLength": 5 },
             "focus_areas": { "type": "array", "items": { "type": "string" } },
             "complexity": { "type": "string", "enum": ["simple", "medium", "complex"] },
-            "model": {
-              "type": "string",
-              "description": "Payload-level model field carrying the governance-resolved model for delegation contract, validation, and audit context. Runtime enforcement is the outer tool-call model parameter passed to agent/runSubagent; this payload field does not by itself override frontmatter or select the runtime model."
-            },
+            "runtime_model_mode": { "$ref": "#/$defs/runtimeModelMode" },
+            "model": { "$ref": "#/$defs/payloadModelField" },
             "context_packet": {
               "type": "object",
               "description": "Optional compact research digest. When present, executor should read artifact_path before opening raw source files and skip paths in do_not_re_read unless contradicting evidence is found.",
@@ -77,16 +74,18 @@
                 }
               }
             }
-          }
+          },
+          "allOf": [{ "$ref": "#/$defs/modelRequirementByRuntimeMode" }]
         },
         "Planner": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["task_description", "model"],
+          "required": ["task_description"],
           "properties": {
             "task_description": { "type": "string", "minLength": 10 },
             "constraints": { "type": "array", "items": { "type": "string" } },
             "context_refs": { "type": "array", "items": { "type": "string" } },
+            "runtime_model_mode": { "$ref": "#/$defs/runtimeModelMode" },
             "trace_id": {
               "type": "string",
               "format": "uuid",
@@ -117,12 +116,10 @@
               "minLength": 1,
               "description": "Prior plan artifact that a new superseding artifact replaces when revision_mode is new_artifact_supersession."
             },
-            "model": {
-              "type": "string",
-              "description": "Payload-level model field carrying the governance-resolved model for delegation contract, validation, and audit context. Runtime enforcement is the outer tool-call model parameter passed to agent/runSubagent; this payload field does not by itself override frontmatter or select the runtime model."
-            }
+            "model": { "$ref": "#/$defs/payloadModelField" }
           },
           "allOf": [
+            { "$ref": "#/$defs/modelRequirementByRuntimeMode" },
             {
               "if": {
                 "properties": { "revision_mode": { "const": "in_place_update" } },
@@ -146,7 +143,7 @@
         "CoreImplementer-subagent": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["task_id", "phase_id", "task_definition", "model"],
+          "required": ["task_id", "phase_id", "task_definition"],
           "properties": {
             "task_id": { "type": "string" },
             "phase_id": { "type": "integer", "minimum": 1 },
@@ -157,10 +154,8 @@
             },
             "task_definition": { "type": "string", "minLength": 10 },
             "context_files": { "type": "array", "items": { "type": "string" } },
-            "model": {
-              "type": "string",
-              "description": "Payload-level model field carrying the governance-resolved model for delegation contract, validation, and audit context. Runtime enforcement is the outer tool-call model parameter passed to agent/runSubagent; this payload field does not by itself override frontmatter or select the runtime model."
-            },
+            "runtime_model_mode": { "$ref": "#/$defs/runtimeModelMode" },
+            "model": { "$ref": "#/$defs/payloadModelField" },
             "context_packet": {
               "type": "object",
               "description": "Optional compact research digest. When present, executor should read artifact_path before opening raw source files and skip paths in do_not_re_read unless contradicting evidence is found.",
@@ -186,12 +181,13 @@
                 }
               }
             }
-          }
+          },
+          "allOf": [{ "$ref": "#/$defs/modelRequirementByRuntimeMode" }]
         },
         "UIImplementer-subagent": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["task_id", "phase_id", "task_definition", "model"],
+          "required": ["task_id", "phase_id", "task_definition"],
           "properties": {
             "task_id": { "type": "string" },
             "phase_id": { "type": "integer", "minimum": 1 },
@@ -202,10 +198,8 @@
             },
             "task_definition": { "type": "string", "minLength": 10 },
             "design_refs": { "type": "array", "items": { "type": "string" } },
-            "model": {
-              "type": "string",
-              "description": "Payload-level model field carrying the governance-resolved model for delegation contract, validation, and audit context. Runtime enforcement is the outer tool-call model parameter passed to agent/runSubagent; this payload field does not by itself override frontmatter or select the runtime model."
-            },
+            "runtime_model_mode": { "$ref": "#/$defs/runtimeModelMode" },
+            "model": { "$ref": "#/$defs/payloadModelField" },
             "context_packet": {
               "type": "object",
               "description": "Optional compact research digest. When present, executor should read artifact_path before opening raw source files and skip paths in do_not_re_read unless contradicting evidence is found.",
@@ -231,12 +225,13 @@
                 }
               }
             }
-          }
+          },
+          "allOf": [{ "$ref": "#/$defs/modelRequirementByRuntimeMode" }]
         },
         "PlatformEngineer-subagent": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["task_id", "phase_id", "environment", "model"],
+          "required": ["task_id", "phase_id", "environment"],
           "properties": {
             "task_id": { "type": "string" },
             "phase_id": { "type": "integer", "minimum": 1 },
@@ -249,10 +244,8 @@
             "environment": { "type": "string", "enum": ["development", "staging", "production"] },
             "requires_approval": { "type": "boolean" },
             "security_sensitive": { "type": "boolean" },
-            "model": {
-              "type": "string",
-              "description": "Payload-level model field carrying the governance-resolved model for delegation contract, validation, and audit context. Runtime enforcement is the outer tool-call model parameter passed to agent/runSubagent; this payload field does not by itself override frontmatter or select the runtime model."
-            },
+            "runtime_model_mode": { "$ref": "#/$defs/runtimeModelMode" },
+            "model": { "$ref": "#/$defs/payloadModelField" },
             "context_packet": {
               "type": "object",
               "description": "Optional compact research digest. When present, executor should read artifact_path before opening raw source files and skip paths in do_not_re_read unless contradicting evidence is found.",
@@ -278,12 +271,13 @@
                 }
               }
             }
-          }
+          },
+          "allOf": [{ "$ref": "#/$defs/modelRequirementByRuntimeMode" }]
         },
         "TechnicalWriter-subagent": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["task_id", "phase_id", "task_type", "model"],
+          "required": ["task_id", "phase_id", "task_type"],
           "properties": {
             "task_id": { "type": "string" },
             "phase_id": { "type": "integer", "minimum": 1 },
@@ -295,10 +289,8 @@
             "task_type": { "type": "string", "enum": ["documentation", "walkthrough", "update"] },
             "audience": { "type": "string", "enum": ["developers", "end_users", "stakeholders"] },
             "coverage_matrix": { "type": "array", "items": { "type": "string" } },
-            "model": {
-              "type": "string",
-              "description": "Payload-level model field carrying the governance-resolved model for delegation contract, validation, and audit context. Runtime enforcement is the outer tool-call model parameter passed to agent/runSubagent; this payload field does not by itself override frontmatter or select the runtime model."
-            },
+            "runtime_model_mode": { "$ref": "#/$defs/runtimeModelMode" },
+            "model": { "$ref": "#/$defs/payloadModelField" },
             "context_packet": {
               "type": "object",
               "description": "Optional compact research digest. When present, executor should read artifact_path before opening raw source files and skip paths in do_not_re_read unless contradicting evidence is found.",
@@ -324,12 +316,13 @@
                 }
               }
             }
-          }
+          },
+          "allOf": [{ "$ref": "#/$defs/modelRequirementByRuntimeMode" }]
         },
         "BrowserTester-subagent": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["task_id", "phase_id", "model"],
+          "required": ["task_id", "phase_id"],
           "properties": {
             "task_id": { "type": "string" },
             "phase_id": { "type": "integer", "minimum": 1 },
@@ -353,10 +346,8 @@
                 }
               }
             },
-            "model": {
-              "type": "string",
-              "description": "Payload-level model field carrying the governance-resolved model for delegation contract, validation, and audit context. Runtime enforcement is the outer tool-call model parameter passed to agent/runSubagent; this payload field does not by itself override frontmatter or select the runtime model."
-            },
+            "runtime_model_mode": { "$ref": "#/$defs/runtimeModelMode" },
+            "model": { "$ref": "#/$defs/payloadModelField" },
             "context_packet": {
               "type": "object",
               "description": "Optional compact research digest. When present, executor should read artifact_path before opening raw source files and skip paths in do_not_re_read unless contradicting evidence is found.",
@@ -382,12 +373,13 @@
                 }
               }
             }
-          }
+          },
+          "allOf": [{ "$ref": "#/$defs/modelRequirementByRuntimeMode" }]
         },
         "CodeReviewer-subagent": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["phase_id", "changed_files", "model"],
+          "required": ["phase_id", "changed_files"],
           "properties": {
             "phase_id": { "type": "integer", "minimum": 0 },
             "phase_type": {
@@ -449,16 +441,15 @@
               "description": "Optional. The execution report from the implementing agent for the phase being reviewed.",
               "additionalProperties": true
             },
-            "model": {
-              "type": "string",
-              "description": "Payload-level model field carrying the governance-resolved model for delegation contract, validation, and audit context. Runtime enforcement is the outer tool-call model parameter passed to agent/runSubagent; this payload field does not by itself override frontmatter or select the runtime model."
-            }
-          }
+            "runtime_model_mode": { "$ref": "#/$defs/runtimeModelMode" },
+            "model": { "$ref": "#/$defs/payloadModelField" }
+          },
+          "allOf": [{ "$ref": "#/$defs/modelRequirementByRuntimeMode" }]
         },
         "PlanAuditor-subagent": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["task_id", "plan_path", "plan_summary", "trace_id", "iteration_index", "model"],
+          "required": ["task_id", "plan_path", "plan_summary", "trace_id", "iteration_index"],
           "properties": {
             "task_id": { "type": "string" },
             "trace_id": {
@@ -494,16 +485,15 @@
               "minimum": 0,
               "description": "Retry attempt counter for exponential backoff signaling."
             },
-            "model": {
-              "type": "string",
-              "description": "Payload-level model field carrying the governance-resolved model for delegation contract, validation, and audit context. Runtime enforcement is the outer tool-call model parameter passed to agent/runSubagent; this payload field does not by itself override frontmatter or select the runtime model."
-            }
-          }
+            "runtime_model_mode": { "$ref": "#/$defs/runtimeModelMode" },
+            "model": { "$ref": "#/$defs/payloadModelField" }
+          },
+          "allOf": [{ "$ref": "#/$defs/modelRequirementByRuntimeMode" }]
         },
         "AssumptionVerifier-subagent": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["plan_path", "plan_summary", "trace_id", "iteration_index", "model"],
+          "required": ["plan_path", "plan_summary", "trace_id", "iteration_index"],
           "properties": {
             "trace_id": {
               "type": "string",
@@ -530,16 +520,15 @@
               "minimum": 0,
               "description": "Current iteration in the plan-review loop."
             },
-            "model": {
-              "type": "string",
-              "description": "Payload-level model field carrying the governance-resolved model for delegation contract, validation, and audit context. Runtime enforcement is the outer tool-call model parameter passed to agent/runSubagent; this payload field does not by itself override frontmatter or select the runtime model."
-            }
-          }
+            "runtime_model_mode": { "$ref": "#/$defs/runtimeModelMode" },
+            "model": { "$ref": "#/$defs/payloadModelField" }
+          },
+          "allOf": [{ "$ref": "#/$defs/modelRequirementByRuntimeMode" }]
         },
         "ExecutabilityVerifier-subagent": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["plan_path", "plan_summary", "trace_id", "iteration_index", "model"],
+          "required": ["plan_path", "plan_summary", "trace_id", "iteration_index"],
           "properties": {
             "trace_id": {
               "type": "string",
@@ -565,12 +554,32 @@
               "type": "string",
               "description": "Optional project directory tree for context."
             },
-            "model": {
-              "type": "string",
-              "description": "Payload-level model field carrying the governance-resolved model for delegation contract, validation, and audit context. Runtime enforcement is the outer tool-call model parameter passed to agent/runSubagent; this payload field does not by itself override frontmatter or select the runtime model."
-            }
-          }
+            "runtime_model_mode": { "$ref": "#/$defs/runtimeModelMode" },
+            "model": { "$ref": "#/$defs/payloadModelField" }
+          },
+          "allOf": [{ "$ref": "#/$defs/modelRequirementByRuntimeMode" }]
         }
+      }
+    }
+  },
+  "$defs": {
+    "runtimeModelMode": {
+      "type": "string",
+      "enum": ["deterministic", "auto"],
+      "description": "Dispatch marker for model-selection mode. Omitted means deterministic for backward compatibility."
+    },
+    "payloadModelField": {
+      "type": "string",
+      "description": "Payload-level model field carrying governance-resolved model context for delegation contract, validation, and audit context. Runtime enforcement is the outer tool-call model parameter passed to agent/runSubagent; this payload field does not by itself override frontmatter or select the runtime model. Deterministic mode requires this payload field; auto mode may omit it when runtime_model_mode is auto."
+    },
+    "modelRequirementByRuntimeMode": {
+      "if": {
+        "properties": { "runtime_model_mode": { "const": "auto" } },
+        "required": ["runtime_model_mode"]
+      },
+      "then": {},
+      "else": {
+        "required": ["model"]
       }
     }
   }

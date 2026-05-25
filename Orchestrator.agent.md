@@ -170,10 +170,14 @@ Reference: `docs/agent-engineering/TOOL-ROUTING.md`
 ### Universal Model Resolution Rule (Mandatory — All Dispatches)
 Before every `agent/runSubagent` call, regardless of dispatch context, apply this rule:
 1. Load `governance/model-routing.json`.
-2. Look up the target agent name in the top-level `agent_role_index` map to get its role.
-3. Read `roles[role].by_tier[complexity_tier]`. If the entry is `{ "inherit_from": "default" }`, use the role's top-level `primary` model; otherwise use the tier-specific `primary`.
-4. Pass the exact target as the outer `agentName` parameter and the resolved `primary` model string as the outer `model` parameter to `agent/runSubagent`. Never omit either outer field.
-5. For initial planning dispatches before any plan `complexity_tier` exists, use the target role's top-level `primary` model. For replan/planning dispatches after a plan exists, use the active plan's `complexity_tier`. Never omit `model` because tier context is missing; missing tier context changes the resolution source, not the outer tool-call contract.
+2. Load `governance/runtime-policy.json` and resolve `runtime_model_mode` from per-dispatch override when present, else `model_dispatch.default_mode` (deterministic default).
+3. Set payload marker `runtime_model_mode` on every delegation payload for auditability and mode-consistency checks.
+4. Look up the target agent name in the top-level `agent_role_index` map to get its role.
+5. Read `roles[role].by_tier[complexity_tier]`. If the entry is `{ "inherit_from": "default" }`, use the role's top-level `primary` model; otherwise use the tier-specific `primary`.
+6. Pass the exact target as the outer `agentName` parameter to `agent/runSubagent`.
+7. **Deterministic mode (default/backward-compatible):** pass the resolved `primary` model string as the outer `model` parameter to `agent/runSubagent`. Never omit outer `model` in deterministic mode.
+8. **Auto mode:** omit the outer `model` parameter so Copilot platform auto-selection can choose the runtime model. Keep payload-level `model` optional in this mode and rely on `runtime_model_mode: auto` marker for contract semantics and audits.
+9. For initial planning dispatches before any plan `complexity_tier` exists: deterministic mode uses the target role's top-level `primary` model; auto mode still omits outer `model`. Missing tier context changes the resolution source (deterministic) or preserves omission (auto), not the mode contract.
 
 This rule covers all dispatch paths without exception: Plan Review Gate reviewers (PlanAuditor, AssumptionVerifier, ExecutabilityVerifier), phase CodeReviewer dispatch, final CodeReviewer dispatch, failure-classification retry dispatch, needs_replan Planner dispatch, and Implementation Loop executor dispatch.
 
@@ -181,8 +185,12 @@ This rule covers all dispatch paths without exception: Plan Review Gate reviewer
 
 Every `agent/runSubagent` call must include these outer tool-call fields:
 - **`agentName`** — the verified target-agent field (string). Placing the agent name only inside prompt prose or a delegation payload is non-compliant.
-- **`model`** — the resolved primary model string from the Universal Model Resolution Rule, passed as the outer `model` field at the tool-call boundary. Never omit. A payload-level `model` inside the prompt/delegation payload remains useful for schema validation and audit context, but it does not by itself select the runtime model and is not a substitute for this outer field.
+- **`model`** — mode-conditional outer runtime selector from the Universal Model Resolution Rule. In deterministic mode (default/backward-compatible), pass the resolved primary as the outer `model` field and never omit it. In auto mode, omit the outer `model` field intentionally so Copilot selects the model automatically.
 - **Prompt/context payload** — scope, deliverables, and relevant context references.
+
+Payload-level `model` remains delegation/audit metadata and does not by itself select runtime execution. It is not a substitute for the outer `model` when deterministic mode is active.
+
+Every delegation payload must include `runtime_model_mode` (`deterministic` or `auto`) for dispatch-audit traceability.
 
 #### Capable-Reviewer Model Routing
 
@@ -199,7 +207,7 @@ For `CodeReviewer-subagent`, `PlanAuditor-subagent`, and `AssumptionVerifier-sub
 **Non-trigger conditions:** Informational questions, status requests, or any request that already includes a `plan_path` or references an active plan. Do not trigger this gate when plan context is already available.
 
 **Dispatch:**
-- Apply the Universal Model Resolution Rule. Before a plan `complexity_tier` exists (no `plan_path` yet), use Planner's top-level `primary` model — never omit `model` because tier context is missing.
+- Apply the Universal Model Resolution Rule. Before a plan `complexity_tier` exists (no `plan_path` yet), deterministic mode uses Planner's top-level `primary` model; auto mode omits outer `model` intentionally. Deterministic remains the default path.
 - Dispatch Planner as an **entry-point delegate, not a phase executor**, with:
    - `revision_mode: initial_create` because no active plan exists. Phase 3 keeps the schema field optional for legacy fixture compatibility, but live initial planning dispatch uses this mode.
   - The original user request.

@@ -6,7 +6,8 @@
   "schema_version": "1.0.0",
   "agents": {
     "CodeMapper-subagent": {
-      "scope_description": "Discover all authentication-related source files"
+      "scope_description": "Discover all authentication-related source files",
+      "runtime_model_mode": "deterministic"
     },
     "Researcher-subagent": {
       "research_query": "JWT authentication implementation best practices",

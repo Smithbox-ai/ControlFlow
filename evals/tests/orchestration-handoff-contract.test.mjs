@@ -28,6 +28,9 @@ const ROOT = join(__dirname, '..', '..');
 const modelRouting = JSON.parse(
   readFileSync(join(ROOT, 'governance', 'model-routing.json'), 'utf8')
 );
+const runtimePolicy = JSON.parse(
+  readFileSync(join(ROOT, 'governance', 'runtime-policy.json'), 'utf8')
+);
 
 function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -114,7 +117,10 @@ const delegationProtocolSchema = JSON.parse(
 const ajv = new Ajv2020({ strict: false, allErrors: true });
 addFormats(ajv);
 const plannerDelegationPayloadSchema = delegationProtocolSchema.properties?.agents?.properties?.Planner;
-const validatePlannerDelegationPayload = ajv.compile(plannerDelegationPayloadSchema);
+const validatePlannerDelegationPayload = ajv.compile({
+  ...plannerDelegationPayloadSchema,
+  $defs: delegationProtocolSchema.$defs ?? {},
+});
 const orchestratorDispatchContract = extractBetween(
   orch,
   '### Dispatch Tool-Call Contract (Required Fields)',
@@ -131,14 +137,25 @@ const plannerResearchDispatchRule = extractBetween(
   '7. Design'
 );
 
-const requiredModelRoutingNegativeCases = [
+const requiredModelRoutingContractCases = [
   'missing-outer-agentName',
   'missing-outer-model',
   'payload-only-model',
+  'auto-mode-missing-outer-model-allowed',
   'wrong-effective-review-tier',
   'unconfigured-fallback',
   'omitted-model-due-missing-tier-context',
 ];
+
+check(
+  'Runtime policy: model_dispatch.default_mode exists and defaults to deterministic',
+  runtimePolicy?.model_dispatch?.default_mode === 'deterministic'
+);
+
+check(
+  'Runtime policy: model_dispatch.auto_mode_allow_outer_model_omission is enabled',
+  runtimePolicy?.model_dispatch?.auto_mode_allow_outer_model_omission === true
+);
 
 // ──────────────────────────────────────────────
 // PLAN_REVIEW gate invariants
@@ -800,13 +817,14 @@ check(
   /Apply the Universal Model Resolution Rule.*before delegating execution/i.test(orch)
 );
 check(
-  'Model resolution: non-negotiable rule prohibits omitting model parameter on any dispatch',
-  /No.*agent.*runSubagent.*omit.*model|every dispatch must apply the Universal Model Resolution Rule/i.test(orch)
+  'Model resolution: deterministic mode keeps non-negotiable outer model requirement; auto mode allows omission',
+  /Deterministic mode.*Never omit outer `model`|never omit outer `model` in deterministic mode/i.test(orch) &&
+  /Auto mode.*omit the outer `model`|auto mode.*omit outer `model`/i.test(orch)
 );
 check(
-  'Model resolution: missing pre-plan complexity_tier falls back to top-level primary model without omitting model',
+  'Model resolution: missing pre-plan complexity_tier uses top-level primary in deterministic mode and preserves omission in auto mode',
   /initial planning dispatches before any plan `complexity_tier` exists.*top-level `primary` model/i.test(orch) &&
-  /Never omit `model` because tier context is missing/i.test(orch)
+  /auto mode.*omits outer `model` intentionally|preserves omission/i.test(orch)
 );
 
 // ──────────────────────────────────────────────
@@ -859,9 +877,10 @@ check(
 );
 
 check(
-  'Payload schema review: delegated payload model fields remain payload-level contract fields, not outer-dispatch evidence',
-  delegationProtocolSchema.properties?.agents?.properties?.['Planner']?.required?.includes('model') === true &&
-  delegationProtocolSchema.properties?.agents?.properties?.['CodeMapper-subagent']?.required?.includes('model') === true &&
+  'Payload schema review: runtime_model_mode marker exists and payload-level model is conditionally required (deterministic default)',
+  delegationProtocolSchema.properties?.agents?.properties?.['Planner']?.properties?.runtime_model_mode !== undefined &&
+  delegationProtocolSchema.properties?.agents?.properties?.['CodeMapper-subagent']?.properties?.runtime_model_mode !== undefined &&
+  Array.isArray(delegationProtocolSchema.properties?.agents?.properties?.['Planner']?.allOf) &&
   !/Every `agent\/runSubagent` call must include these outer tool-call fields/i.test(JSON.stringify(delegationProtocolSchema))
 );
 
@@ -890,9 +909,9 @@ check(
 );
 
 check(
-  'Planner research dispatch: missing tier context uses top-level primary instead of omitting outer model',
+  'Planner research dispatch: deterministic missing tier context uses top-level primary, while auto mode allows outer model omission',
   /complexity_tier.*unavailable[\s\S]{0,240}top-level `primary`|top-level `primary`[\s\S]{0,240}complexity_tier.*unavailable/i.test(plannerResearchDispatchRule) &&
-  /Never omit `model` because tier context is missing/i.test(plannerResearchDispatchRule)
+  /auto mode.*omit the outer `model` intentionally|auto mode.*omit outer `model`/i.test(plannerResearchDispatchRule)
 );
 
 // ──────────────────────────────────────────────
@@ -1055,6 +1074,7 @@ check(
   dispatchContract.outer_agentName_field === 'agentName' &&
   dispatchContract.outer_model_field === 'model' &&
   dispatchContract.payload_model_field === 'model' &&
+  dispatchContract.payload_runtime_model_mode_field === 'runtime_model_mode' &&
   dispatchContract.payload_model_is_runtime_enforcement_boundary === false
 );
 
@@ -1077,18 +1097,20 @@ check(
 );
 
 check(
-  'Model resolution scenario: all required outer-dispatch negative cases are documented',
-  requiredModelRoutingNegativeCases.every(caseId => negativeCases.some(c => c.case_id === caseId)) &&
-  modelResScenario.expected?.negative_cases_documented === requiredModelRoutingNegativeCases.length
+  'Model resolution scenario: all required dispatch contract cases are documented',
+  requiredModelRoutingContractCases.every(caseId => negativeCases.some(c => c.case_id === caseId)) &&
+  modelResScenario.expected?.negative_cases_documented === requiredModelRoutingContractCases.length
 );
 
-for (const caseId of requiredModelRoutingNegativeCases) {
+for (const caseId of requiredModelRoutingContractCases) {
   const negativeCase = negativeCases.find(c => c.case_id === caseId);
   check(
-    `Model resolution negative scenario: ${caseId} is rejected as structural contract drift`,
-    negativeCase?.expected?.rejected === true &&
-    negativeCase?.expected?.offline_detection_scope === 'structural_contract' &&
-    negativeCase?.expected?.live_runtime_assertion === false
+    `Model resolution contract scenario: ${caseId} preserves structural contract expectations`,
+    (caseId === 'auto-mode-missing-outer-model-allowed'
+      ? negativeCase?.expected?.rejected === false
+      : negativeCase?.expected?.rejected === true) &&
+      negativeCase?.expected?.offline_detection_scope === 'structural_contract' &&
+      negativeCase?.expected?.live_runtime_assertion === false
   );
 }
 
@@ -1114,6 +1136,16 @@ check(
   payloadOnlyModelCase?.broken_dispatch?.outer_fields?.model_present === false &&
   payloadOnlyModelCase?.broken_dispatch?.payload_fields?.model_present === true &&
   payloadOnlyModelCase?.expected?.violates === 'payload_only_model'
+);
+
+const autoModeOuterModelOmittedCase = negativeCases.find(c => c.case_id === 'auto-mode-missing-outer-model-allowed');
+check(
+  'Model resolution auto-mode scenario: missing outer model is allowed when runtime_model_mode=auto marker is present',
+  autoModeOuterModelOmittedCase?.input_context?.runtime_model_mode === 'auto' &&
+  autoModeOuterModelOmittedCase?.broken_dispatch?.outer_fields?.model_present === false &&
+  autoModeOuterModelOmittedCase?.broken_dispatch?.payload_fields?.runtime_model_mode_present === true &&
+  autoModeOuterModelOmittedCase?.expected?.rejected === false &&
+  autoModeOuterModelOmittedCase?.expected?.resolution_mode === 'platform_auto'
 );
 
 const wrongEffectiveReviewTierCase = negativeCases.find(c => c.case_id === 'wrong-effective-review-tier');

@@ -47,6 +47,12 @@
     "LARGE": 5
   },
 
+  "model_dispatch": {
+    "default_mode": "deterministic",
+    "auto_mode_allow_outer_model_omission": true,
+    "auto_mode_requires_runtime_marker": true
+  },
+
   "retry_budgets": {
     "max_retries_per_phase": 5,
     "transient_max": 3,

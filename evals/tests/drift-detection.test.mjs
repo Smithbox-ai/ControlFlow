@@ -572,19 +572,28 @@ console.log('\n=== Check #6 — by_tier matrix shape ===');
 // ──────────────────────────────────────────────
 console.log('\n=== Check #6b — payload model description semantics ===');
 {
-  const validDescription = 'Payload-level model field carrying the governance-resolved model for delegation contract, validation, and audit context. Runtime enforcement is the outer tool-call model parameter passed to agent/runSubagent; this payload field does not by itself override frontmatter or select the runtime model.';
+  const validDescription = 'Payload-level model field carrying governance-resolved model context for delegation contract, validation, and audit context. Runtime enforcement is the outer tool-call model parameter passed to agent/runSubagent; this payload field does not by itself override frontmatter or select the runtime model. Deterministic mode requires this payload field; auto mode may omit it when runtime_model_mode is auto.';
   const validSchema = {
     properties: {
       agents: {
         properties: {
           Planner: {
-            required: ['task_description', 'model'],
+            required: ['task_description'],
             properties: {
+              runtime_model_mode: {
+                type: 'string',
+                enum: ['deterministic', 'auto'],
+              },
               model: {
                 type: 'string',
                 description: validDescription,
               },
             },
+            allOf: [
+              {
+                else: { required: ['model'] },
+              },
+            ],
           },
         },
       },
@@ -609,11 +618,11 @@ console.log('\n=== Check #6b — payload model description semantics ===');
   );
 
   const missingRequiredSchema = JSON.parse(JSON.stringify(validSchema));
-  missingRequiredSchema.properties.agents.properties.Planner.required = ['task_description'];
+  missingRequiredSchema.properties.agents.properties.Planner.allOf = [];
   const missingRequired = validatePayloadModelDescriptionSemantics(missingRequiredSchema);
   check(
-    'negative: payload object omitting required model field -> drift detected',
-    missingRequired.ok === false && missingRequired.errors.some(e => e.includes('required')),
+    'negative: payload object missing conditional model requirement -> drift detected',
+    missingRequired.ok === false && missingRequired.errors.some(e => e.includes('conditionally required')),
     `ok=${missingRequired.ok}, errors=${JSON.stringify(missingRequired.errors)}`
   );
 }
@@ -629,6 +638,7 @@ console.log('\n=== Check #6c — model resolution scenario negative cases ===');
         outer_agentName_field: 'agentName',
         outer_model_field: 'model',
         payload_model_field: 'model',
+        payload_runtime_model_mode_field: 'runtime_model_mode',
         payload_model_is_runtime_enforcement_boundary: false,
       },
       negative_cases: [
@@ -657,6 +667,15 @@ console.log('\n=== Check #6c — model resolution scenario negative cases ===');
           expected: { rejected: true, violates: 'payload_only_model', offline_detection_scope: 'structural_contract', live_runtime_assertion: false },
         },
         {
+          case_id: 'auto-mode-missing-outer-model-allowed',
+          input_context: { runtime_model_mode: 'auto' },
+          broken_dispatch: {
+            outer_fields: { agentName_present: true, model_present: false },
+            payload_fields: { runtime_model_mode_present: true, runtime_model_mode: 'auto', model_present: false },
+          },
+          expected: { rejected: false, resolution_mode: 'platform_auto', runtime_model_mode_marker_required: true, offline_detection_scope: 'structural_contract', live_runtime_assertion: false },
+        },
+        {
           case_id: 'wrong-effective-review-tier',
           input_context: { plan_complexity_tier: 'MEDIUM', unresolved_high_risk: true },
           broken_resolution: { effective_review_tier: 'MEDIUM' },
@@ -676,7 +695,7 @@ console.log('\n=== Check #6c — model resolution scenario negative cases ===');
         },
       ],
     },
-    expected: { negative_cases_documented: 6 },
+    expected: { negative_cases_documented: 7 },
   };
 
   const positive = validateModelResolutionScenarioNegatives(validScenario);
@@ -702,6 +721,15 @@ console.log('\n=== Check #6c — model resolution scenario negative cases ===');
     'negative: payload-only-model case with outer model present is flagged',
     payloadOnlyConflated.ok === false && payloadOnlyConflated.errors.some(e => e.includes('payload-only-model')),
     `ok=${payloadOnlyConflated.ok}, errors=${JSON.stringify(payloadOnlyConflated.errors)}`
+  );
+
+  const autoModeRejectedScenario = JSON.parse(JSON.stringify(validScenario));
+  autoModeRejectedScenario.input.negative_cases.find(c => c.case_id === 'auto-mode-missing-outer-model-allowed').expected.rejected = true;
+  const autoModeRejected = validateModelResolutionScenarioNegatives(autoModeRejectedScenario);
+  check(
+    'negative: auto-mode omission case marked rejected is flagged',
+    autoModeRejected.ok === false && autoModeRejected.errors.some(e => e.includes('auto-mode-missing-outer-model-allowed')),
+    `ok=${autoModeRejected.ok}, errors=${JSON.stringify(autoModeRejected.errors)}`
   );
 
   const wrongTierScenario = JSON.parse(JSON.stringify(validScenario));
