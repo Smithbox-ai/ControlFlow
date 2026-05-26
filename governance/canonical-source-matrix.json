@@ -46,6 +46,11 @@
       "concern": "Gate-event contract",
       "authoritative_file": "docs/agent-engineering/RELIABILITY-GATES.md",
       "notes": "Governs PreFlect, Completion, and validation structural rules."
+    },
+    {
+      "concern": "Cursor IDE support policy",
+      "authoritative_file": "docs/agent-engineering/CURSOR-SUPPORT.md",
+      "notes": "Rule inventory, activation guidance, limitations, and validation commands for Cursor IDE integration. Does not alter VS Code tool grants, agent grants, or executor rosters."
     }
   ]
 }

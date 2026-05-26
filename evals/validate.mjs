@@ -17,6 +17,8 @@
  *   3d. Agent Grant Consistency — for files listed in governance/agent-grants.json only,
  *                              agents: frontmatter must be present, non-wildcard, and exactly
  *                              match the manifest. Files not in the manifest are out of scope.
+ *   3e. Cursor Rule Validation — .cursor/rules/*.mdc frontmatter, activation metadata,
+ *                              line budget, and configured canonical references.
  *   4. P.A.R.T Section Order — every *.agent.md has Prompt→Archive→Resources→Tools
  *                              in the correct order
  *   4b. §5/§6 Compliance   — Clarification Triggers (§5) and Tool Routing Rules (§6)
@@ -37,7 +39,7 @@
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import { readFileSync, readdirSync, existsSync, mkdirSync, writeFileSync } from 'fs';
-import { join, resolve, dirname } from 'path';
+import { join, resolve, dirname, relative } from 'path';
 import { fileURLToPath } from 'url';
 import {
   MODEL_ROLE_CHECK_ENABLED,
@@ -77,6 +79,10 @@ const SCHEMAS_DIR = join(ROOT, 'schemas');
 const SCENARIOS_DIR = join(__dirname, 'scenarios');
 const CACHE_DIR = join(__dirname, '.cache');
 const CACHE_FILE = join(CACHE_DIR, 'validate-cache.json');
+const CURSOR_RULES_DIR = join(ROOT, '.cursor', 'rules');
+const CURSOR_RULE_CONTRACT_FILE = join(SCENARIOS_DIR, 'cursor-rules', 'cursor-rules-contract.json');
+const CURSOR_RULE_ACTIVATION_KEYS = ['alwaysApply', 'description', 'globs'];
+const CURSOR_RULE_DEFAULT_MAX_LINES = 500;
 
 let totalPassed = 0;
 let totalFailed = 0;
@@ -213,6 +219,198 @@ function collectAllScenarioJsonFiles(dir) {
     else if (ent.isFile() && ent.name.endsWith('.json')) results.push(full);
   }
   return results;
+}
+
+function repoRelative(filePath) {
+  return relative(ROOT, filePath).replace(/\\/g, '/');
+}
+
+function collectCursorRuleFiles(dir = CURSOR_RULES_DIR) {
+  const results = [];
+  let entries;
+  try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return results; }
+  for (const ent of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+    const full = join(dir, ent.name);
+    if (ent.isDirectory()) results.push(...collectCursorRuleFiles(full));
+    else if (ent.isFile() && ent.name.endsWith('.mdc')) results.push(full);
+  }
+  return results;
+}
+
+function parseCursorRuleFrontmatter(content, label) {
+  const lines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const errors = [];
+
+  if (!lines[0] || !lines[0].startsWith('---')) {
+    errors.push(`${label}: frontmatter must start on line 1 with ---`);
+  }
+
+  let closingLineIndex = -1;
+  for (let i = 1; i < lines.length; i++) {
+    if (lines[i].trim() === '---') {
+      closingLineIndex = i;
+      break;
+    }
+  }
+
+  if (closingLineIndex === -1) {
+    errors.push(`${label}: missing closing frontmatter delimiter --- on a later line`);
+  }
+
+  return {
+    lines,
+    frontmatter: closingLineIndex === -1 ? '' : lines.slice(1, closingLineIndex).join('\n'),
+    errors,
+  };
+}
+
+function frontmatterHasKey(frontmatter, key) {
+  return new RegExp(`^${key}:`, 'm').test(frontmatter);
+}
+
+function frontmatterBooleanValue(frontmatter, key) {
+  const match = frontmatter.match(new RegExp(`^${key}:\\s*(true|false)\\s*$`, 'm'));
+  return match ? match[1] === 'true' : null;
+}
+
+function validateCursorRuleContent(content, label, contractRule = {}) {
+  const result = parseCursorRuleFrontmatter(content, label);
+  const errors = [...result.errors];
+  const maxLines = Number.isInteger(contractRule.maxLines) ? contractRule.maxLines : CURSOR_RULE_DEFAULT_MAX_LINES;
+
+  if (result.lines.length > maxLines) {
+    errors.push(`${label}: exceeds Cursor rule line budget (${result.lines.length} > ${maxLines})`);
+  }
+
+  const activationKeysPresent = CURSOR_RULE_ACTIVATION_KEYS.filter(key => frontmatterHasKey(result.frontmatter, key));
+  if (result.frontmatter && activationKeysPresent.length === 0) {
+    errors.push(`${label}: frontmatter must include at least one activation metadata key: ${CURSOR_RULE_ACTIVATION_KEYS.join(', ')}`);
+  }
+
+  const requiredActivationKeys = Array.isArray(contractRule.requiredActivationKeys) ? contractRule.requiredActivationKeys : [];
+  for (const key of requiredActivationKeys) {
+    if (!CURSOR_RULE_ACTIVATION_KEYS.includes(key)) {
+      errors.push(`${label}: configured requiredActivationKeys contains unsupported key "${key}"`);
+    } else if (!frontmatterHasKey(result.frontmatter, key)) {
+      errors.push(`${label}: required activation metadata missing from frontmatter: ${key}`);
+    }
+  }
+
+  if (typeof contractRule.alwaysApplied === 'boolean') {
+    const actual = frontmatterBooleanValue(result.frontmatter, 'alwaysApply');
+    const mismatch = contractRule.alwaysApplied === true ? actual !== true : actual === true;
+    if (mismatch) {
+      errors.push(`${label}: alwaysApply must be ${contractRule.alwaysApplied}`);
+    }
+  }
+
+  const canonicalReferences = Array.isArray(contractRule.canonicalReferenceAnyOf)
+    ? contractRule.canonicalReferenceAnyOf
+    : [];
+  if (canonicalReferences.length > 0) {
+    const missingConfiguredRefs = canonicalReferences.filter(ref => !existsSync(join(ROOT, ref)));
+    for (const ref of missingConfiguredRefs) {
+      errors.push(`${label}: configured canonical reference path does not exist in repo: ${ref}`);
+    }
+    const presentReferences = canonicalReferences.filter(ref => content.includes(ref));
+    if (presentReferences.length === 0) {
+      errors.push(`${label}: must include at least one configured canonical reference: ${canonicalReferences.join(', ')}`);
+    }
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+
+function loadCursorRuleContract() {
+  if (!existsSync(CURSOR_RULE_CONTRACT_FILE)) {
+    return { contract: null, errors: [`Missing Cursor rule contract fixture: ${repoRelative(CURSOR_RULE_CONTRACT_FILE)}`] };
+  }
+
+  try {
+    const contract = JSON.parse(readFileSync(CURSOR_RULE_CONTRACT_FILE, 'utf8'));
+    const errors = [];
+    if (!Array.isArray(contract.rules)) {
+      errors.push('Cursor rule contract fixture must contain top-level rules[]');
+    }
+    if (contract.parserFixtures !== undefined && !Array.isArray(contract.parserFixtures)) {
+      errors.push('Cursor rule contract parserFixtures must be an array when present');
+    }
+    return { contract, errors };
+  } catch (e) {
+    return { contract: null, errors: [`Cursor rule contract JSON parse error: ${e.message}`] };
+  }
+}
+
+function validateCursorRuleSet() {
+  const errors = [];
+  const { contract, errors: contractErrors } = loadCursorRuleContract();
+  errors.push(...contractErrors);
+
+  const ruleFiles = collectCursorRuleFiles();
+  if (ruleFiles.length === 0) {
+    errors.push('No Cursor rule files found under .cursor/rules/**/*.mdc');
+  }
+
+  const contractRules = new Map();
+  if (contract && Array.isArray(contract.rules)) {
+    for (const rule of contract.rules) {
+      if (!rule || typeof rule.path !== 'string' || !rule.path.endsWith('.mdc')) {
+        errors.push('Cursor rule contract entries must include a .mdc path');
+        continue;
+      }
+      contractRules.set(rule.path, rule);
+      const configuredPath = join(ROOT, rule.path);
+      if (!existsSync(configuredPath)) {
+        errors.push(`Configured Cursor rule missing from repo: ${rule.path}`);
+      }
+    }
+  }
+
+  for (const filePath of ruleFiles) {
+    const rel = repoRelative(filePath);
+    const content = readFileSync(filePath, 'utf8');
+    const result = validateCursorRuleContent(content, rel, contractRules.get(rel));
+    errors.push(...result.errors);
+  }
+
+  const parserFixtures = Array.isArray(contract?.parserFixtures) ? contract.parserFixtures : [];
+  for (const fixture of parserFixtures) {
+    const name = typeof fixture?.name === 'string' ? fixture.name : '<unnamed parser fixture>';
+    const content = typeof fixture?.content === 'string' ? fixture.content : '';
+    const expectedValid = fixture?.expectValid === true;
+    const result = validateCursorRuleContent(content, `parserFixtures.${name}`, fixture?.contractRule || {});
+    if (result.ok !== expectedValid) {
+      errors.push(`parserFixtures.${name}: expected valid=${expectedValid}, got valid=${result.ok}${result.errors.length > 0 ? ` (${result.errors.join('; ')})` : ''}`);
+    }
+  }
+
+  return { ok: errors.length === 0, errors, ruleCount: ruleFiles.length, parserFixtureCount: parserFixtures.length };
+}
+
+if (process.argv[2] === '--cursor-rule-fixture') {
+  const fixturePath = process.argv[3];
+  if (!fixturePath) {
+    console.error('Usage: node validate.mjs --cursor-rule-fixture <path>');
+    process.exit(2);
+  }
+
+  const resolvedFixturePath = resolve(process.cwd(), fixturePath);
+  try {
+    const content = readFileSync(resolvedFixturePath, 'utf8');
+    const result = validateCursorRuleContent(content, fixturePath, {
+      canonicalReferenceAnyOf: ['.github/copilot-instructions.md', 'plans/project-context.md'],
+      maxLines: CURSOR_RULE_DEFAULT_MAX_LINES,
+    });
+    if (result.ok) {
+      console.log(`Cursor rule fixture valid: ${fixturePath}`);
+      process.exit(0);
+    }
+    for (const err of result.errors) console.error(err);
+    process.exit(1);
+  } catch (e) {
+    console.error(`Cannot read Cursor rule fixture: ${fixturePath} — ${e.message}`);
+    process.exit(1);
+  }
 }
 
 // ─── Warm Cache (Structural Passes) ──────────────────────────────────────────
@@ -952,6 +1150,18 @@ if (allowlist) {
   }
   if (retiredConflict === 0) {
     pass(`Allowlist retired_names.runtime: no conflicts with active_artifacts`);
+  }
+}
+
+// ─── Pass 3e: Cursor Rule Validation ────────────────────────────────────────
+header('Pass 3e: Cursor Rule Validation');
+
+{
+  const cursorRules = validateCursorRuleSet();
+  if (cursorRules.ok) {
+    pass(`Cursor rules valid: ${cursorRules.ruleCount} .mdc file(s), ${cursorRules.parserFixtureCount} parser fixture(s)`);
+  } else {
+    for (const err of cursorRules.errors) fail(`Cursor rules: ${err}`);
   }
 }
 

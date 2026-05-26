@@ -23,6 +23,7 @@ const __cfDir = dirname(__cfFilename);
 const CF_REPO_ROOT = resolve(__cfDir, '..');
 const CF_SCHEMAS_DIR = join(CF_REPO_ROOT, 'schemas');
 const CF_SCENARIOS_DIR = join(__cfDir, 'scenarios');
+const CF_CURSOR_RULES_DIR = join(CF_REPO_ROOT, '.cursor', 'rules');
 
 // ── Check #1: model_role validation ───────────────────────────────────────────
 // Enabled after Phase 2 spike confirmed VS Code tolerates model_role: frontmatter.
@@ -1085,9 +1086,8 @@ export function validateTutorialParity(enDir, ruDir, allowlist) {
  * regression tests can import it without triggering validate.mjs side effects
  * (process.exit calls, pass output, cache writes).
  *
- * Hashes: both harness files, evals package manifests, all schemas, all top-level
- * scenario JSON, all nested scenario JSON under runtime-policy/ and tutorial-parity/
- * (recursive walk — proves the Wave 2 fix), all agent prompt files, key governance
+ * Hashes: both harness files, evals package manifests, all schemas, all scenario
+ * JSON files, all Cursor .mdc rule files, all agent prompt files, key governance
  * and artifact files, and the skills library.
  *
  * @returns {string} hex SHA-256 digest
@@ -1125,6 +1125,17 @@ export function computeStructuralFingerprint() {
     }
   }
   walkJson(CF_SCENARIOS_DIR);
+  // Cursor project rules — deterministic sorted recursive walk of .mdc content.
+  function walkCursorRules(dir) {
+    let entries;
+    try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const ent of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+      const full = join(dir, ent.name);
+      if (ent.isDirectory()) walkCursorRules(full);
+      else if (ent.isFile() && ent.name.endsWith('.mdc')) hashFile(full);
+    }
+  }
+  walkCursorRules(CF_CURSOR_RULES_DIR);
   // root agent prompt files
   try {
     for (const f of readdirSync(CF_REPO_ROOT).sort()) {

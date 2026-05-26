@@ -108,6 +108,7 @@ When a semantic risk entry triggers PlanAuditor review, Orchestrator maps the ri
 - Template files are stored in `plans/templates/` directory.
 - Implementation agents (CoreImplementer, UIImplementer, PlatformEngineer) share a common execution backbone documented in `docs/agent-engineering/MIGRATION-CORE-FIRST.md`. CoreImplementer is the canonical backbone reference; UI and Platform extend it with domain-specific gates.
 - Model-role routing uses the `by_tier` convention defined in `governance/model-routing.json`; the authoritative spec is `docs/agent-engineering/MODEL-ROUTING.md`. All 13 agents declare a valid `model_role:` frontmatter key matching a role entry in that file.
+- **Cursor IDE support** is a documentation and rules surface only. Rules under `.cursor/rules/*.mdc` give Cursor users access to ControlFlow conventions without adding new tool grants, executor roles, or VS Code runtime semantics. Authoritative policy: `docs/agent-engineering/CURSOR-SUPPORT.md`.
 
 ## Canonical Source Matrix
 
@@ -122,3 +123,4 @@ When a semantic risk entry triggers PlanAuditor review, Orchestrator maps the ri
 | Retry budgets | `governance/runtime-policy.json` | Exact numeric limits, backoffs, and escalation thresholds. |
 | Shared evidence discipline | `docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md` | Mandates evidence citations for claims across all agents. |
 | Gate-event contract | `docs/agent-engineering/RELIABILITY-GATES.md` | Governs PreFlect, Completion, and validation structural rules. |
+| Cursor IDE support policy | `docs/agent-engineering/CURSOR-SUPPORT.md` | Rule inventory, activation guidance, limitations, and validation commands. Does not alter VS Code tool grants or executor rosters. |

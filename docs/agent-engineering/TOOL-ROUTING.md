@@ -80,3 +80,13 @@ Agent resource paths are workspace-relative by default. When a file listed in an
 4. **Applies to:** `governance/`, `schemas/`, `plans/project-context.md`, `docs/agent-engineering/`, `skills/` — any path referenced in a `## Resources` section of any agent file.
 
 This rule resolves the gap when agents are loaded as global prompts (from `User/prompts/`) but the active workspace does not contain the ControlFlow governance tree. It is intentionally duplicated in `.github/copilot-instructions.md` so the fallback is available before this file itself can be loaded.
+
+### Rule 9 - Cursor IDE Support Does Not Change VS Code Tool Grants
+
+Cursor IDE support is a documentation and rules surface only (`.cursor/rules/*.mdc`). It does not:
+
+- Add new entries to `governance/tool-grants.json` or `governance/agent-grants.json`.
+- Grant Cursor access to VS Code-specific capabilities such as `agent/runSubagent`.
+- Require new model-routing roles or executor agents.
+
+When updating `.cursor/rules/*.mdc` files, agents must verify the change against official Cursor documentation (`https://cursor.com/docs/rules`) before editing frontmatter activation fields (`alwaysApply`, `globs`, `description`). Local-first rule (Rule 1) still applies — search the codebase before consulting external Cursor docs. The authoritative governance document for Cursor support is `docs/agent-engineering/CURSOR-SUPPORT.md`.

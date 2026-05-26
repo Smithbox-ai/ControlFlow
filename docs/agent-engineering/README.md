@@ -18,12 +18,13 @@ Index of governance and engineering policy documents. Each agent loads the relev
 - [`SCORING-SPEC.md`](SCORING-SPEC.md) — Quantitative scoring reference for reviewers and eval harnesses.
 - [`MIGRATION-CORE-FIRST.md`](MIGRATION-CORE-FIRST.md) — Shared implementation backbone pattern and consolidation exit criteria.
 
-## Portability & Plugins
+## Portability & IDE Support
 
-The repository contains adaptations of the ControlFlow system for non-VS Code environments:
+The repository contains adaptations of the ControlFlow system for non-VS Code environments and IDE integrations:
 
 - **Codex CLI**: See `plugins/controlflow-codex/README.md` for the portable skills and artifacts adapter.
 - **Claude Code**: See `plugins/controlflow-claude-code/README.md` for the native plugin skills, agents, and local development lifecycle.
+- **Cursor IDE**: See [`CURSOR-SUPPORT.md`](CURSOR-SUPPORT.md) for the version-controlled Project Rules surface, activation guidance, limitations, and validation commands. Cursor support does not alter VS Code tool grants or add new executor roles.
 
 ## Runtime capabilities (shipped in the ControlFlow revision program)
 

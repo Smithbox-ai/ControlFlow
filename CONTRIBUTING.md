@@ -123,6 +123,17 @@ Always run `cd evals && npm test` after plugin edits to catch cross-repo drift.
 
 ---
 
+## Editing Cursor Rules (`.cursor/rules`)
+
+When editing `.cursor/rules`, ensure the following:
+
+1. **Frontmatter is valid:** Check that frontmatter starts with `---`, has a closing `---`, and includes at least one of `alwaysApply`, `description`, or `globs`.
+2. **Line budget respected:** Keep rules concise and within 500 lines.
+3. **Canonical references:** Point to canonical ControlFlow files (e.g. `.github/copilot-instructions.md`, `plans/project-context.md`) instead of copying policy content.
+4. **Run structural validation:** After editing, run `cd evals && npm test` to ensure no project-wide structural contracts were accidentally broken.
+
+---
+
 ## Proposing changes
 
 - **Bug reports and feature requests:** Open a GitHub Issue describing the problem or proposal clearly.

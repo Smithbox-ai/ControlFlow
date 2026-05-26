@@ -5,26 +5,42 @@
 ![Eval](https://img.shields.io/badge/eval-offline-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-A multi-agent orchestration system for VS Code Copilot, plus maintained Codex and Claude Code plugins. ControlFlow coordinates 13 specialized agents under deterministic **P.A.R.T contracts** (Prompt → Archive → Resources → Tools), structured text outputs, and layered reliability gates.
+A multi-agent orchestration system for VS Code Copilot, plus maintained Codex, Claude, and Cursor plugins. ControlFlow coordinates 13 specialized agents under deterministic **P.A.R.T contracts** (Prompt → Archive → Resources → Tools), structured text outputs, and layered reliability gates.
 
 ---
 
 ## Contents
 
-- [Why ControlFlow?](#why-controlflow)
-- [Quick Start](#quick-start)
-- [When to Use Which Agent](#when-to-use-which-agent)
-- [Pipeline by Complexity](#pipeline-by-complexity)
-- [Orchestration State Machine](#orchestration-state-machine)
-- [Failure Routing](#failure-routing)
-- [Agent Architecture](#agent-architecture)
-- [Evaluation Suite](#evaluation-suite)
-- [Project Structure](#project-structure)
-- [Documentation](#documentation)
-- [Installation](#installation)
-- [ControlFlow for Codex (Plugin)](#controlflow-for-codex-plugin)
-- [ControlFlow for Claude Code (Plugin)](#controlflow-for-claude-code-plugin)
-- [License](#license)
+- [ControlFlow](#controlflow)
+  - [Contents](#contents)
+  - [Why ControlFlow?](#why-controlflow)
+  - [Quick Start](#quick-start)
+  - [When to Use Which Agent](#when-to-use-which-agent)
+  - [Pipeline by Complexity](#pipeline-by-complexity)
+  - [Orchestration State Machine](#orchestration-state-machine)
+  - [Failure Routing](#failure-routing)
+  - [Agent Architecture](#agent-architecture)
+    - [Interaction diagram](#interaction-diagram)
+    - [Primary Agents](#primary-agents)
+    - [Specialized Subagents](#specialized-subagents)
+  - [Evaluation Suite](#evaluation-suite)
+  - [Project Structure](#project-structure)
+  - [Documentation](#documentation)
+  - [Installation](#installation)
+    - [Adding Custom Agents](#adding-custom-agents)
+  - [ControlFlow for Codex (Plugin)](#controlflow-for-codex-plugin)
+    - [Included Skills](#included-skills)
+  - [ControlFlow for Claude Code (Plugin)](#controlflow-for-claude-code-plugin)
+    - [Local Development Usage](#local-development-usage)
+    - [Intentional Differences from VS Code](#intentional-differences-from-vs-code)
+  - [ControlFlow for Cursor](#controlflow-for-cursor)
+  - [ControlFlow for Codex Usage and Validation](#controlflow-for-codex-usage-and-validation)
+    - [Plugin Installation](#plugin-installation)
+    - [Usage](#usage)
+    - [Validating Codex Strict-Plan Artifacts](#validating-codex-strict-plan-artifacts)
+    - [Intentional Differences from the VS Code Version](#intentional-differences-from-the-vs-code-version)
+  - [License](#license)
+  - [Acknowledgments](#acknowledgments)
 
 ---
 
@@ -348,6 +364,15 @@ claude --plugin-dir ./plugins/controlflow-claude-code
 See [`plugins/controlflow-claude-code/README.md`](plugins/controlflow-claude-code/README.md) for full documentation.
 
 Complexity routing matches the main project: `TRIVIAL` → optional; `SMALL` → plan-audit; `MEDIUM` → plan-audit + assumption-verifier; `LARGE` → full pipeline.
+
+## ControlFlow for Cursor
+
+This repository includes a `.cursor/rules/` directory with version-controlled Project Rules (`.mdc` files). Cursor automatically loads these rules when you open the project — no installation or configuration required. The rules give Cursor's AI agent high-level instructions about this repository's conventions, agent roles, and architectural principles.
+
+- **What it does:** Provides context and conventions to Cursor's agent.
+- **What it does NOT do:** It does not enable Cursor to run the VS Code subagent dispatch system.
+
+For more details, see the authoritative guide at [docs/agent-engineering/CURSOR-SUPPORT.md](docs/agent-engineering/CURSOR-SUPPORT.md).
 
 ## ControlFlow for Codex Usage and Validation
 

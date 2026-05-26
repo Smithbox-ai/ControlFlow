@@ -125,6 +125,12 @@ Here is a simplified walkthrough of what happens:
 3. **(intermediate)** Open `governance/runtime-policy.json`. Find `review_pipeline_by_tier`. Which reviewers are active for `MEDIUM`?
 4. **(intermediate)** Open `schemas/planner.plan.schema.json`. Find the `complexity_tier` enum. What are the four allowed values?
 
+## Using with Cursor IDE
+
+If you are using the [Cursor IDE](https://cursor.sh/), ControlFlow includes a `.cursor/rules/` directory with version-controlled Project Rules (`.mdc` files). Cursor loads these rules automatically when you open the project — no installation or extra configuration required. The rules give Cursor's AI agent high-level instructions about this repository's conventions, agent roles, and architectural principles.
+
+This helps the agent provide more relevant assistance, but it does **not** enable Cursor to run the full multi-agent orchestration system. For authoritative details, see [docs/agent-engineering/CURSOR-SUPPORT.md](../../docs/agent-engineering/CURSOR-SUPPORT.md).
+
 ## Review Questions
 
 1. What is the canonical verification command?

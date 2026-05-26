@@ -1,0 +1,88 @@
+{
+  "rules": [
+    {
+      "path": ".cursor/rules/controlflow-core.mdc",
+      "alwaysApplied": true,
+      "requiredActivationKeys": ["alwaysApply"],
+      "canonicalReferenceAnyOf": [
+        ".github/copilot-instructions.md",
+        "plans/project-context.md"
+      ],
+      "maxLines": 500
+    },
+    {
+      "path": ".cursor/rules/controlflow-planning.mdc",
+      "alwaysApplied": false,
+      "requiredActivationKeys": ["description", "globs"],
+      "canonicalReferenceAnyOf": [
+        "plans/project-context.md",
+        "schemas/planner.plan.schema.json"
+      ],
+      "maxLines": 500
+    },
+    {
+      "path": ".cursor/rules/controlflow-implementation-review.mdc",
+      "alwaysApplied": false,
+      "requiredActivationKeys": ["description", "globs"],
+      "canonicalReferenceAnyOf": [
+        "docs/agent-engineering/PART-SPEC.md",
+        "docs/agent-engineering/MIGRATION-CORE-FIRST.md",
+        "governance/agent-grants.json",
+        "governance/tool-grants.json"
+      ],
+      "maxLines": 500
+    },
+    {
+      "path": ".cursor/rules/controlflow-docs-evals.mdc",
+      "alwaysApplied": false,
+      "requiredActivationKeys": ["description", "globs"],
+      "canonicalReferenceAnyOf": [
+        "CONTRIBUTING.md",
+        "docs/tutorial-en/",
+        "docs/tutorial-ru/",
+        "evals/README.md"
+      ],
+      "maxLines": 500
+    },
+    {
+      "path": ".cursor/rules/controlflow-portability.mdc",
+      "alwaysApplied": false,
+      "requiredActivationKeys": ["description", "globs"],
+      "canonicalReferenceAnyOf": [
+        "plugins/controlflow-codex/README.md",
+        "plugins/controlflow-claude-code/README.md",
+        "plugins/controlflow-shared-source/README.md",
+        "docs/agent-engineering/TOOL-ROUTING.md"
+      ],
+      "maxLines": 500
+    }
+  ],
+  "parserFixtures": [
+    {
+      "name": "valid-core-rule",
+      "content": "---\nalwaysApply: true\n---\n# Cursor Rule Fixture\n\nReference `.github/copilot-instructions.md` for canonical policy.\n",
+      "expectValid": true,
+      "contractRule": {
+        "canonicalReferenceAnyOf": [".github/copilot-instructions.md", "plans/project-context.md"],
+        "requiredActivationKeys": ["alwaysApply"],
+        "maxLines": 500
+      }
+    },
+    {
+      "name": "missing-closing-frontmatter",
+      "content": "---\nalwaysApply: true\n# Cursor Rule Fixture\n\nReference `.github/copilot-instructions.md` for canonical policy.\n",
+      "expectValid": false,
+      "contractRule": {
+        "maxLines": 500
+      }
+    },
+    {
+      "name": "missing-activation-metadata",
+      "content": "---\nowner: platform\n---\n# Cursor Rule Fixture\n\nReference `.github/copilot-instructions.md` for canonical policy.\n",
+      "expectValid": false,
+      "contractRule": {
+        "maxLines": 500
+      }
+    }
+  ]
+}

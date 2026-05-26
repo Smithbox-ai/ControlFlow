@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **Cursor IDE Support**: Added `.cursor/rules` to provide high-level guidance to the Cursor agent, along with documentation in `docs/agent-engineering/CURSOR-SUPPORT.md`.
+
+---
+
 ## [Unreleased] — Claude Code Plugin (Phase 6)
 
 ### Added - Claude Code Plugin

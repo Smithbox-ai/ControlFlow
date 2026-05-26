@@ -10,6 +10,7 @@
  *   FP2 — tutorial-parity subdirectory temp file changes and restores fingerprint
  *   FP3 — deeply nested path (runtime-policy/nested-dir/_temp.json) changes and
  *          restores fingerprint (proves recursive coverage beyond the top level)
+ *   FP4 — temporary Cursor rule .mdc content changes and restores fingerprint
  *
  * All temp files are cleaned up via try/finally so test failure never leaks
  * artifacts into the scenarios/ directory.
@@ -27,6 +28,8 @@ import { computeStructuralFingerprint } from '../drift-checks.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCENARIOS_DIR = join(__dirname, '..', 'scenarios');
+const ROOT = join(__dirname, '..', '..');
+const CURSOR_RULES_DIR = join(ROOT, '.cursor', 'rules');
 
 let passed = 0;
 let failed = 0;
@@ -105,6 +108,28 @@ console.log('\n=== Fingerprint Regression Tests ===');
     'FP3: deeply nested path (runtime-policy/nested-dir/_temp.json) — fingerprint changes on write, restores on delete',
     fp3Changed && fp3Restored,
     `changed=${fp3Changed}, restored=${fp3Restored}`
+  );
+}
+
+// ─── FP4: Cursor rules content ───────────────────────────────────────────────
+{
+  const tempPath = join(CURSOR_RULES_DIR, '_fingerprint_test_temp.mdc');
+  const initial = computeStructuralFingerprint();
+  let fp4Changed = false;
+  let fp4Restored = false;
+  try {
+    mkdirSync(CURSOR_RULES_DIR, { recursive: true });
+    writeFileSync(tempPath, '---\ndescription: "Fingerprint test fixture."\n---\n\nReferences `.github/copilot-instructions.md`.\n', 'utf8');
+    fp4Changed = computeStructuralFingerprint() !== initial;
+    unlinkSync(tempPath);
+    fp4Restored = computeStructuralFingerprint() === initial;
+  } finally {
+    if (existsSync(tempPath)) { try { unlinkSync(tempPath); } catch { /* best-effort */ } }
+  }
+  check(
+    'FP4: temporary Cursor rule .mdc — fingerprint changes on write, restores on delete',
+    fp4Changed && fp4Restored,
+    `changed=${fp4Changed}, restored=${fp4Restored}`
   );
 }
 

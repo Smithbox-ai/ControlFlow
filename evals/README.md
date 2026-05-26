@@ -27,6 +27,7 @@ Structural, behavioral, and orchestration validation fixtures for the ControlFlo
 21. F8 reference integrity scanning for core documentation paths.
 22. Plan artifact lifecycle vocabulary: `persisted_artifact`, `revision_mode: in_place_update`, `new_artifact_supersession_requires_revision_of`, and Planner replan payload metadata assertions.
 23. Independent read-only edit-tool denylist enforcement for review, discovery, research, and verification-only agents.
+24. Cursor Project Rule validation for `.cursor/rules/**/*.mdc` frontmatter bounds, activation metadata, line budget, and configured canonical references.
 
 ## Validation passes
 
@@ -35,6 +36,7 @@ High-level grouping (see full `### Passes` table below for all intermediate sub-
 - **Pass 1:** Schema ingestion and compilation with Ajv 2020-12 using `strict: false` and `allErrors: true`.
 - **Pass 2:** `scenarios/` structural hydration and mapping (includes Pass 3a, 3b, 3c, 3d, 4b).
 - **Pass 3:** Cross-scenario structural regression testing.
+- **Pass 3e:** Cursor Project Rule validation for `.mdc` rule metadata and canonical references.
 - **Pass 5:** Skill library registration and path resolution.
 - **Pass 7/7b/7c:** Memory architecture, memory discipline, and tutorial parity checks.
 - **Pass 8-14:** Drift, governance, final-review coupling, and canonical source matrix checks.
@@ -160,6 +162,7 @@ npm test
 | **3c — Tool Grant Consistency** | Every agent frontmatter `tools:` list matches the repository's canonical least-privilege tool set. |
 | **3c.1 — Read-Only Edit-Tool Denylist** | PlanAuditor, AssumptionVerifier, ExecutabilityVerifier, CodeMapper, Researcher, and CodeReviewer must not gain `edit`, `edit/createFile`, `edit/editFiles`, or any other `edit/` tool in frontmatter or `governance/tool-grants.json`, even if both surfaces drift consistently. |
 | **3d — Agent Grant Consistency** | Every agent frontmatter `agents:` list matches `governance/agent-grants.json`. |
+| **3e — Cursor Rule Validation** | Every `.cursor/rules/**/*.mdc` file starts with line-1 `---`, has a later closing `---`, includes at least one of `alwaysApply`, `description`, or `globs`, stays within the 500-line budget, and satisfies configured canonical-reference checks from `evals/scenarios/cursor-rules/cursor-rules-contract.json`. |
 | **4 — P.A.R.T Section Order** | Every `*.agent.md` preserves `## Prompt` → `## Archive` → `## Resources` → `## Tools` ordering. |
 | **4b — Clarification Triggers & Tool Routing** | Every agent either has a `### Clarification` section, delegates via `NEEDS_INPUT`, or is an ABSTAIN-only role (§5). Agents with external tools must have a `### Tool Routing` section (§6). |
 | **5 — Skill Library** | Every file in `skills/patterns/` is registered in `skills/index.md` and every index entry resolves to a real file. |
@@ -182,6 +185,7 @@ npm test
 | `tests/notes-md-drift.test.mjs` | NOTES.md style anti-pattern detection. |
 | `tests/archive-script.test.mjs` | Task-episodic archive script behavior against isolated fixture trees. |
 | `tests/fingerprint.test.mjs` | Structural fingerprint invalidation for nested scenario fixtures. |
+| `tests/cursor-rules.test.mjs` | Cursor `.mdc` parser regressions for valid frontmatter, missing closing delimiters, and missing activation metadata. |
 | `tests/report-health.test.mjs` | Operator health report helpers and smoke generation against isolated fixture trees. |
 | `tests/capability-matrix.test.mjs` | Capability-matrix reconciliation of tool grants, agent frontmatter, and project context. |
 | `tests/skill-discoverability.test.mjs` | Protects skill metadata discoverability and ensures skills remain accurately referenced. |
