@@ -48,6 +48,9 @@ import {
   validateTutorialParity,
   validateCanonicalSourceMatrixContract,
   validateProjectContextRegistryMirror,
+  validateToolCountLabelConsistency,
+  validatePatternFileLineBudget,
+  countTextLines,
 } from '../drift-checks.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -757,12 +760,12 @@ console.log('\n=== Check #6c — model resolution scenario negative cases ===');
           case_id: 'wrong-effective-review-tier',
           input_context: { plan_complexity_tier: 'MEDIUM', unresolved_high_risk: true },
           broken_resolution: { effective_review_tier: 'MEDIUM' },
-          expected: { rejected: true, violates: 'wrong_effective_review_tier', effective_review_tier: 'LARGE', resolved_primary_model: 'Claude Opus 4.7 (copilot)', offline_detection_scope: 'structural_contract', live_runtime_assertion: false },
+          expected: { rejected: true, violates: 'wrong_effective_review_tier', effective_review_tier: 'LARGE', resolved_primary_model: 'Claude Opus 4.8 (copilot)', offline_detection_scope: 'structural_contract', live_runtime_assertion: false },
         },
         {
           case_id: 'unconfigured-fallback',
           input_context: { effective_review_tier: 'MEDIUM' },
-          broken_retry: { model: 'Claude Opus 4.7 (copilot)', configured_fallbacks: ['GPT-5.4 (copilot)', 'GPT-5.5 (copilot)'] },
+          broken_retry: { model: 'Claude Opus 4.8 (copilot)', configured_fallbacks: ['GPT-5.4 (copilot)', 'GPT-5.5 (copilot)'] },
           expected: { rejected: true, violates: 'unconfigured_fallback', configured_fallbacks_only: true, offline_detection_scope: 'structural_contract', live_runtime_assertion: false },
         },
         {
@@ -1425,6 +1428,120 @@ console.log('\n=== Check #14 — project-context registry mirror contract ===');
     reorderedExecutor.ok === false && reorderedExecutor.errors.some(e => e.includes('Phase Executor Agents')),
     `ok=${reorderedExecutor.ok}, errors=${JSON.stringify(reorderedExecutor.errors)}`
   );
+}
+
+// ──────────────────────────────────────────────
+// Check #15 — tool-count label consistency
+// ──────────────────────────────────────────────
+console.log('\n=== Check #15 — tool-count label consistency ===');
+{
+  // Positive (real repo): registry "(N tools)" labels match tool-grants array lengths.
+  const ROOT = join(__dirname, '..', '..');
+  const realRegistry = JSON.parse(
+    readFileSync(join(ROOT, 'governance', 'project-context-registry.json'), 'utf8')
+  );
+  const realToolGrants = JSON.parse(
+    readFileSync(join(ROOT, 'governance', 'tool-grants.json'), 'utf8')
+  );
+  const realResult = validateToolCountLabelConsistency(realRegistry, realToolGrants);
+  check(
+    'TC1: real governance registry/tool-grants "(N tools)" labels are consistent',
+    realResult.ok === true,
+    realResult.ok ? '' : `errors=${JSON.stringify(realResult.errors)}`
+  );
+
+  // Synthetic positive baseline.
+  const baselineRegistry = {
+    agent_role_matrix: [
+      { agent: 'CodeReviewer-subagent', schema_output: 's.json', tools_profile: 'Search + run (7 tools)', delegation_source: 'Orchestrator' },
+      { agent: 'CodeMapper-subagent', schema_output: 's.json', tools_profile: 'Read-only (5 tools)', delegation_source: 'Orchestrator' },
+    ],
+  };
+  const baselineGrants = {
+    'CodeReviewer-subagent.agent.md': ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
+    'CodeMapper-subagent.agent.md': ['a', 'b', 'c', 'd', 'e'],
+  };
+  const baseline = validateToolCountLabelConsistency(baselineRegistry, baselineGrants);
+  check(
+    'TC2: synthetic matched labels → ok=true',
+    baseline.ok === true,
+    `ok=${baseline.ok}, errors=${JSON.stringify(baseline.errors)}`
+  );
+
+  // Negative: label says "(6 tools)" but grant array holds 7 (the CodeReviewer-class bug).
+  const mismatchRegistry = JSON.parse(JSON.stringify(baselineRegistry));
+  mismatchRegistry.agent_role_matrix[0].tools_profile = 'Search + run (6 tools)';
+  const mismatch = validateToolCountLabelConsistency(mismatchRegistry, baselineGrants);
+  check(
+    'TC3: label "(6 tools)" but grant array length 7 → drift detected',
+    mismatch.ok === false && mismatch.errors.some(e => e.includes('CodeReviewer-subagent') && e.includes('7 tool')),
+    `ok=${mismatch.ok}, errors=${JSON.stringify(mismatch.errors)}`
+  );
+
+  // Negative: labeled agent missing from tool-grants entirely → drift detected.
+  const missingGrants = { 'CodeMapper-subagent.agent.md': ['a', 'b', 'c', 'd', 'e'] };
+  const missing = validateToolCountLabelConsistency(baselineRegistry, missingGrants);
+  check(
+    'TC4: labeled agent absent from tool-grants → drift detected',
+    missing.ok === false && missing.errors.some(e => e.includes('CodeReviewer-subagent.agent.md')),
+    `ok=${missing.ok}, errors=${JSON.stringify(missing.errors)}`
+  );
+
+  // Skip path: tools_profile without a "(N tools)" label is ignored even if grants differ.
+  const unlabeledRegistry = {
+    agent_role_matrix: [
+      { agent: 'CodeMapper-subagent', schema_output: 's.json', tools_profile: 'Read-only', delegation_source: 'Orchestrator' },
+    ],
+  };
+  const unlabeled = validateToolCountLabelConsistency(unlabeledRegistry, { 'CodeMapper-subagent.agent.md': ['a', 'b'] });
+  check(
+    'TC5: tools_profile without "(N tools)" label is skipped → ok=true',
+    unlabeled.ok === true,
+    `ok=${unlabeled.ok}, errors=${JSON.stringify(unlabeled.errors)}`
+  );
+}
+
+// ──────────────────────────────────────────────
+// Pattern-file line budget — skills/patterns/*.md must be ≤100 lines
+// ──────────────────────────────────────────────
+console.log('\n=== Pattern-file line budget (skills/patterns/*.md ≤100 lines) ===');
+{
+  // Positive (real repo): every skills/patterns/*.md file is within the 100-line budget.
+  const ROOT = join(__dirname, '..', '..');
+  const realPatternsDir = join(ROOT, 'skills', 'patterns');
+  const realResult = validatePatternFileLineBudget(realPatternsDir);
+  check(
+    'PB1: real skills/patterns/*.md files are all ≤100 lines',
+    realResult.ok === true,
+    realResult.ok ? '' : `errors=${JSON.stringify(realResult.errors)}`
+  );
+
+  // Line-counting semantics: a single trailing newline is not a phantom line.
+  check(
+    'PB2: countTextLines treats trailing newline as wc(1) does',
+    countTextLines('a\nb\nc') === 3 && countTextLines('a\nb\nc\n') === 3 && countTextLines('') === 0,
+    `got [${countTextLines('a\nb\nc')}, ${countTextLines('a\nb\nc\n')}, ${countTextLines('')}]`
+  );
+
+  // Negative (synthetic): a 101-line pattern file in a temp dir → drift detected.
+  // No real oversized file is added to the repo.
+  const tmpRoot = join(tmpdir(), `cf-pattern-budget-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+  mkdirSync(tmpRoot, { recursive: true });
+  try {
+    const oversizedLines = Array.from({ length: 101 }, (_, i) => `line ${i + 1}`).join('\n');
+    writeFileSync(join(tmpRoot, 'oversized.md'), oversizedLines);
+    writeFileSync(join(tmpRoot, 'within-budget.md'), Array.from({ length: 100 }, (_, i) => `line ${i + 1}`).join('\n'));
+    const negative = validatePatternFileLineBudget(tmpRoot);
+    check(
+      'PB3: synthetic 101-line pattern file → drift detected with file + count',
+      negative.ok === false
+        && negative.errors.some(e => e.includes('oversized.md') && e.includes('101'))
+        && !negative.errors.some(e => e.includes('within-budget.md')),
+      `ok=${negative.ok}, errors=${JSON.stringify(negative.errors)}`
+    );
+  } finally {
+    rmSync(tmpRoot, { recursive: true, force: true });
+  }
 }
 
 // ──────────────────────────────────────────────

@@ -158,7 +158,7 @@ Governance — это **5 JSON-файлов** в `governance/`, фиксирую
 {
   "research-capable": {
     "primary": "GPT-5.4 (copilot)",
-    "fallbacks": ["GPT-5.5 (copilot)", "Claude Opus 4.7 (copilot)"],
+    "fallbacks": ["GPT-5.5 (copilot)", "Claude Opus 4.8 (copilot)"],
     "by_tier": {
       "TRIVIAL": {
         "primary": "GPT-5.4 mini (copilot)",

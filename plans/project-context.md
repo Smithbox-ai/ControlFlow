@@ -4,7 +4,7 @@
 
 The following agents are available for Orchestrator phase dispatch. The `executor_agent` field in Planner plans must use one of these exact names.
 
-These metadata tables are maintained as semantic mirrors of `governance/project-context-registry.json` in this optimization wave.
+**SINGLE SOURCE OF TRUTH: `governance/project-context-registry.json`.** The roster/role-matrix tables below (Phase Executor Agents, Review Pipeline Agents, Agent Role Matrix) are a human-readable mirror, automatically verified row-for-row by the Pass 14 drift check (`validateProjectContextRegistryMirror`). Do not hand-edit these tables independently of the registry — update the registry first, then mirror the change here.
 
 | Agent | Role | Primary Use Case | Model Routing Role |
 | --- | --- | --- | --- |
@@ -41,9 +41,7 @@ Delegation to external or third-party agents is strictly prohibited.
 
 - **Orchestrator** — Conductor (conductor, not a phase executor)
 - **Planner** — Plan Producer (produces plans, not a phase executor)
-- **PlanAuditor-subagent** — Review-only auditor (dispatched during PLAN_REVIEW, not via `executor_agent`)
-- **AssumptionVerifier-subagent** — Review-only mirage detection (dispatched during PLAN_REVIEW, not via `executor_agent`)
-- **ExecutabilityVerifier-subagent** — Review-only executability verification (dispatched during PLAN_REVIEW, not via `executor_agent`)
+- The three review-only agents (`PlanAuditor-subagent`, `AssumptionVerifier-subagent`, `ExecutabilityVerifier-subagent`) are also non-executors — see the **Review Pipeline Agents** table and its note above for their roster and the `executor_agent` exclusion rule.
 
 ## Complexity Tier Definitions
 
@@ -93,7 +91,7 @@ When a semantic risk entry triggers PlanAuditor review, Orchestrator maps the ri
 | PlatformEngineer-subagent | platform-engineer.execution-report.schema.json | Full implementation (10 tools) | Orchestrator |
 | TechnicalWriter-subagent | technical-writer.execution-report.schema.json | Edit + search (7 tools) | Orchestrator |
 | BrowserTester-subagent | browser-tester.execution-report.schema.json | Search + edit evidence (8 tools) | Orchestrator |
-| CodeReviewer-subagent | code-reviewer.verdict.schema.json | Search + run (6 tools) | Orchestrator |
+| CodeReviewer-subagent | code-reviewer.verdict.schema.json | Search + run (7 tools) | Orchestrator |
 | PlanAuditor-subagent | plan-auditor.plan-audit.schema.json | Read-only (7 tools) | Orchestrator |
 | AssumptionVerifier-subagent | assumption-verifier.plan-audit.schema.json | Read-only (6 tools) | Orchestrator |
 | ExecutabilityVerifier-subagent | executability-verifier.execution-report.schema.json | Read-only (5 tools) | Orchestrator |
@@ -101,7 +99,8 @@ When a semantic risk entry triggers PlanAuditor review, Orchestrator maps the ri
 ## Shared Conventions
 
 - All agent outputs use structured text format. Do NOT output raw JSON to chat — it wastes context tokens. Schemas in `schemas/` serve as contract documentation and eval fixture references.
-- Failure classification enum: `transient`, `fixable`, `needs_replan`, `escalate` (except PlanAuditor/AssumptionVerifier which exclude `transient`).
+- Failure classification enum: `transient`, `fixable`, `needs_replan`, `escalate`, `model_unavailable` (except PlanAuditor/AssumptionVerifier which exclude `transient`).
+  - `model_unavailable` — the routed/primary model is unavailable or unreachable; substitute per model-routing fallback and retry up to `model_unavailable_max` (see runtime-policy.json), then escalate. Distinct from `transient`; the PlanAuditor/AssumptionVerifier `transient`-exclusion does NOT exclude `model_unavailable`.
 - PART-spec section order is mandatory for all agents: Prompt → Archive → Resources → Tools.
 - Plan artifacts are stored in `plans/` directory.
 - Skills library is stored in `skills/` directory.

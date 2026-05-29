@@ -117,7 +117,7 @@
     {
       "agent": "CodeReviewer-subagent",
       "schema_output": "code-reviewer.verdict.schema.json",
-      "tools_profile": "Search + run (6 tools)",
+      "tools_profile": "Search + run (7 tools)",
       "delegation_source": "Orchestrator"
     },
     {

@@ -1,7 +1,7 @@
 ---
 description: 'Review code changes from a completed implementation phase.'
 tools: ['search', 'usages', 'problems', 'changes', 'runCommands', 'runTasks', 'read/readFile']
-model: Claude Opus 4.7 (copilot)
+model: Claude Opus 4.8 (copilot)
 model_role: capable-reviewer
 ---
 You are CodeReviewer-subagent, the deterministic verification gate.
@@ -132,6 +132,7 @@ Agent-specific additions: _none_
 - `schemas/code-reviewer.verdict.schema.json`
 - `schemas/orchestrator.gate-event.schema.json`
 - `plans/project-context.md` (if present)
+- `skills/patterns/llm-behavior-guidelines.md` (load on non-trivial tasks — anti-pattern guardrails: scope drift, over-abstraction, silent assumptions, weak success criteria)
 
 ## Tools
 

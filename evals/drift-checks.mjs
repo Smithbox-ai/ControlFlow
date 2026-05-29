@@ -1154,6 +1154,9 @@ export function computeStructuralFingerprint() {
     'governance/runtime-policy.json',
     'governance/rename-allowlist.json',
     'governance/agent-grants.json',
+    'governance/model-routing.json',
+    'governance/canonical-source-matrix.json',
+    'governance/project-context-registry.json',
   ]) hashFile(join(CF_REPO_ROOT, rel));
   // skills index and patterns
   hashFile(join(CF_REPO_ROOT, 'skills', 'index.md'));
@@ -1456,6 +1459,123 @@ export function validateProjectContextRegistryMirror(projectContextContent, regi
           `${spec.name}: row ${i + 1} mismatch — expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`
         );
       }
+    }
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+
+/**
+ * Validate that every "(N tools)" integer label declared in a registry agent's
+ * tools_profile equals the actual length of that agent's tool array in
+ * governance/tool-grants.json. Agents whose tools_profile carries no "(N tools)"
+ * label are skipped. This catches drift like a label saying "(6 tools)" while
+ * the grant array holds 7 entries.
+ * @param {object} registryJson - Parsed governance/project-context-registry.json
+ * @param {object} toolGrantsJson - Parsed governance/tool-grants.json
+ * @returns {{ ok: boolean, errors: string[] }}
+ */
+export function validateToolCountLabelConsistency(registryJson, toolGrantsJson) {
+  const errors = [];
+
+  if (!registryJson || typeof registryJson !== 'object') {
+    return { ok: false, errors: ['tool-count-label: project-context-registry JSON object missing'] };
+  }
+  if (!toolGrantsJson || typeof toolGrantsJson !== 'object') {
+    return { ok: false, errors: ['tool-count-label: tool-grants JSON object missing'] };
+  }
+
+  const entries = registryJson.agent_role_matrix;
+  if (!Array.isArray(entries) || entries.length === 0) {
+    return { ok: false, errors: ['tool-count-label: agent_role_matrix[] missing or empty'] };
+  }
+
+  for (const [idx, entry] of entries.entries()) {
+    if (!entry || typeof entry !== 'object') {
+      errors.push(`tool-count-label: agent_role_matrix entry ${idx + 1} must be an object`);
+      continue;
+    }
+    const agent = entry.agent;
+    const toolsProfile = entry.tools_profile;
+    if (typeof agent !== 'string' || agent.trim().length === 0) {
+      errors.push(`tool-count-label: agent_role_matrix entry ${idx + 1} missing non-empty agent`);
+      continue;
+    }
+    if (typeof toolsProfile !== 'string') {
+      errors.push(`tool-count-label: "${agent}" tools_profile must be a string`);
+      continue;
+    }
+
+    const labelMatch = toolsProfile.match(/\((\d+)\s+tools\)/);
+    if (!labelMatch) {
+      // No "(N tools)" label — skip per spec.
+      continue;
+    }
+    const declaredCount = Number(labelMatch[1]);
+
+    const grantKey = `${agent}.agent.md`;
+    const grantArray = toolGrantsJson[grantKey];
+    if (!Array.isArray(grantArray)) {
+      errors.push(`tool-count-label: "${agent}" labels "(${declaredCount} tools)" but tool-grants has no array under "${grantKey}"`);
+      continue;
+    }
+    if (grantArray.length !== declaredCount) {
+      errors.push(`tool-count-label: "${agent}" labels "(${declaredCount} tools)" but tool-grants "${grantKey}" has ${grantArray.length} tool(s)`);
+    }
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+
+/**
+ * Count the lines of text in a string using wc(1)-style semantics: a single
+ * trailing newline does not add a phantom empty line.
+ * @param {string} content
+ * @returns {number}
+ */
+export function countTextLines(content) {
+  if (typeof content !== 'string' || content.length === 0) return 0;
+  const segments = content.split('\n');
+  // A trailing newline yields a final empty segment that is not a real line.
+  if (segments[segments.length - 1] === '') segments.pop();
+  return segments.length;
+}
+
+/**
+ * Enforce the skills library hard rule documented in skills/README.md and
+ * skills/index.md: every skill pattern file (skills/patterns/*.md) must be
+ * ≤100 lines. Reports each offending file with its actual line count so the
+ * failure message is actionable. Line counting uses wc(1)-style semantics
+ * (a single trailing newline is not counted as an extra line).
+ * @param {string} patternsDir - Absolute path to the skills/patterns directory
+ * @param {number} [maxLines=100] - Inclusive upper bound on lines per file
+ * @returns {{ ok: boolean, errors: string[] }}
+ */
+export function validatePatternFileLineBudget(patternsDir, maxLines = 100) {
+  const errors = [];
+
+  let files = [];
+  try {
+    files = readdirSync(patternsDir).filter(f => f.endsWith('.md')).sort();
+  } catch {
+    return { ok: false, errors: [`pattern-line-budget: cannot read patterns directory "${patternsDir}"`] };
+  }
+
+  if (files.length === 0) {
+    return { ok: false, errors: [`pattern-line-budget: no *.md pattern files found in "${patternsDir}"`] };
+  }
+
+  for (const file of files) {
+    let content;
+    try {
+      content = readFileSync(join(patternsDir, file), 'utf8');
+    } catch {
+      errors.push(`pattern-line-budget: cannot read "${file}"`);
+      continue;
+    }
+    const lineCount = countTextLines(content);
+    if (lineCount > maxLines) {
+      errors.push(`pattern-line-budget: "${file}" has ${lineCount} lines (limit ${maxLines})`);
     }
   }
 

@@ -89,7 +89,7 @@
         "resolution_mode": "inherit_from default",
         "dispatch_family": "final_code_review",
         "reference_expectation": {
-          "resolved_primary_model": "Claude Opus 4.7 (copilot)",
+          "resolved_primary_model": "Claude Opus 4.8 (copilot)",
           "resolution_source": "governance/model-routing.json roles.capable-reviewer.by_tier.LARGE (inherit_from default → role default)",
           "outer_agentName_field": "agentName",
           "outer_model_field": "model",
@@ -148,7 +148,7 @@
         "dispatch_family": "plan_review",
         "dispatch_context": "Unresolved applicable HIGH-impact risk_review entry forces effective review tier to LARGE regardless of plan complexity_tier. Orchestrator resolves capable-reviewer models using LARGE (inherit_from default), providing premium routing.",
         "reference_expectation": {
-          "resolved_primary_model": "Claude Opus 4.7 (copilot)",
+          "resolved_primary_model": "Claude Opus 4.8 (copilot)",
           "first_fallback_model": "GPT-5.5 (copilot)",
           "first_fallback_model_source": "governance/model-routing.json roles.capable-reviewer.fallbacks[0] via LARGE inherit_from default",
           "effective_review_tier": "LARGE",
@@ -337,7 +337,7 @@
           "rejected": true,
           "violates": "wrong_effective_review_tier",
           "effective_review_tier": "LARGE",
-          "resolved_primary_model": "Claude Opus 4.7 (copilot)",
+          "resolved_primary_model": "Claude Opus 4.8 (copilot)",
           "model_source": "governance/model-routing.json roles.capable-reviewer.by_tier.LARGE (inherit_from default -> role default)",
           "offline_detection_scope": "structural_contract",
           "live_runtime_assertion": false
@@ -353,7 +353,7 @@
           "primary_unavailable": true
         },
         "broken_retry": {
-          "model": "Claude Opus 4.7 (copilot)",
+          "model": "Claude Opus 4.8 (copilot)",
           "configured_fallbacks_source": "governance/model-routing.json roles.capable-reviewer.by_tier.MEDIUM.fallbacks",
           "configured_fallbacks": ["GPT-5.4 (copilot)", "GPT-5.5 (copilot)"]
         },

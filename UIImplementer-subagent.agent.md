@@ -79,6 +79,7 @@ Agent-specific fields:
 - `schemas/ui-implementer.execution-report.schema.json`
 - `plans/project-context.md` (if present)
 - `docs/agent-engineering/TOOL-ROUTING.md`
+- `skills/patterns/llm-behavior-guidelines.md` (load on non-trivial tasks — anti-pattern guardrails: scope drift, over-abstraction, silent assumptions, weak success criteria)
 
 ## Tools
 

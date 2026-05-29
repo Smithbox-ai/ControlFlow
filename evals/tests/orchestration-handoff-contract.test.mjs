@@ -82,7 +82,7 @@ const capableReviewerFallback0 = _capableReviewer.fallbacks[0]; // e.g. GPT-5.4 
 const orchestratorDefaultPrimary = resolveRoleModel('orchestration-capable', 'MEDIUM').primary; // e.g. Claude Sonnet 4.6 (copilot)
 const evPrimary = resolveRoleModel(agentRoleIndex['ExecutabilityVerifier-subagent'], 'LARGE').primary; // e.g. Claude Sonnet 4.6 (copilot)
 const _capableReviewerLarge    = resolveRoleModel('capable-reviewer', 'LARGE');
-const capableReviewerLargePrimary  = _capableReviewerLarge.primary;       // e.g. Claude Opus 4.7 (copilot)
+const capableReviewerLargePrimary  = _capableReviewerLarge.primary;       // e.g. Claude Opus 4.8 (copilot)
 const capableReviewerLargeFallback0 = _capableReviewerLarge.fallbacks[0]; // e.g. GPT-5.5 (copilot)
 
 const capableImplementerTrivialPrimary = resolveRoleModel('capable-implementer', 'TRIVIAL').primary;
@@ -92,7 +92,7 @@ const documentationTrivialPrimary = resolveRoleModel('documentation', 'TRIVIAL')
 // Pre-resolved planner role values (derived from governance/model-routing.json)
 const _capablePlanner         = resolveRoleModel('capable-planner', 'MEDIUM');
 const capablePlannerPrimary   = _capablePlanner.primary;        // GPT-5.5 (copilot)
-const capablePlannerFallback0 = _capablePlanner.fallbacks[0];   // Claude Opus 4.7 (copilot)
+const capablePlannerFallback0 = _capablePlanner.fallbacks[0];   // Claude Opus 4.8 (copilot)
 const capablePlannerFallback1 = _capablePlanner.fallbacks[1];   // GPT-5.4 mini (copilot)
 const fastReadonlyPrimary = resolveRoleModel(modelRouting.agent_role_index['CodeMapper-subagent'], 'MEDIUM').primary;
 const researchCapableLargePrimary = resolveRoleModel(modelRouting.agent_role_index['Researcher-subagent'], 'LARGE').primary;
@@ -1323,7 +1323,7 @@ check(
 // ──────────────────────────────────────────────
 // Planner Role Fallback Chain Regression (Phase 3)
 // Locks the capable-planner ordered fallback contract so drift is immediately
-// visible: primary GPT-5.5 (copilot) → Claude Opus 4.7 (copilot) → GPT-5.4 mini (copilot)
+// visible: primary GPT-5.5 (copilot) → Claude Opus 4.8 (copilot) → GPT-5.4 mini (copilot)
 // ──────────────────────────────────────────────
 console.log('\n=== Model Routing — Planner Role Fallback Chain ===');
 
@@ -1336,8 +1336,8 @@ check(
   capablePlannerPrimary === 'GPT-5.5 (copilot)'
 );
 check(
-  `Planner routing: fallback[0] is Claude Opus 4.7 (copilot) (resolved: ${capablePlannerFallback0})`,
-  capablePlannerFallback0 === 'Claude Opus 4.7 (copilot)'
+  `Planner routing: fallback[0] is Claude Opus 4.8 (copilot) (resolved: ${capablePlannerFallback0})`,
+  capablePlannerFallback0 === 'Claude Opus 4.8 (copilot)'
 );
 check(
   `Planner routing: fallback[1] is GPT-5.4 mini (copilot) (resolved: ${capablePlannerFallback1})`,

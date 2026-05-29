@@ -262,6 +262,7 @@ See [`evals/README.md`](evals/README.md) for pass descriptions and how to add sc
 ├── schemas/                       # JSON Schema contracts
 ├── docs/
 │   ├── agent-engineering/         # Governance policies and reliability gates
+│   ├── tutorial-en/               # Full English-language tutorial (19 chapters)
 │   └── tutorial-ru/               # Full Russian-language tutorial (19 chapters)
 ├── governance/                    # Operational knobs and tool grants
 ├── skills/                        # Reusable domain pattern library (18 patterns)
@@ -280,7 +281,7 @@ See [`evals/README.md`](evals/README.md) for pass descriptions and how to add sc
 
 - **[docs/tutorial-en/](docs/tutorial-en/README.md)** — full English tutorial: architecture, agents, orchestration, planning, review pipeline, schemas, governance, skills, memory, failure taxonomy, evals, case studies, exercises, glossary, FAQ.
 - **[docs/tutorial-ru/](docs/tutorial-ru/README.md)** — то же на русском языке.
-- **[docs/agent-engineering/](docs/agent-engineering/)** — authoritative governance specs: P.A.R.T, reliability gates, clarification policy, tool routing, scoring, observability, memory architecture.
+- **[docs/agent-engineering/](docs/agent-engineering/README.md)** — authoritative governance specs; see its README for the full, current index.
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** — how to add agents, schemas, eval scenarios.
 - **[CHANGELOG.md](CHANGELOG.md)** — version history.
 
@@ -313,7 +314,7 @@ Without `.github/copilot-instructions.md` agents will not have access to shared 
 
 ### Adding Custom Agents
 
-Create a new `.agent.md` file following the P.A.R.T structure (Prompt → Archive → Resources → Tools). See [CONTRIBUTING.md](CONTRIBUTING.md) for the full 4-step process.
+Create a new `.agent.md` file following the P.A.R.T structure (Prompt → Archive → Resources → Tools). See [CONTRIBUTING.md](CONTRIBUTING.md) for the process documented there.
 
 ---
 

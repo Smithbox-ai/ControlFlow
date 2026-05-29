@@ -200,7 +200,7 @@ From `planner.plan.schema.json` → `risk_review.items.properties.category.enum`
 
 **Q25. What is the process for adding a new agent?**
 
-4-step process (see `CONTRIBUTING.md`):
+Follow the agent-contribution process in `CONTRIBUTING.md`. In summary:
 1. Create `<Name>.agent.md` (P.A.R.T. order).
 2. Create `schemas/<name>.schema.json`.
 3. Add eval scenarios in `evals/scenarios/<name>/`.

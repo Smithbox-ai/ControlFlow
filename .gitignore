@@ -10,7 +10,6 @@ yarn-error.log*
 # Ignore all plan files by default, but allow required project artifacts
 plans/*
 !plans/project-context.md
-!plans/pipeline-comparison.md
 !plans/session-outcomes.md
 !plans/templates/
 plans/templates/*
@@ -56,6 +55,8 @@ temp/
 *.swo
 # ── Eval warm cache ────────────────────────────────────────────
 evals/.cache/
+# ── Eval stdout dumps (debug scratch, not tracked) ────────────
+evals/out*.txt
 # ── Tool output spill directory ───────────────────────────────
 .cache/tool-output/
 # ── Windows OS artifacts ──────────────────────────────────

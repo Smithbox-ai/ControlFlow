@@ -126,7 +126,7 @@
   "compaction": {
     "max_consecutive_failures": 3,
     "circuit_breaker_action": "escalate",
-    "_comment": "autoCompact circuit breaker — adapted from free-code-main/src/services/compact/autoCompact.ts MAX_CONSECUTIVE_AUTOCOMPACT_FAILURES = 3"
+    "_comment": "autoCompact circuit breaker — adapted from prior art; no local source in this repo. Max consecutive autocompact failures = 3."
   },
 
   "task_cache": {

@@ -18,6 +18,11 @@ Index of governance and engineering policy documents. Each agent loads the relev
 - [`SCORING-SPEC.md`](SCORING-SPEC.md) — Quantitative scoring reference for reviewers and eval harnesses.
 - [`MIGRATION-CORE-FIRST.md`](MIGRATION-CORE-FIRST.md) — Shared implementation backbone pattern and consolidation exit criteria.
 
+## Process
+
+- [`ADR-PROCESS.md`](ADR-PROCESS.md) — Architecture Decision Record workflow: when to author an ADR, lifecycle states, and review expectations.
+- [`ADR-TEMPLATE.md`](ADR-TEMPLATE.md) — Canonical ADR template for recording context, decision, and consequences.
+
 ## Portability & IDE Support
 
 The repository contains adaptations of the ControlFlow system for non-VS Code environments and IDE integrations:

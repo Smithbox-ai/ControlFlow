@@ -72,7 +72,7 @@ After completing this tutorial you will be able to:
 3. Explain how the Orchestrator state machine progresses from `PLANNING` to `COMPLETE`.
 4. Classify any failure scenario into one of the 4 failure classes.
 5. Run `cd evals && npm test` and interpret the output.
-6. Contribute a new agent or schema following the 4-step process.
+6. Contribute a new agent or schema following the process documented in CONTRIBUTING.md.
 
 ## How to Read This Tutorial
 

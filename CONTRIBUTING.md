@@ -10,6 +10,8 @@ Thank you for your interest in contributing! This guide covers the key contribut
   - [Adding a new agent](#adding-a-new-agent)
   - [Editing an existing agent](#editing-an-existing-agent)
   - [Adding skills](#adding-skills)
+  - [Adding or modifying eval scenarios and validator passes](#adding-or-modifying-eval-scenarios-and-validator-passes)
+  - [Editing governance configuration (`governance/*.json`)](#editing-governance-configuration-governancejson)
   - [Proposing changes](#proposing-changes)
   - [Code of conduct](#code-of-conduct)
 
@@ -60,8 +62,10 @@ npm run test:behavior
    - `ABSTAIN` / `NEEDS_INPUT` / failure classification behavior
    - Tool routing compliance if the agent uses external tools
 
-5. **Register the agent in governance files**:
-   - Add it to `governance/agent-grants.json` with its canonical tool grants.
+5. **Register the agent in governance files** (see AGENTS.md §4 editing checklist):
+   - Add it to `governance/agent-grants.json` with its canonical agent/tool grants.
+   - Add it to `governance/tool-grants.json` when the agent's tool surface changes — the eval suite enforces consistency.
+   - Update `governance/runtime-policy.json` and `governance/rename-allowlist.json` where relevant (e.g. review routing/retry knobs or rename permissions).
    - Add it to `plans/project-context.md` (agent roster table).
 
 6. **Update `README.md`**:
@@ -90,6 +94,24 @@ Skills are reusable domain pattern snippets that Planner selects per phase and i
 3. Run `cd evals && npm test` — Pass 5 validates that every `skills/patterns/` file is registered in the index and every index entry resolves to a real file.
 
 For project-wide orchestration audits, prefer `skills/patterns/orchestration-audit-playbook.md` as the audit-specific checklist. It complements the completeness, integration, and LLM behavior skills by focusing on traceability, schema/prompt/grant alignment, hidden-defect triage, validation gates, and phase-boundary memory hygiene.
+
+---
+
+## Adding or modifying eval scenarios and validator passes
+
+The eval suite is the only verification gate (`cd evals && npm test`).
+
+1. Scenario fixtures live in `evals/scenarios/`; add or edit the fixture that exercises the behavior, validated against the matching schema in `schemas/`.
+2. Validator passes live in `evals/validate.mjs` (structural/schema/P.A.R.T) and drift checks in `evals/drift-checks.mjs`. Add a pass only when an existing one cannot express the contract; keep new passes offline and network-free.
+3. Run `cd evals && npm test` (or the faster `test:structural` / `test:behavior`) and confirm green before opening a PR. See `evals/README.md` for pass descriptions.
+
+---
+
+## Editing governance configuration (`governance/*.json`)
+
+1. Most knobs in `governance/` are referenced by Orchestrator/Planner prompt text — re-read the consumers and update the prompt wording when knob semantics change (per AGENTS.md §4).
+2. Keep grants consistent: `governance/agent-grants.json` and `governance/tool-grants.json` are enforced against agent frontmatter by the eval suite.
+3. Run `cd evals && npm test` after any governance edit to catch drift — changes here affect all agents.
 
 ---
 

@@ -114,6 +114,7 @@ Agent-specific additions:
 - `docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md`
 - `plans/project-context.md` (if present)
 - `skills/index.md` (domain skill mapping — read during Step 5)
+- `skills/patterns/llm-behavior-guidelines.md` (load on non-trivial tasks — anti-pattern guardrails: scope drift, over-abstraction, silent assumptions, weak success criteria)
 - Plan artifacts directory: `plans/` (default location for all plan and completion files)
 
 ## Tools

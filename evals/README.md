@@ -37,7 +37,9 @@ High-level grouping (see full `### Passes` table below for all intermediate sub-
 - **Pass 2:** `scenarios/` structural hydration and mapping (includes Pass 3a, 3b, 3c, 3d, 4b).
 - **Pass 3:** Cross-scenario structural regression testing.
 - **Pass 3e:** Cursor Project Rule validation for `.mdc` rule metadata and canonical references.
+- **Pass 4:** P.A.R.T section-order enforcement and (Pass 4b) clarification-trigger and tool-routing rule checks.
 - **Pass 5:** Skill library registration and path resolution.
+- **Pass 6:** Synthetic rename negative-path checks against `governance/rename-allowlist.json`.
 - **Pass 7/7b/7c:** Memory architecture, memory discipline, and tutorial parity checks.
 - **Pass 8-14:** Drift, governance, final-review coupling, and canonical source matrix checks.
 - **Separate harnesses in `npm test`:** prompt behavior, orchestration handoff, drift detection, NOTES.md drift, archive script, and fingerprint regression checks.
