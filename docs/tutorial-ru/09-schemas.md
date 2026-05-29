@@ -2,7 +2,7 @@
 
 ## Зачем эта глава
 
-Понять, **что схемы — это контракты между агентами**, а не просто JSON-файлы. После этой главы вы будете знать назначение каждой из 15 схем и где искать ключевые поля.
+Понять, **что схемы — это контракты между агентами**, а не просто JSON-файлы. После этой главы вы будете знать назначение каждой из 17 схем и где искать ключевые поля.
 
 ## Что такое схема в ControlFlow
 
@@ -33,8 +33,10 @@ Schema (`schemas/*.json`) — это **JSON Schema (draft 2020-12)**, фикси
 | 13 | `technical-writer.execution-report.schema.json` | TechnicalWriter-subagent | Docs report (parity, diagrams) |
 | 14 | `browser-tester.execution-report.schema.json` | BrowserTester-subagent | E2E report (scenarios, accessibility) |
 | 15 | `code-reviewer.verdict.schema.json` | CodeReviewer-subagent | Review verdict (validated_blocking_issues) |
+| 16 | `skill-proposal.schema.json` | Любой acting subagent | Заявка на кандидат-паттерн (подтверждается человеком перед промоушеном) |
+| 17 | `runtime-policy.schema.json` | Governance config | Схема для валидации `governance/runtime-policy.json` |
 
-> **Note:** "14 agent output schemas" + 1 shared `clarification-request.schema.json` = 15 файлов.
+> **Note:** 14 agent output схем + 3 shared/config схемы (`clarification-request`, `skill-proposal`, `runtime-policy`) = 17 файлов.
 
 ## Группы схем по назначению
 
@@ -66,6 +68,10 @@ flowchart LR
     end
     subgraph PostRev["Пост-ревью"]
         CR[code-reviewer.verdict]
+    end
+    subgraph Meta["Мета / Конфиг"]
+        SP[skill-proposal]
+        RP[runtime-policy]
     end
 ```
 

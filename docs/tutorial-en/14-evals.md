@@ -210,7 +210,7 @@ The CI gate requires all checks to pass. No partial passes.
 
 ## Exercises
 
-1. **(beginner)** Run `cd evals && npm test`. How many checks pass? Check `evals/out.txt` for the last run.
+1. **(beginner)** Run `cd evals && npm test`. How many checks pass? Optionally redirect the output to a local file (`npm test > out.txt`, which is gitignored) to review the last run.
 2. **(beginner)** Open `evals/scenarios/` — how many agent folders are there?
 3. **(intermediate)** Add a `ABSTAIN` verdict scenario for PlanAuditor. What JSON fields are required?
 4. **(intermediate)** What companion rule exists for `Orchestrator.agent.md`? Find the rule in `drift-checks.mjs`.

@@ -1581,3 +1581,226 @@ export function validatePatternFileLineBudget(patternsDir, maxLines = 100) {
 
   return { ok: errors.length === 0, errors };
 }
+
+// ── Check: doc-count-consistency ───────────────────────────────────────────────
+// Assert that canonical hardcoded counts stated in docs match the REAL number of
+// files on disk, so adding a schema/skill/governance/agent file forces the docs
+// to be updated rather than silently drifting.
+//
+// Design constraints (deliberate, to keep this maintainable and false-positive free):
+//   • Ground-truth counts are resolved at runtime from disk (no hardcoded truth).
+//   • Only a SMALL, explicit allowlist of docs is scanned — the README plus the
+//     tutorial index/quickstart/glossary files that state repo-wide totals.
+//   • Only a TIGHT, explicit set of canonical phrase patterns is matched. We do
+//     NOT build a general number extractor. Each pattern below is anchored to
+//     avoid known collisions, in particular:
+//       - "17 mirage patterns" / "17 patterns" / "17 паттернов" (AssumptionVerifier
+//         mirage count) must NOT be read as the skills-pattern count (18).
+//       - "10 portable skills, 6 agents" (claude-code plugin line in README) must
+//         NOT be read as the repo skills/agents totals.
+//     When a phrasing is ambiguous we prefer NOT matching it over guessing.
+const DOC_COUNT_ALLOWLIST_FILES = [
+  'README.md',
+  'docs/tutorial-en/README.md',
+  'docs/tutorial-ru/README.md',
+  'docs/tutorial-en/01-quickstart.md',
+  'docs/tutorial-ru/01-quickstart.md',
+  'docs/tutorial-en/17-glossary.md',
+  'docs/tutorial-ru/17-glossary.md',
+];
+
+// Each pattern's capture group 1 is the count asserted to equal truth[kind].
+// Patterns are intentionally narrow; see the collision notes above.
+const DOC_COUNT_PHRASE_PATTERNS = [
+  // schemas → schemas/*.json
+  { kind: 'schemas', re: /(\d+)\s+schemas\b/gi },                 // EN "17 schemas" / "17 schemas total"
+  { kind: 'schemas', re: /(\d+)\s+JSON-схем/gi },                 // RU "17 JSON-схем"
+  { kind: 'schemas', re: /(\d+)\s+схем\b/gi },                    // RU "17 схем" (\b excludes "схемы"/"схема")
+  // governance → governance/*.json
+  { kind: 'governance', re: /(\d+)\s+governance\b/gi },           // EN "7 governance files", RU "7 governance(-файлов)"
+  // skills → skills/patterns/*.md
+  { kind: 'skills', re: /(?<![≤<])(\d+)\s+skills\b(?!\s+per\b)/gi },// EN "18 skills" (NOT "10 portable skills", NOT "≤3 skills per phase")
+  { kind: 'skills', re: /pattern library \((\d+)\s+patterns\)/gi },// EN README "pattern library (18 patterns)"
+  // RU skills total: anchored (mirrors EN) to a same-line skill-library marker —
+  // "Skill library ... 18 паттернов" (tutorial README) and "patterns/ ... 18 паттернов"
+  // (quickstart tree). The Latin "skill"/"patterns/" anchor excludes a bare genitive
+  // mirage like "17 паттернов" (AssumptionVerifier taxonomy) from being misread as 18.
+  // Trailing (?![а-яё]) is the Cyrillic word boundary (JS \b is ASCII-only, so it never
+  // matches after Cyrillic) — prevents matching longer forms like "паттерновых".
+  { kind: 'skills', re: /(?:skill|patterns\/).*?(\d+)\s+паттернов(?![а-яё])/gi },
+  // agents → root *.agent.md
+  { kind: 'agents', re: /ControlFlow\s+\((\d+)\s+agents\)/gi },   // README "ControlFlow (13 agents)"
+  { kind: 'agents', re: /All\s+(\d+)\s+agents\b/gi },             // "All 13 agents"
+  { kind: 'agents', re: /(\d+)\s+agents in the ControlFlow system/gi },
+  { kind: 'agents', re: /(\d+)\s+agents,/g },                     // glossary "13 agents, 17 schemas, ..."
+  { kind: 'agents', re: /(\d+)\s+агентов\b/gi },                  // RU "13 агентов"
+];
+
+/**
+ * Pure helper: scan a doc's text for canonical count phrases and report any that
+ * disagree with the resolved ground-truth counts. Reports file:line + the matched
+ * phrase + expected vs found. Used by validateDocCountConsistency and exercised
+ * directly by the negative-path test with fabricated text.
+ * @param {string} fileLabel - Display label (workspace-relative path) for diagnostics.
+ * @param {string} text - Full file contents.
+ * @param {{schemas:number, skills:number, governance:number, agents:number}} truthCounts
+ * @returns {string[]} mismatch messages (empty when consistent)
+ */
+export function scanDocCountMismatches(fileLabel, text, truthCounts) {
+  const mismatches = [];
+  const lines = text.split('\n');
+  for (const { kind, re } of DOC_COUNT_PHRASE_PATTERNS) {
+    const truth = truthCounts[kind];
+    if (typeof truth !== 'number') continue;
+    for (let i = 0; i < lines.length; i++) {
+      re.lastIndex = 0;
+      let m;
+      while ((m = re.exec(lines[i])) !== null) {
+        const found = Number(m[1]);
+        if (found !== truth) {
+          mismatches.push(
+            `doc-count: ${fileLabel}:${i + 1} "${m[0].trim()}" states ${found} ${kind} but actual is ${truth}`
+          );
+        }
+      }
+    }
+  }
+  return mismatches;
+}
+
+/**
+ * Assert that canonical hardcoded counts in the allowlisted docs match the real
+ * number of files on disk. Ground-truth counts are resolved at runtime.
+ * @param {string} repoRoot - Absolute path to the repository root.
+ * @returns {{ ok: boolean, errors: string[], truth?: object }}
+ */
+export function validateDocCountConsistency(repoRoot) {
+  const errors = [];
+  let truth;
+  try {
+    truth = {
+      schemas: readdirSync(join(repoRoot, 'schemas')).filter(f => f.endsWith('.json')).length,
+      skills: readdirSync(join(repoRoot, 'skills', 'patterns')).filter(f => f.endsWith('.md')).length,
+      governance: readdirSync(join(repoRoot, 'governance')).filter(f => f.endsWith('.json')).length,
+      agents: readdirSync(repoRoot).filter(f => f.endsWith('.agent.md')).length,
+    };
+  } catch (e) {
+    return { ok: false, errors: [`doc-count: cannot resolve ground-truth counts — ${e.message}`] };
+  }
+
+  for (const rel of DOC_COUNT_ALLOWLIST_FILES) {
+    const abs = join(repoRoot, ...rel.split('/'));
+    let content;
+    try {
+      content = readFileSync(abs, 'utf8');
+    } catch {
+      errors.push(`doc-count: allowlisted doc not found: ${rel}`);
+      continue;
+    }
+    errors.push(...scanDocCountMismatches(rel, content, truth));
+  }
+
+  return { ok: errors.length === 0, errors, truth };
+}
+
+// ── Check: plugin-generation-parity ────────────────────────────────────────────
+// Enforce that the controlflow-codex generated output matches its generation
+// source (plugins/controlflow-shared-source) for every target the manifest marks
+// as verbatim/no-delta (codex => allowed_deltas:false). This is a cross-platform
+// Node mirror of plugins/controlflow-shared-source/scripts/sync-plugin-assets.ps1.
+//
+// Scope decisions (to avoid false drift):
+//   • Only the codex host is verified. claude_code declares allowed_deltas:true
+//     (legitimate divergence) and is intentionally NOT checked here.
+//   • The "managed" file set is derived from the manifest source_path directories
+//     in shared-source. Host-specific files that exist only in codex (e.g.
+//     skills/<id>/agents/openai.yaml) are NOT part of the shared-source managed
+//     set and are intentionally out of scope — exactly as the PowerShell validator
+//     iterates only the manifest-declared expected files.
+//   • If a target declares allowed_deltas:true or an override_path for codex, the
+//     manifest legitimately permits divergence, so that target is skipped.
+//   • Content hashes normalize line endings to \n before hashing to avoid CRLF
+//     false-positives across platforms / git autocrlf checkouts.
+
+function sha256Normalized(content) {
+  const normalized = String(content).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  return createHash('sha256').update(normalized, 'utf8').digest('hex');
+}
+
+function walkFilesRelPosix(dir) {
+  const out = [];
+  const rec = (cur, prefix) => {
+    for (const entry of readdirSync(cur, { withFileTypes: true })) {
+      const abs = join(cur, entry.name);
+      const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) rec(abs, rel);
+      else out.push(rel);
+    }
+  };
+  rec(dir, '');
+  return out.sort();
+}
+
+/**
+ * Verify codex generated-output parity against the shared-source generation source.
+ * @param {string} pluginsRoot - Absolute path to the plugins/ directory.
+ * @returns {{ ok: boolean, errors: string[], checked: number }}
+ */
+export function validatePluginGenerationParity(pluginsRoot) {
+  const errors = [];
+  const sharedRoot = join(pluginsRoot, 'controlflow-shared-source');
+  const codexRoot = join(pluginsRoot, 'controlflow-codex');
+  const manifestPath = join(sharedRoot, 'generation-manifest.json');
+
+  let manifest;
+  try {
+    manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  } catch (e) {
+    return { ok: false, errors: [`plugin-parity: cannot read generation-manifest.json — ${e.message}`], checked: 0 };
+  }
+  if (!Array.isArray(manifest.targets) || manifest.targets.length === 0) {
+    return { ok: false, errors: ['plugin-parity: manifest.targets[] missing or empty'], checked: 0 };
+  }
+
+  let checked = 0;
+  for (const target of manifest.targets) {
+    const codexOut = target && target.host_outputs && target.host_outputs.codex;
+    if (!codexOut) {
+      errors.push(`plugin-parity: target "${target && target.source_path}" missing codex host output`);
+      continue;
+    }
+    // Only verify verbatim (no-delta) codex outputs.
+    if (codexOut.allowed_deltas !== false) continue;
+    if (codexOut.override_path) continue;
+    if (typeof target.source_path !== 'string' || typeof codexOut.dest_path !== 'string') {
+      errors.push(`plugin-parity: target missing source_path/dest_path string`);
+      continue;
+    }
+
+    const srcDir = join(sharedRoot, ...target.source_path.split('/'));
+    const destDir = join(codexRoot, ...codexOut.dest_path.split('/'));
+    if (!existsSync(srcDir)) {
+      errors.push(`plugin-parity: shared-source dir missing: ${target.source_path}`);
+      continue;
+    }
+
+    const managed = walkFilesRelPosix(srcDir);
+    for (const rel of managed) {
+      checked++;
+      const destFile = join(destDir, ...rel.split('/'));
+      if (!existsSync(destFile)) {
+        errors.push(`plugin-parity: codex missing managed file ${codexOut.dest_path}/${rel}`);
+        continue;
+      }
+      const srcHash = sha256Normalized(readFileSync(join(srcDir, ...rel.split('/')), 'utf8'));
+      const destHash = sha256Normalized(readFileSync(destFile, 'utf8'));
+      if (srcHash !== destHash) {
+        errors.push(
+          `plugin-parity: codex drift at ${codexOut.dest_path}/${rel} (content hash mismatch vs shared-source ${target.source_path}/${rel})`
+        );
+      }
+    }
+  }
+
+  return { ok: errors.length === 0, errors, checked };
+}

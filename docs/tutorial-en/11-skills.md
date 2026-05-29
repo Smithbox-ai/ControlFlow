@@ -75,7 +75,7 @@ sequenceDiagram
     E->>E: apply patterns
 ```
 
-**Why just in time?** Skills add context to the agent's prompt. Loading all 11 skills upfront wastes tokens and creates noise. Only load what is needed for the current phase.
+**Why just in time?** Skills add context to the agent's prompt. Loading all 18 skills upfront wastes tokens and creates noise. Only load what is needed for the current phase.
 
 ## Key Skills Deep Dive
 

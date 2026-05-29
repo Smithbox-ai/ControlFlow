@@ -50,7 +50,7 @@ Practice tasks that reinforce the key concepts from all previous chapters. Group
 2. Run `cd evals && npm test`.
 3. Count the total number of checks.
 4. Which pass runs the most checks?
-5. Open `evals/out.txt` — what was the result of the last run?
+5. Optionally redirect the run to a local file (`cd evals && npm test > out.txt`, which is gitignored) — what was the result?
 
 ---
 

@@ -206,7 +206,7 @@ Authoritative policy documents in `docs/agent-engineering/`:
 
 ## Review Questions
 
-1. Name the 5 governance files.
+1. Name the 7 governance files.
 2. What does "governance beats prompt" mean?
 3. Which file controls PLAN_REVIEW trigger conditions?
 4. Which file controls tool access?

@@ -9,11 +9,11 @@ Get oriented in the repository within 30 minutes. After this chapter you can ope
 ```text
 ControlFlow/
 ├── *.agent.md              ← 13 agent prompt files (P.A.R.T. structure)
-├── schemas/                ← 15 JSON schemas (inter-agent contracts)
-├── governance/             ← 5 JSON configs (permissions, policies, routing)
+├── schemas/                ← 17 JSON schemas (inter-agent contracts)
+├── governance/             ← 7 JSON configs (permissions, policies, routing)
 ├── skills/
 │   ├── index.md            ← Skill registry
-│   └── patterns/           ← 11 reusable domain patterns
+│   └── patterns/           ← 18 reusable domain patterns
 ├── evals/                  ← Offline validation suite
 │   ├── validate.mjs
 │   ├── scenarios/          ← Regression fixtures

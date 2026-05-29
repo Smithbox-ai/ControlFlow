@@ -25,9 +25,9 @@ The repository delivers:
 | Artifact | Count | Purpose |
 |----------|-------|---------|
 | Agent prompt files (`*.agent.md`) | 13 | Define role, scope, contracts, and tools for each agent |
-| JSON schemas (`schemas/*.json`) | 15 | Formal contracts for inter-agent communication |
-| Governance configs (`governance/*.json`) | 5 | Tool permissions, retry budgets, tier routing, model mapping |
-| Skill patterns (`skills/patterns/*.md`) | 11 | Reusable domain expertise loaded just-in-time |
+| JSON schemas (`schemas/*.json`) | 17 | Formal contracts for inter-agent communication |
+| Governance configs (`governance/*.json`) | 7 | Tool permissions, retry budgets, tier routing, model mapping |
+| Skill patterns (`skills/patterns/*.md`) | 18 | Reusable domain expertise loaded just-in-time |
 | Eval harness (`evals/`) | ~410 checks | Offline validation of schema compliance and behavioral invariants |
 | Documentation (`docs/`) | — | Engineering policies, tutorials, architecture docs |
 

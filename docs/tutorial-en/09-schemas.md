@@ -2,7 +2,7 @@
 
 ## Why this chapter
 
-Understand **that schemas are contracts between agents**, not just JSON files. After this chapter you will know the purpose of each of the 15 schemas and where to find their key fields.
+Understand **that schemas are contracts between agents**, not just JSON files. After this chapter you will know the purpose of each of the 17 schemas and where to find their key fields.
 
 ## What a Schema Is in ControlFlow
 
@@ -33,8 +33,10 @@ A schema (`schemas/*.json`) is a **JSON Schema (draft 2020-12)** that fixes the 
 | 13 | `technical-writer.execution-report.schema.json` | TechnicalWriter-subagent | Docs report (parity, diagrams) |
 | 14 | `browser-tester.execution-report.schema.json` | BrowserTester-subagent | E2E report (scenarios, accessibility) |
 | 15 | `code-reviewer.verdict.schema.json` | CodeReviewer-subagent | Review verdict (validated_blocking_issues) |
+| 16 | `skill-proposal.schema.json` | Any acting subagent | Candidate skill-pattern proposal (human-approved before promotion) |
+| 17 | `runtime-policy.schema.json` | Governance config | Schema validating `governance/runtime-policy.json` |
 
-> **Note:** "14 agent output schemas" + 1 shared `clarification-request.schema.json` = 15 files.
+> **Note:** 14 agent output schemas + 3 shared/config schemas (`clarification-request`, `skill-proposal`, `runtime-policy`) = 17 files.
 
 ## Schema Groups by Purpose
 
@@ -66,6 +68,10 @@ flowchart LR
     end
     subgraph PostRev["Post-Review"]
         CR[code-reviewer.verdict]
+    end
+    subgraph Meta["Meta / Config"]
+        SP[skill-proposal]
+        RP[runtime-policy]
     end
 ```
 

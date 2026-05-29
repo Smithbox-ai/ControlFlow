@@ -9,16 +9,18 @@
 ```text
 ControlFlow/
 ├── *.agent.md                       # 13 агентов (промпты)
-├── schemas/                         # 15 JSON-схем (контракты)
-├── governance/                      # 5 файлов политик
+├── schemas/                         # 17 JSON-схем (контракты)
+├── governance/                      # 7 файлов политик
 │   ├── agent-grants.json
 │   ├── tool-grants.json
 │   ├── runtime-policy.json
 │   ├── model-routing.json
-│   └── rename-allowlist.json
+│   ├── rename-allowlist.json
+│   ├── canonical-source-matrix.json
+│   └── project-context-registry.json
 ├── skills/
 │   ├── index.md                     # каталог skill-паттернов
-│   └── patterns/                    # 11 паттернов
+│   └── patterns/                    # 18 паттернов
 ├── evals/                           # оффлайн-проверки
 │   ├── package.json                 # npm test → канонический gate
 │   ├── validate.mjs                 # структурный проход

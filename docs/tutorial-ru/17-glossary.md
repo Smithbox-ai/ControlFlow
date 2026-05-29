@@ -74,7 +74,7 @@
 
 **Gate event** — Структурное событие на переходе Orchestrator-а. Schema: `orchestrator.gate-event.schema.json`. → [Глава 05](05-orchestration.md), [Глава 09](09-schemas.md).
 
-**Governance** — 5 JSON-файлов в `governance/`. Single source of truth для прав и runtime-параметров. → [Глава 10](10-governance.md).
+**Governance** — 7 JSON-файлов в `governance/`. Single source of truth для прав и runtime-параметров. → [Глава 10](10-governance.md).
 
 **Handoff** — Передача артефакта от одного агента другому через `plan_path` или подобное. Не implicit approval. → [Глава 06](06-planning.md), [Глава 15](15-case-studies.md).
 

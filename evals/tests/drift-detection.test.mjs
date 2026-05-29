@@ -51,6 +51,9 @@ import {
   validateToolCountLabelConsistency,
   validatePatternFileLineBudget,
   countTextLines,
+  scanDocCountMismatches,
+  validateDocCountConsistency,
+  validatePluginGenerationParity,
 } from '../drift-checks.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -1541,6 +1544,147 @@ console.log('\n=== Pattern-file line budget (skills/patterns/*.md ≤100 lines) 
     );
   } finally {
     rmSync(tmpRoot, { recursive: true, force: true });
+  }
+}
+
+// ──────────────────────────────────────────────
+// Doc-count consistency — canonical doc totals match files on disk
+// ──────────────────────────────────────────────
+console.log('\n=== Doc-count consistency (canonical doc totals vs files on disk) ===');
+{
+  const ROOT = join(__dirname, '..', '..');
+
+  // Positive (real repo): allowlisted docs already state correct totals (Wave 1 fix).
+  const realResult = validateDocCountConsistency(ROOT);
+  check(
+    'DC1: real docs state counts matching the files on disk',
+    realResult.ok === true,
+    realResult.ok ? '' : `errors=${JSON.stringify(realResult.errors)}`
+  );
+
+  // Synthetic positive: fabricated text with correct counts → no mismatch.
+  const truth = { schemas: 17, skills: 18, governance: 7, agents: 13 };
+  const goodText = [
+    'ControlFlow (13 agents)',
+    '13 agents, 17 schemas, 7 governance files, 18 skills.',
+    '17 JSON-схем и 18 паттернов; 13 агентов; 7 governance.',
+  ].join('\n');
+  const good = scanDocCountMismatches('synthetic-good.md', goodText, truth);
+  check(
+    'DC2: synthetic text with correct counts → no mismatch',
+    good.length === 0,
+    `errors=${JSON.stringify(good)}`
+  );
+
+  // Negative (synthetic): a wrong count in fabricated text is caught with file:line.
+  const badText = [
+    'intro line',
+    '13 agents, 99 schemas, 7 governance files, 18 skills.',
+  ].join('\n');
+  const bad = scanDocCountMismatches('synthetic-bad.md', badText, truth);
+  check(
+    'DC3: synthetic "99 schemas" with truth 17 → drift caught with line + expected/found',
+    bad.length === 1
+      && bad[0].includes('synthetic-bad.md:2')
+      && bad[0].includes('99 schemas')
+      && bad[0].includes('actual is 17'),
+    `errors=${JSON.stringify(bad)}`
+  );
+
+  // Negative guard: the AssumptionVerifier mirage phrasing must NOT be misread as the
+  // skills-pattern total (18). The RU genitive "17 паттернов" is the REAL collision case
+  // (identical surface form to the allowlisted "18 паттернов" skills phrasing) — the
+  // anchored RU pattern ignores it because no same-line "skill"/"patterns/" marker precedes.
+  const mirageText = 'AssumptionVerifier uses 17 mirage patterns / 17 patterns / таксономия из 17 паттернов.';
+  const mirage = scanDocCountMismatches('synthetic-mirage.md', mirageText, truth);
+  check(
+    'DC4: genitive "17 паттернов" mirage not flagged as skills-count drift',
+    mirage.length === 0,
+    `errors=${JSON.stringify(mirage)}`
+  );
+
+  // Positive guard: a WRONG skills total in the real allowlisted RU phrasing IS still
+  // caught — proves the anchor narrows false positives without losing real coverage.
+  const wrongRuText = 'Skill library, протокол выбора (≤3 на фазу), 17 паттернов';
+  const wrongRu = scanDocCountMismatches('synthetic-wrong-ru.md', wrongRuText, truth);
+  check(
+    'DC5: anchored RU "Skill library ... 17 паттернов" with truth 18 → drift caught',
+    wrongRu.length === 1
+      && wrongRu[0].includes('synthetic-wrong-ru.md:1')
+      && wrongRu[0].includes('17 паттернов')
+      && wrongRu[0].includes('actual is 18'),
+    `errors=${JSON.stringify(wrongRu)}`
+  );
+}
+
+// ──────────────────────────────────────────────
+// Plugin generation parity — controlflow-codex matches shared-source (verbatim)
+// ──────────────────────────────────────────────
+console.log('\n=== Plugin generation parity (controlflow-codex == shared-source, no deltas) ===');
+{
+  const PLUGINS_ROOT = join(__dirname, '..', '..', 'plugins');
+
+  // Positive (real repo): codex output is byte-identical (line-ending normalized)
+  // to the shared-source managed file set.
+  const realResult = validatePluginGenerationParity(PLUGINS_ROOT);
+  check(
+    `PP1: real controlflow-codex matches shared-source (checked ${realResult.checked} managed files)`,
+    realResult.ok === true && realResult.checked > 0,
+    realResult.ok ? '' : `errors=${JSON.stringify(realResult.errors)}`
+  );
+
+  // Synthetic positive: matching content with CRLF vs LF → still parity (normalized).
+  const tmpOk = join(tmpdir(), `cf-plugin-parity-ok-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+  mkdirSync(join(tmpOk, 'controlflow-shared-source', 'skills', 'demo'), { recursive: true });
+  mkdirSync(join(tmpOk, 'controlflow-codex', 'skills', 'demo'), { recursive: true });
+  try {
+    const manifest = {
+      version: '1.0.0',
+      targets: [
+        { source_path: 'skills', host_outputs: { codex: { dest_path: 'skills', allowed_deltas: false } } },
+      ],
+    };
+    writeFileSync(join(tmpOk, 'controlflow-shared-source', 'generation-manifest.json'), JSON.stringify(manifest));
+    writeFileSync(join(tmpOk, 'controlflow-shared-source', 'skills', 'demo', 'SKILL.md'), 'line one\nline two\n');
+    // Same content, CRLF line endings + a codex-only host file that must be ignored.
+    writeFileSync(join(tmpOk, 'controlflow-codex', 'skills', 'demo', 'SKILL.md'), 'line one\r\nline two\r\n');
+    writeFileSync(join(tmpOk, 'controlflow-codex', 'skills', 'demo', 'openai.yaml'), 'host: codex\n');
+    const okRes = validatePluginGenerationParity(tmpOk);
+    check(
+      'PP2: matching content (CRLF vs LF) + codex-only host file → parity holds',
+      okRes.ok === true && okRes.checked === 1,
+      `ok=${okRes.ok}, checked=${okRes.checked}, errors=${JSON.stringify(okRes.errors)}`
+    );
+  } finally {
+    rmSync(tmpOk, { recursive: true, force: true });
+  }
+
+  // Negative (synthetic): mismatching content + a missing managed file → drift caught.
+  // No real plugin files are mutated.
+  const tmpBad = join(tmpdir(), `cf-plugin-parity-bad-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+  mkdirSync(join(tmpBad, 'controlflow-shared-source', 'skills'), { recursive: true });
+  mkdirSync(join(tmpBad, 'controlflow-codex', 'skills'), { recursive: true });
+  try {
+    const manifest = {
+      version: '1.0.0',
+      targets: [
+        { source_path: 'skills', host_outputs: { codex: { dest_path: 'skills', allowed_deltas: false } } },
+      ],
+    };
+    writeFileSync(join(tmpBad, 'controlflow-shared-source', 'generation-manifest.json'), JSON.stringify(manifest));
+    writeFileSync(join(tmpBad, 'controlflow-shared-source', 'skills', 'a.md'), 'source content\n');
+    writeFileSync(join(tmpBad, 'controlflow-shared-source', 'skills', 'b.md'), 'managed but absent in codex\n');
+    writeFileSync(join(tmpBad, 'controlflow-codex', 'skills', 'a.md'), 'TAMPERED content\n');
+    const badRes = validatePluginGenerationParity(tmpBad);
+    check(
+      'PP3: tampered content + missing managed file → drift caught with relative paths',
+      badRes.ok === false
+        && badRes.errors.some(e => e.includes('skills/a.md') && e.includes('hash mismatch'))
+        && badRes.errors.some(e => e.includes('skills/b.md') && e.includes('missing managed file')),
+      `ok=${badRes.ok}, errors=${JSON.stringify(badRes.errors)}`
+    );
+  } finally {
+    rmSync(tmpBad, { recursive: true, force: true });
   }
 }
 
