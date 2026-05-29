@@ -75,7 +75,7 @@ flowchart TD
 
 Open `CoreImplementer-subagent.agent.md`. You will see:
 
-- **YAML frontmatter** — `description`, `tools`, `model`, `model_role`.
+- **YAML frontmatter** — `description`, `tools`, `model_role` (the four pinned agents also carry a `model:` line; auto agents like CoreImplementer omit it so Copilot's picker selects the model).
 - **## Prompt** — mission, scope, contracts, state machine.
 - **## Archive** — context compaction, memory, state tracking.
 - **## Resources** — canonical schemas and docs.

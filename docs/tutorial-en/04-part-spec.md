@@ -77,21 +77,22 @@ Must be **synchronized** with `governance/tool-grants.json` and `governance/agen
 
 ## Frontmatter
 
-Before the P.A.R.T. sections there is always YAML frontmatter. Minimum required fields:
+Before the P.A.R.T. sections there is always YAML frontmatter. Required fields:
 
 ```yaml
 ---
 description: Brief description of the agent's role
 agents: [list of agents this agent may delegate to; empty for non-orchestrators]
 tools: [list of MCP tools]
-model: GPT-5.4 (copilot)
-model_role: research-capable
+model: GPT-5.5 (copilot)
+model_role: capable-planner
 ---
 ```
 
 - **`description`** — appears in the VS Code Copilot Chat UI.
 - **`tools`** — must match `governance/tool-grants.json` for this agent.
 - **`model_role`** — logical role from `governance/model-routing.json` (see [Chapter 10](10-governance.md)).
+- **`model`** — required ONLY for pinned agents (Orchestrator, Planner, PlanAuditor, AssumptionVerifier); it is OMITTED for auto (default) agents so Copilot's picker selects the model. When present, it must equal the role's `primary`. The example above is the pinned `capable-planner` case; an auto agent omits `model:` and keeps just its `model_role:` (for example, `model_role: research-capable`).
 
 ## Minimal Example
 
@@ -100,11 +101,12 @@ model_role: research-capable
 description: Demo agent that does nothing useful
 agents: []
 tools: [search/codebase, read/file]
-model: GPT-5.4 (copilot)
 model_role: research-capable
 ---
 
 You are DemoAgent, a minimal example for tutorial purposes.
+
+<!-- DemoAgent is an auto (default) agent: it omits `model:` so Copilot's picker selects the model. A pinned agent would instead add a matching `model:` line, e.g. `model: GPT-5.5 (copilot)` with `model_role: capable-planner`. -->
 
 ## Prompt
 
@@ -161,7 +163,7 @@ Drop file content after summarization; keep only the summary.
 |-------|----------------|
 | Section order | Sections P → A → R → T in the correct order. |
 | Section presence | All 4 sections are present. |
-| Frontmatter completeness | Fields `description`, `tools`, `model`, `model_role` are populated. |
+| Frontmatter completeness | Fields `description`, `tools`, `model_role` are populated; `model` is present only for pinned agents and absent for auto (default) agents. |
 | Tools sync | `tools:` frontmatter ↔ `governance/tool-grants.json`. |
 | Schema references | Every cited schema exists in `schemas/`. |
 | PreFlect presence | Every agent references `skills/patterns/preflect-core.md`. |

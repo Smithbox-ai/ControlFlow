@@ -77,21 +77,22 @@
 
 ## Frontmatter
 
-Перед секциями P.A.R.T. всегда идёт YAML-frontmatter. Минимальный набор полей:
+Перед секциями P.A.R.T. всегда идёт YAML-frontmatter. Обязательные поля:
 
 ```yaml
 ---
 description: Краткое описание роли агента
 agents: [список агентов, к которым этот может делегировать; для не-orchestrator — пустой]
 tools: [список MCP-тулз]
-model: GPT-5.4 (copilot)
-model_role: research-capable
+model: GPT-5.5 (copilot)
+model_role: capable-planner
 ---
 ```
 
 - **`description`** — попадает в UI VS Code Copilot Chat.
 - **`tools`** — должен соответствовать `governance/tool-grants.json` для этого агента.
 - **`model_role`** — логическая роль из `governance/model-routing.json` (см. [главу 10](10-governance.md)).
+- **`model`** — требуется ТОЛЬКО для закреплённых (pinned) агентов (Orchestrator, Planner, PlanAuditor, AssumptionVerifier); для auto-агентов (по умолчанию) он ОПУСКАЕТСЯ, и модель выбирает picker Copilot. Если поле присутствует, оно должно совпадать с `primary` роли. Пример выше — закреплённый случай `capable-planner`; auto-агент опускает `model:` и оставляет только свой `model_role:` (например, `model_role: research-capable`).
 
 ## Полный мини-пример
 
@@ -100,11 +101,12 @@ model_role: research-capable
 description: Demo agent that does nothing useful
 agents: []
 tools: [search/codebase, read/file]
-model: GPT-5.4 (copilot)
 model_role: research-capable
 ---
 
 You are DemoAgent, a minimal example for tutorial purposes.
+
+<!-- DemoAgent — auto-агент (по умолчанию): он опускает `model:`, и модель выбирает picker Copilot. Закреплённый агент вместо этого добавил бы совпадающую строку `model:`, например `model: GPT-5.5 (copilot)` с `model_role: capable-planner`. -->
 
 ## Prompt
 
@@ -161,7 +163,7 @@ Drop file content after summarization; keep only the summary.
 |----------|----------|
 | Section order | Секции P → A → R → T в правильном порядке. |
 | Section presence | Все 4 секции присутствуют. |
-| Frontmatter completeness | Поля `description`, `tools`, `model`, `model_role` заполнены. |
+| Frontmatter completeness | Поля `description`, `tools`, `model_role` заполнены; `model` присутствует только у закреплённых агентов и отсутствует у auto-агентов (по умолчанию). |
 | Tools sync | `tools:` frontmatter ↔ `governance/tool-grants.json`. |
 | Schema references | Каждая упомянутая схема существует. |
 | PreFlect presence | Каждый агент содержит ссылку на `skills/patterns/preflect-core.md`. |

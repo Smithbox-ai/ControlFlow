@@ -67,6 +67,9 @@ export function validateModelRole(agentFrontmatter, routingJson) {
 
 /**
  * Validate direct-invocation frontmatter defaults against governance role primary.
+ * Pinned agents (listed in routingJson.pinned_agents) MUST declare a frontmatter
+ * `model:` equal to the role top-level primary. Non-pinned (auto) agents MUST omit
+ * `model:` entirely so Copilot's picker selects the model at dispatch time.
  * This intentionally does not compare against tier-specific by_tier overrides;
  * those are used only when internal dispatch passes the outer tool-call model.
  * @param {string} agentFileName - Agent filename for diagnostics.
@@ -80,9 +83,6 @@ export function validateFrontmatterModelDefaults(agentFileName, agentFrontmatter
   const model = parseFrontmatterScalar(scope, 'model');
   const role = parseFrontmatterScalar(scope, 'model_role');
 
-  if (!model) {
-    errors.push(`${agentFileName}: model key missing from frontmatter`);
-  }
   if (!role) {
     errors.push(`${agentFileName}: model_role key missing from frontmatter`);
     return { ok: false, errors };
@@ -95,11 +95,21 @@ export function validateFrontmatterModelDefaults(agentFileName, agentFrontmatter
     return { ok: false, errors };
   }
 
-  const defaultPrimary = roleConfig.primary;
-  if (typeof defaultPrimary !== 'string' || defaultPrimary.length === 0) {
-    errors.push(`${agentFileName}: role "${role}" is missing a top-level primary model`);
-  } else if (model && model !== defaultPrimary) {
-    errors.push(`${agentFileName}: frontmatter model "${model}" must match role "${role}" top-level primary "${defaultPrimary}" for direct invocation fallback; tier-specific by_tier overrides are only for internal dispatch`);
+  const pinnedAgents = Array.isArray(routingJson?.pinned_agents) ? routingJson.pinned_agents : [];
+  const isPinned = pinnedAgents.includes(agentFileName);
+
+  if (isPinned) {
+    if (!model) {
+      errors.push(`${agentFileName}: model key missing from frontmatter`);
+    }
+    const defaultPrimary = roleConfig.primary;
+    if (typeof defaultPrimary !== 'string' || defaultPrimary.length === 0) {
+      errors.push(`${agentFileName}: role "${role}" is missing a top-level primary model`);
+    } else if (model && model !== defaultPrimary) {
+      errors.push(`${agentFileName}: frontmatter model "${model}" must match role "${role}" top-level primary "${defaultPrimary}" for direct invocation fallback; tier-specific by_tier overrides are only for internal dispatch`);
+    }
+  } else if (model) {
+    errors.push(`${agentFileName}: model key present on non-pinned (auto) agent '${agentFileName}'; auto agents must omit 'model:' so Copilot's picker selects the model`);
   }
 
   return { ok: errors.length === 0, errors };

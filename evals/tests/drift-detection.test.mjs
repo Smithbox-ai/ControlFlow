@@ -137,11 +137,19 @@ const _testRoutingJson = {
 }
 
 // Negative/positive coverage for direct-invocation frontmatter defaults.
-// Frontmatter `model:` must match the role top-level primary, but must not be
-// forced to match tier-specific by_tier overrides used for internal dispatch.
+// Semantics key off pinned_agents membership: pinned agents must declare a
+// frontmatter `model:` matching the role top-level primary; non-pinned (auto)
+// agents must omit `model:` entirely so Copilot's picker selects it.
 {
   const routingJson = {
+    pinned_agents: ['Orchestrator.agent.md'],
     roles: {
+      'orchestration-capable': {
+        primary: 'Claude Opus 4.8 (copilot)',
+        by_tier: {
+          LARGE: { primary: 'GPT-5.5 (copilot)' },
+        },
+      },
       'capable-implementer': {
         primary: 'Claude Sonnet 4.6 (copilot)',
         by_tier: {
@@ -152,26 +160,64 @@ const _testRoutingJson = {
     },
   };
 
-  const mismatch = validateFrontmatterModelDefaults(
-    'CoreImplementer-subagent.agent.md',
-    '---\nmodel: GPT-5.5 (copilot)\nmodel_role: capable-implementer\n---\n## Prompt\n',
+  // (a) PINNED agent WITHOUT model: → fail (missing model)
+  const pinnedMissingModel = validateFrontmatterModelDefaults(
+    'Orchestrator.agent.md',
+    '---\nmodel_role: orchestration-capable\n---\n## Prompt\n',
     routingJson
   );
   check(
-    'Test E: frontmatter model differing from role default primary -> validation fails',
-    mismatch.ok === false && mismatch.errors.some(e => e.includes('top-level primary')),
-    `ok=${mismatch.ok}, errors=${JSON.stringify(mismatch.errors)}`
+    'Test E: pinned agent missing frontmatter model -> validation fails',
+    pinnedMissingModel.ok === false && pinnedMissingModel.errors.some(e => e.includes('model key missing')),
+    `ok=${pinnedMissingModel.ok}, errors=${JSON.stringify(pinnedMissingModel.errors)}`
   );
 
-  const tierOverrideAllowed = validateFrontmatterModelDefaults(
+  // (b) PINNED agent WITH model: !== role primary → fail ("top-level primary" mismatch)
+  const pinnedMismatch = validateFrontmatterModelDefaults(
+    'Orchestrator.agent.md',
+    '---\nmodel: GPT-5.5 (copilot)\nmodel_role: orchestration-capable\n---\n## Prompt\n',
+    routingJson
+  );
+  check(
+    'Test F: pinned agent model differing from role default primary -> validation fails',
+    pinnedMismatch.ok === false && pinnedMismatch.errors.some(e => e.includes('top-level primary')),
+    `ok=${pinnedMismatch.ok}, errors=${JSON.stringify(pinnedMismatch.errors)}`
+  );
+
+  // (c) PINNED agent WITH model: === role primary → PASS
+  const pinnedMatch = validateFrontmatterModelDefaults(
+    'Orchestrator.agent.md',
+    '---\nmodel: Claude Opus 4.8 (copilot)\nmodel_role: orchestration-capable\n---\n## Prompt\n',
+    routingJson
+  );
+  check(
+    'Test G: pinned agent model matches role default primary despite by_tier overrides -> validation passes',
+    pinnedMatch.ok === true,
+    `ok=${pinnedMatch.ok}, errors=${JSON.stringify(pinnedMatch.errors)}`
+  );
+
+  // (d) NON-pinned agent WITH model: present → fail (model must be absent on auto agent)
+  const autoWithModel = validateFrontmatterModelDefaults(
     'CoreImplementer-subagent.agent.md',
     '---\nmodel: Claude Sonnet 4.6 (copilot)\nmodel_role: capable-implementer\n---\n## Prompt\n',
     routingJson
   );
   check(
-    'Test F: frontmatter model matches role default primary despite by_tier overrides -> validation passes',
-    tierOverrideAllowed.ok === true,
-    `ok=${tierOverrideAllowed.ok}, errors=${JSON.stringify(tierOverrideAllowed.errors)}`
+    'Test H: non-pinned (auto) agent with frontmatter model present -> validation fails',
+    autoWithModel.ok === false && autoWithModel.errors.some(e => e.includes('non-pinned (auto) agent')),
+    `ok=${autoWithModel.ok}, errors=${JSON.stringify(autoWithModel.errors)}`
+  );
+
+  // (e) NON-pinned agent WITHOUT model: → PASS
+  const autoNoModel = validateFrontmatterModelDefaults(
+    'CoreImplementer-subagent.agent.md',
+    '---\nmodel_role: capable-implementer\n---\n## Prompt\n',
+    routingJson
+  );
+  check(
+    'Test I: non-pinned (auto) agent omitting frontmatter model -> validation passes',
+    autoNoModel.ok === true,
+    `ok=${autoNoModel.ok}, errors=${JSON.stringify(autoNoModel.errors)}`
   );
 }
 

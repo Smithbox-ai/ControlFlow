@@ -49,7 +49,7 @@
   },
 
   "model_dispatch": {
-    "default_mode": "deterministic",
+    "default_mode": "auto",
     "auto_mode_allow_outer_model_omission": true,
     "auto_mode_requires_runtime_marker": true
   },

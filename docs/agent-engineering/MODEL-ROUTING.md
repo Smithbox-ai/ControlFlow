@@ -37,31 +37,44 @@ The 10 roles are:
 | `fast-readonly` | CodeMapper |
 | `research-capable` | Researcher |
 
-### Control-Plane Premium Pinning
+### Default Auto Selection with Selective Pinning
 
-While internal subagent dispatch resolves models dynamically, top-level user entry points (handling the initial chat request) execute using the literal `model:` frontmatter value. The operating mode ensures premium requests are spent on agents that decide quality at the control plane:
+Copilot **Auto** is the default model-selection mode for every agent. Auto agents omit the `model:` frontmatter line entirely (omission is the only supported way to defer to the picker — there is no `model: auto` sentinel), so VS Code Copilot's model picker chooses the runtime model for both direct invocation and orchestrated `runSubagent` dispatch. Deterministic/pinned selection is the **opt-in override** for a small set of control-plane agents whose model choice decides output quality.
 
-- `Planner` is pinned to `GPT-5.5` so plan quality, decomposition, and risk framing use the strongest available planning model. The planner fallback ordering is governed by `governance/model-routing.json` via `roles.capable-planner` (primary: `GPT-5.5 (copilot)`, fallback 1: `Claude Opus 4.8 (copilot)`, fallback 2: `GPT-5.4 mini (copilot)`). This workflow preserves the scalar `model:` frontmatter in `Planner.agent.md` and does not imply list-valued frontmatter is required.
-- `CodeReviewer`, `PlanAuditor`, and `AssumptionVerifier` rely on premium adversarial reviewers (`Claude Opus 4.7`) for direct invocation and for `LARGE` or high-risk orchestrated dispatch; ordinary `TRIVIAL`, `SMALL`, and `MEDIUM` orchestrated dispatch is tier-aware as described in [Fallback semantics](#fallback-semantics).
-- `CodeMapper` is pinned to `Claude Sonnet 4.6` for capable, cost-effective codebase discovery (1× premium multiplier). `ExecutabilityVerifier`, `Orchestrator`, and the implementation agents typically resolve to contained defaults (`Claude Sonnet 4.6`, `GPT-5.4`, `GPT-5.4 mini`, `Gemini 3.1 Pro`) to balance capability and premium usage.
+Exactly four agents are pinned, listed in the top-level `pinned_agents` array of `governance/model-routing.json`:
+
+- `Orchestrator` — pinned to `Claude Opus 4.8 (copilot)` (role `orchestration-capable`, `cost_tier: high`). This pin is required by the tier-floor invariant below, so that no pinned subagent it dispatches is capped down.
+- `Planner` — pinned to `GPT-5.5 (copilot)` (role `capable-planner`) so plan quality, decomposition, and risk framing use the strongest available planning model. The planner fallback ordering is governed by `roles.capable-planner` (primary: `GPT-5.5 (copilot)`, fallback 1: `Claude Opus 4.8 (copilot)`, fallback 2: `GPT-5.4 mini (copilot)`). This preserves the scalar `model:` frontmatter in `Planner.agent.md` and does not imply list-valued frontmatter is required.
+- `PlanAuditor-subagent` and `AssumptionVerifier-subagent` — pinned to `Claude Opus 4.8 (copilot)` (role `capable-reviewer`) for premium adversarial review on direct invocation and orchestrated dispatch.
+
+The remaining nine agents — including `CodeReviewer-subagent`, `CodeMapper-subagent`, `ExecutabilityVerifier-subagent`, and the implementation agents — are Auto: they keep `model_role:` but omit `model:`, and Copilot's picker selects their runtime model. Pinning is keyed by agent **filename** in `pinned_agents`, not by role, so `PlanAuditor`/`AssumptionVerifier` stay on the shared `capable-reviewer` role while the (Auto) `CodeReviewer` on the same role needs no role split. For tier-aware `capable-reviewer` resolution under pinned/deterministic dispatch, see [Fallback semantics](#fallback-semantics).
+
+> **Advisory/inert fields for Auto agents.** For any non-pinned (Auto) agent, the role's `primary`, `fallbacks`, `by_tier`, `cost_tier`, and `reasoning_effort_hint` fields are **advisory reference only** — Copilot's model picker selects the model at runtime and these fields are not applied. They take effect only if the agent is later pinned (added to `pinned_agents`).
 
 This yields a pragmatic split:
 
-- Premium tokens are spent on planning and on finding flaws.
-- Routine orchestration and implementation stay cheaper, managed through dynamic subagent dispatch logic.
+- Premium tokens are spent on planning and on finding flaws (Planner, the two pinned reviewers), plus the Orchestrator pin that floors their tier.
+- Routine orchestration, implementation, and read-only work defer to Auto and let Copilot's picker choose.
 
-During the compatibility window, agents carry a `model_role:` line in their frontmatter **alongside** the existing `model:` line:
+Pinned agents carry both a `model:` line and a `model_role:` line in their frontmatter; Auto agents carry `model_role:` alone and omit `model:`:
 
 ```yaml
 ---
 description: '...'
 tools: [...]
-model: GPT-5.4 mini (copilot)
-model_role: browser-testing
+model: GPT-5.5 (copilot)
+model_role: capable-planner
 ---
 ```
 
-Both lines coexist. The `model:` line is what VS Code Copilot currently consumes; `model_role:` is the logical-layer indirection validated by evals.
+For a pinned agent both lines coexist: the `model:` line is what VS Code Copilot consumes for direct invocation and must equal the role's top-level `primary`. For an Auto agent the `model:` line is omitted and Copilot's picker selects the model; `model_role:` remains the logical-layer indirection validated by evals in both cases.
+
+### Tier-floor invariant and the subagent cost-cap rule
+
+VS Code enforces a **subagent cost-cap rule**: a subagent's effective model cost tier cannot exceed the cost tier of the MAIN (Orchestrator) model. If a dispatched subagent is pinned to a higher-cost-tier model than the running Orchestrator, the subagent is silently capped down to the Orchestrator's model (it falls back to the main model). This makes the Orchestrator's tier **load-bearing** in two ways:
+
+- **Tier-floor invariant (pinned subagents):** the Orchestrator's pinned model `cost_tier` must be `>=` the highest `cost_tier` among the pinned subagents it dispatches. The pinned Planner and the two pinned reviewers (PlanAuditor, AssumptionVerifier) all sit at `cost_tier: high`, so `orchestration-capable` is pinned to `Claude Opus 4.8 (copilot)` (`cost_tier: high`) — guaranteeing no pinned subagent is capped down below its configured model.
+- **Auto-agent safety:** the same cap also bounds Auto subagents, so an Auto agent such as `ExecutabilityVerifier-subagent` can never resolve above the Orchestrator's high tier. Deferring it (and the other Auto agents) to Copilot's picker is therefore safe.
 
 ## Resolution at runtime
 
@@ -70,7 +83,7 @@ VS Code Copilot defaults to reading the literal `model:` value from frontmatter.
 When Orchestrator or Planner dispatch a subagent via `agent/runSubagent`, they actively execute model resolution:
 
 1. They load `governance/model-routing.json`.
-2. They resolve `runtime_model_mode` from `governance/runtime-policy.json` (`model_dispatch.default_mode`) with deterministic as the default/backward-compatible mode.
+2. They resolve `runtime_model_mode` from `governance/runtime-policy.json` (`model_dispatch.default_mode`), which now defaults to **auto**; deterministic is the opt-in mode applied to pinned dispatch.
 3. They look up the target agent in `agent_role_index`.
 4. They apply the `by_tier` complexity rule to determine the required model string. If no `complexity_tier` exists yet, they use the target role's top-level `primary` model rather than omitting model selection.
 5. They pass the verified target-agent field as the outer `agentName` parameter.
@@ -156,12 +169,14 @@ These tiers are advisory and intended to inform future cost-aware routing (Phase
 
 ## Fallback semantics
 
+The `fallbacks` chain and the `model_unavailable` retry behavior described in this section apply to **pinned/deterministic dispatch only**. Auto agents delegate availability and substitution to Copilot's model picker, so the fallback machinery and the `model_unavailable` failure-classification carve-out are not engaged for them.
+
 `fallbacks` lists alternate models in **preferred order**, used when the `primary` is unavailable (rate-limited, capability-gated, or model removed from Copilot):
 
-- The first fallback is typically a **same-family** alternative (e.g., Claude Sonnet 4.6 → Claude Opus 4.7) preserving prompt compatibility.
+- The first fallback is typically a **same-family** alternative (e.g., Claude Sonnet 4.6 → Claude Opus 4.8) preserving prompt compatibility.
 - The second is a **cross-family** alternative (e.g., Claude → GPT) accepting potentially larger behavior shifts in exchange for availability.
 
-For the `capable-reviewer` role (used by CodeReviewer, PlanAuditor, and AssumptionVerifier), routing is **tier-aware**. For `TRIVIAL`, `SMALL`, and `MEDIUM` plans, the primary is `Claude Sonnet 4.6` with `GPT-5.4` and `GPT-5.5` as fallbacks (cost_tier: medium). For `LARGE` plans, or when a high-impact unresolved `risk_review` entry forces an effective review tier of `LARGE`, the role default applies: primary is `Claude Opus 4.7` with `GPT-5.5` as first fallback (cost_tier: high). The Orchestrator resolves primary and fallbacks from `governance/model-routing.json` `roles.capable-reviewer.by_tier[<effective_review_tier>]`; it must not use any unconfigured model as a silent substitute, and must escalate to `WAITING_APPROVAL` when all configured models for the effective tier are unavailable. `ExecutabilityVerifier-subagent` is an intentional exception: it uses the `review-readonly` role with `Claude Sonnet 4.6` as primary, regardless of tier.
+For the `capable-reviewer` role (used by CodeReviewer, PlanAuditor, and AssumptionVerifier), routing is **tier-aware**. For `TRIVIAL`, `SMALL`, and `MEDIUM` plans, the primary is `Claude Sonnet 4.6` with `GPT-5.4` and `GPT-5.5` as fallbacks (cost_tier: medium). For `LARGE` plans, or when a high-impact unresolved `risk_review` entry forces an effective review tier of `LARGE`, the role default applies: primary is `Claude Opus 4.8` with `GPT-5.5` as first fallback (cost_tier: high). The Orchestrator resolves primary and fallbacks from `governance/model-routing.json` `roles.capable-reviewer.by_tier[<effective_review_tier>]`; it must not use any unconfigured model as a silent substitute, and must escalate to `WAITING_APPROVAL` when all configured models for the effective tier are unavailable. `ExecutabilityVerifier-subagent` is an intentional exception: it uses the `review-readonly` role with `Claude Sonnet 4.6` as primary, regardless of tier.
 
 The tier-aware `capable-reviewer` routing is enforced through the `by_tier` matrix in `governance/model-routing.json`. Generic fallback-list automation (passing an array of fallbacks for runtime execution) is **not** runtime-enforced today and remains future scope. The `fallbacks` list simply documents the intended chain so future routing logic can implement it deterministically without re-deriving safe substitutions. (Note: offline evals structurally validate these contracts but do not constitute live runtime proof of fallback execution.)
 

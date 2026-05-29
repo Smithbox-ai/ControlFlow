@@ -1,7 +1,6 @@
 ---
 description: 'Review code changes from a completed implementation phase.'
 tools: ['search', 'usages', 'problems', 'changes', 'runCommands', 'runTasks', 'read/readFile']
-model: Claude Opus 4.8 (copilot)
 model_role: capable-reviewer
 ---
 You are CodeReviewer-subagent, the deterministic verification gate.

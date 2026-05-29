@@ -139,8 +139,8 @@ const plannerResearchDispatchRule = extractBetween(
 );
 
 check(
-  'Runtime policy: model_dispatch.default_mode exists and defaults to deterministic',
-  runtimePolicy?.model_dispatch?.default_mode === 'deterministic'
+  'Runtime policy: model_dispatch.default_mode exists and defaults to auto',
+  runtimePolicy?.model_dispatch?.default_mode === 'auto'
 );
 
 check(
@@ -868,7 +868,7 @@ check(
 );
 
 check(
-  'Payload schema review: runtime_model_mode marker exists and payload-level model is conditionally required (deterministic default)',
+  'Payload schema review: runtime_model_mode marker exists and payload-level model is conditionally required (auto default)',
   delegationProtocolSchema.properties?.agents?.properties?.['Planner']?.properties?.runtime_model_mode !== undefined &&
   delegationProtocolSchema.properties?.agents?.properties?.['CodeMapper-subagent']?.properties?.runtime_model_mode !== undefined &&
   Array.isArray(delegationProtocolSchema.properties?.agents?.properties?.['Planner']?.allOf) &&

@@ -239,7 +239,7 @@ graph TB
 | **TechnicalWriter** | `TechnicalWriter-subagent.agent.md` | Documentation, diagrams, code-doc parity |
 | **BrowserTester** | `BrowserTester-subagent.agent.md` | Runs provided E2E/accessibility scripts or harnesses; abstains when no executable harness is supplied |
 
-VS Code Copilot defaults to reading the literal `model:` value from each agent frontmatter. For internal orchestrated dispatch (via `agent/runSubagent`), **ControlFlow resolves `governance/model-routing.json` at call time** with deterministic mode as the default/backward-compatible path; when runtime mode is explicitly `auto`, outer `model` is intentionally omitted so Copilot can auto-select the subagent model — see [docs/agent-engineering/MODEL-ROUTING.md](docs/agent-engineering/MODEL-ROUTING.md).
+VS Code Copilot's **Auto** picker is the default model selection for every agent: Auto agents omit the `model:` frontmatter line and Copilot chooses the runtime model. Deterministic/pinned selection is the opt-in override for four control-plane agents (Orchestrator, Planner, PlanAuditor, AssumptionVerifier) listed in `governance/model-routing.json` `pinned_agents`, which carry a literal `model:` line. For internal orchestrated dispatch (via `agent/runSubagent`), **ControlFlow resolves `governance/model-routing.json` at call time**; in auto mode the outer `model` is intentionally omitted so Copilot auto-selects the subagent model, while deterministic mode passes the pinned model explicitly — see [docs/agent-engineering/MODEL-ROUTING.md](docs/agent-engineering/MODEL-ROUTING.md).
 
 ---
 
