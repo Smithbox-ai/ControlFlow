@@ -28,6 +28,7 @@ Structural, behavioral, and orchestration validation fixtures for the ControlFlo
 22. Plan artifact lifecycle vocabulary: `persisted_artifact`, `revision_mode: in_place_update`, `new_artifact_supersession_requires_revision_of`, and Planner replan payload metadata assertions.
 23. Independent read-only edit-tool denylist enforcement for review, discovery, research, and verification-only agents.
 24. Cursor Project Rule validation for `.cursor/rules/**/*.mdc` frontmatter bounds, activation metadata, line budget, and configured canonical references.
+25. Cursor plugin validation for `.cursor/skills/**/SKILL.md` and `.cursor/agents/*.md` per `evals/scenarios/cursor-plugin/` contracts.
 
 ## Validation passes
 
@@ -37,6 +38,7 @@ High-level grouping (see full `### Passes` table below for all intermediate sub-
 - **Pass 2:** `scenarios/` structural hydration and mapping (includes Pass 3a, 3b, 3c, 3d, 4b).
 - **Pass 3:** Cross-scenario structural regression testing.
 - **Pass 3e:** Cursor Project Rule validation for `.mdc` rule metadata and canonical references.
+- **Pass 3f:** Cursor plugin validation for project skills and subagents.
 - **Pass 4:** P.A.R.T section-order enforcement and (Pass 4b) clarification-trigger and tool-routing rule checks.
 - **Pass 5:** Skill library registration and path resolution.
 - **Pass 6:** Synthetic rename negative-path checks against `governance/rename-allowlist.json`.
@@ -165,6 +167,7 @@ npm test
 | **3c.1 — Read-Only Edit-Tool Denylist** | PlanAuditor, AssumptionVerifier, ExecutabilityVerifier, CodeMapper, Researcher, and CodeReviewer must not gain `edit`, `edit/createFile`, `edit/editFiles`, or any other `edit/` tool in frontmatter or `governance/tool-grants.json`, even if both surfaces drift consistently. |
 | **3d — Agent Grant Consistency** | Every agent frontmatter `agents:` list matches `governance/agent-grants.json`. |
 | **3e — Cursor Rule Validation** | Every `.cursor/rules/**/*.mdc` file starts with line-1 `---`, has a later closing `---`, includes at least one of `alwaysApply`, `description`, or `globs`, stays within the 500-line budget, and satisfies configured canonical-reference checks from `evals/scenarios/cursor-rules/cursor-rules-contract.json`. |
+| **3f — Cursor Plugin Validation** | Every configured `.cursor/skills/**/SKILL.md` and `.cursor/agents/*.md` entry in `evals/scenarios/cursor-plugin/` has valid frontmatter (`name`, `description`), line budgets, and expected `readonly` flags for audit/research agents. |
 | **4 — P.A.R.T Section Order** | Every `*.agent.md` preserves `## Prompt` → `## Archive` → `## Resources` → `## Tools` ordering. |
 | **4b — Clarification Triggers & Tool Routing** | Every agent either has a `### Clarification` section, delegates via `NEEDS_INPUT`, or is an ABSTAIN-only role (§5). Agents with external tools must have a `### Tool Routing` section (§6). |
 | **5 — Skill Library** | Every file in `skills/patterns/` is registered in `skills/index.md` and every index entry resolves to a real file. |

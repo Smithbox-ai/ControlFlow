@@ -19,6 +19,8 @@
  *                              match the manifest. Files not in the manifest are out of scope.
  *   3e. Cursor Rule Validation — .cursor/rules/*.mdc frontmatter, activation metadata,
  *                              line budget, and configured canonical references.
+ *   3f. Cursor Plugin Validation — .cursor/skills (SKILL.md) and .cursor/agents
+ *                              per evals/scenarios/cursor-plugin/ contracts.
  *   4. P.A.R.T Section Order — every *.agent.md has Prompt→Archive→Resources→Tools
  *                              in the correct order
  *   4b. §5/§6 Compliance   — Clarification Triggers (§5) and Tool Routing Rules (§6)
@@ -80,9 +82,15 @@ const SCENARIOS_DIR = join(__dirname, 'scenarios');
 const CACHE_DIR = join(__dirname, '.cache');
 const CACHE_FILE = join(CACHE_DIR, 'validate-cache.json');
 const CURSOR_RULES_DIR = join(ROOT, '.cursor', 'rules');
+const CURSOR_SKILLS_DIR = join(ROOT, '.cursor', 'skills');
+const CURSOR_AGENTS_DIR = join(ROOT, '.cursor', 'agents');
 const CURSOR_RULE_CONTRACT_FILE = join(SCENARIOS_DIR, 'cursor-rules', 'cursor-rules-contract.json');
+const CURSOR_SKILLS_CONTRACT_FILE = join(SCENARIOS_DIR, 'cursor-plugin', 'cursor-skills-contract.json');
+const CURSOR_AGENTS_CONTRACT_FILE = join(SCENARIOS_DIR, 'cursor-plugin', 'cursor-agents-contract.json');
 const CURSOR_RULE_ACTIVATION_KEYS = ['alwaysApply', 'description', 'globs'];
 const CURSOR_RULE_DEFAULT_MAX_LINES = 500;
+const CURSOR_SKILL_REQUIRED_KEYS = ['name', 'description'];
+const CURSOR_AGENT_REQUIRED_KEYS = ['name', 'description'];
 
 let totalPassed = 0;
 let totalFailed = 0;
@@ -385,6 +393,174 @@ function validateCursorRuleSet() {
   }
 
   return { ok: errors.length === 0, errors, ruleCount: ruleFiles.length, parserFixtureCount: parserFixtures.length };
+}
+
+function parseMarkdownFrontmatter(content, label) {
+  return parseCursorRuleFrontmatter(content, label);
+}
+
+function frontmatterStringValue(frontmatter, key) {
+  const lineMatch = frontmatter.match(new RegExp(`^${key}:\\s*(.*)$`, 'm'));
+  if (!lineMatch) return null;
+  let raw = lineMatch[1].trim();
+  if ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))) {
+    return raw.slice(1, -1).replace(/\\"/g, '"');
+  }
+  return raw;
+}
+
+function validateCursorSkillContent(content, label, contractEntry = {}, defaults = {}) {
+  const result = parseMarkdownFrontmatter(content, label);
+  const errors = [...result.errors];
+  const maxLines = Number.isInteger(contractEntry.maxLines) ? contractEntry.maxLines : (defaults.maxLines ?? 500);
+
+  if (result.lines.length > maxLines) {
+    errors.push(`${label}: exceeds skill line budget (${result.lines.length} > ${maxLines})`);
+  }
+
+  for (const key of CURSOR_SKILL_REQUIRED_KEYS) {
+    if (!frontmatterHasKey(result.frontmatter, key)) {
+      errors.push(`${label}: frontmatter missing required key: ${key}`);
+    }
+  }
+
+  const name = frontmatterStringValue(result.frontmatter, 'name');
+  if (contractEntry.name && name !== contractEntry.name) {
+    errors.push(`${label}: expected name ${contractEntry.name}, got ${name ?? '<missing>'}`);
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+
+function validateCursorAgentContent(content, label, contractEntry = {}, defaults = {}) {
+  const result = parseMarkdownFrontmatter(content, label);
+  const errors = [...result.errors];
+  const maxLines = Number.isInteger(defaults.maxLines) ? defaults.maxLines : 250;
+
+  if (result.lines.length > maxLines) {
+    errors.push(`${label}: exceeds agent line budget (${result.lines.length} > ${maxLines})`);
+  }
+
+  for (const key of CURSOR_AGENT_REQUIRED_KEYS) {
+    if (!frontmatterHasKey(result.frontmatter, key)) {
+      errors.push(`${label}: frontmatter missing required key: ${key}`);
+    }
+  }
+
+  const name = frontmatterStringValue(result.frontmatter, 'name');
+  if (contractEntry.name && name !== contractEntry.name) {
+    errors.push(`${label}: expected name ${contractEntry.name}, got ${name ?? '<missing>'}`);
+  }
+
+  if (typeof contractEntry.readonly === 'boolean') {
+    const actual = frontmatterBooleanValue(result.frontmatter, 'readonly');
+    if (actual !== contractEntry.readonly) {
+      errors.push(`${label}: readonly must be ${contractEntry.readonly}`);
+    }
+  }
+
+  const desc = frontmatterStringValue(result.frontmatter, 'description');
+  if (!desc || desc.length < 20) {
+    errors.push(`${label}: description must be present and substantive (delegation trigger)`);
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+
+function loadCursorPluginContract(filePath, arrayKey) {
+  if (!existsSync(filePath)) {
+    return { contract: null, errors: [`Missing Cursor plugin contract: ${repoRelative(filePath)}`] };
+  }
+  try {
+    const contract = JSON.parse(readFileSync(filePath, 'utf8'));
+    const errors = [];
+    if (!Array.isArray(contract[arrayKey])) {
+      errors.push(`Cursor plugin contract must contain top-level ${arrayKey}[]`);
+    }
+    return { contract, errors };
+  } catch (e) {
+    return { contract: null, errors: [`Cursor plugin contract parse error: ${e.message}`] };
+  }
+}
+
+function validateCursorSkillSet() {
+  const errors = [];
+  const { contract, errors: contractErrors } = loadCursorPluginContract(CURSOR_SKILLS_CONTRACT_FILE, 'skills');
+  errors.push(...contractErrors);
+  const maxLinesDefault = contract?.maxLines ?? 500;
+
+  if (!contract?.skills?.length) {
+    return { ok: false, errors, skillCount: 0 };
+  }
+
+  for (const skill of contract.skills) {
+    const configuredPath = join(ROOT, skill.path);
+    if (!existsSync(configuredPath)) {
+      errors.push(`Configured Cursor skill missing: ${skill.path}`);
+      continue;
+    }
+    const content = readFileSync(configuredPath, 'utf8');
+    const result = validateCursorSkillContent(content, skill.path, skill, { maxLines: maxLinesDefault });
+    errors.push(...result.errors);
+  }
+
+  return { ok: errors.length === 0, errors, skillCount: contract.skills.length };
+}
+
+function validateCursorAgentSet() {
+  const errors = [];
+  const { contract, errors: contractErrors } = loadCursorPluginContract(CURSOR_AGENTS_CONTRACT_FILE, 'agents');
+  errors.push(...contractErrors);
+  const maxLinesDefault = contract?.maxLines ?? 250;
+
+  if (!contract?.agents?.length) {
+    return { ok: false, errors, agentCount: 0 };
+  }
+
+  for (const agent of contract.agents) {
+    const configuredPath = join(ROOT, agent.path);
+    if (!existsSync(configuredPath)) {
+      errors.push(`Configured Cursor agent missing: ${agent.path}`);
+      continue;
+    }
+    const content = readFileSync(configuredPath, 'utf8');
+    const result = validateCursorAgentContent(content, agent.path, agent, { maxLines: maxLinesDefault });
+    errors.push(...result.errors);
+  }
+
+  const pluginAgentsDir = join(ROOT, 'plugins', 'controlflow-cursor', 'agents');
+  if (!existsSync(pluginAgentsDir)) {
+    errors.push('Missing plugins/controlflow-cursor/agents directory');
+  }
+
+  return { ok: errors.length === 0, errors, agentCount: contract.agents.length };
+}
+
+function collectForbiddenCodexSkillArtifacts() {
+  const errors = [];
+  const roots = [
+    CURSOR_SKILLS_DIR,
+    join(ROOT, 'plugins', 'controlflow-cursor', 'skills'),
+  ];
+
+  function walk(dir) {
+    let entries;
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const ent of entries) {
+      const full = join(dir, ent.name);
+      if (ent.isDirectory()) walk(full);
+      else if (ent.isFile() && ent.name === 'openai.yaml') {
+        errors.push(`Codex artifact must not appear under Cursor skills tree: ${repoRelative(full)}`);
+      }
+    }
+  }
+
+  for (const root of roots) walk(root);
+  return errors;
 }
 
 if (process.argv[2] === '--cursor-rule-fixture') {
@@ -1162,6 +1338,32 @@ header('Pass 3e: Cursor Rule Validation');
     pass(`Cursor rules valid: ${cursorRules.ruleCount} .mdc file(s), ${cursorRules.parserFixtureCount} parser fixture(s)`);
   } else {
     for (const err of cursorRules.errors) fail(`Cursor rules: ${err}`);
+  }
+}
+
+// ─── Pass 3f: Cursor Plugin (Skills + Agents) ───────────────────────────────
+header('Pass 3f: Cursor Plugin Validation');
+
+{
+  const cursorSkills = validateCursorSkillSet();
+  if (cursorSkills.ok) {
+    pass(`Cursor skills valid: ${cursorSkills.skillCount} SKILL.md file(s)`);
+  } else {
+    for (const err of cursorSkills.errors) fail(`Cursor skills: ${err}`);
+  }
+
+  const cursorAgents = validateCursorAgentSet();
+  if (cursorAgents.ok) {
+    pass(`Cursor agents valid: ${cursorAgents.agentCount} subagent file(s)`);
+  } else {
+    for (const err of cursorAgents.errors) fail(`Cursor agents: ${err}`);
+  }
+
+  const codexArtifactErrors = collectForbiddenCodexSkillArtifacts();
+  if (codexArtifactErrors.length === 0) {
+    pass('Cursor skills trees contain no Codex openai.yaml artifacts');
+  } else {
+    for (const err of codexArtifactErrors) fail(`Cursor plugin hygiene: ${err}`);
   }
 }
 

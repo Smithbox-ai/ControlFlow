@@ -154,6 +154,16 @@ When editing `.cursor/rules`, ensure the following:
 3. **Canonical references:** Point to canonical ControlFlow files (e.g. `.github/copilot-instructions.md`, `plans/project-context.md`) instead of copying policy content.
 4. **Run structural validation:** After editing, run `cd evals && npm test` to ensure no project-wide structural contracts were accidentally broken.
 
+## Editing Cursor Plugin (skills, agents, package)
+
+1. **Shared source first:** Edit `plugins/controlflow-shared-source/` when changing workflow skills.
+2. **Sync:** Run `plugins/controlflow-cursor/scripts/sync-to-dotcursor.ps1 -RepoRoot . -Force` (shared source → plugin → `.cursor/`, strips Codex `openai.yaml`).
+3. **Cursor overrides:** Host-specific text lives in `plugins/controlflow-shared-source/host-overrides/cursor/`.
+4. **Subagents:** Edit `plugins/controlflow-cursor/agents/` then run `sync-to-dotcursor.ps1` (or `install-project.ps1` for consumer repos).
+5. **Contracts:** Update `evals/scenarios/cursor-plugin/*.json` when adding or renaming skills/agents.
+6. **Do not** add VS Code tool grants for Cursor-only surfaces.
+7. Run `cd evals && npm test` before declaring done.
+
 ---
 
 ## Proposing changes

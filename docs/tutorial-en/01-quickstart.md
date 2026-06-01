@@ -127,9 +127,15 @@ Here is a simplified walkthrough of what happens:
 
 ## Using with Cursor IDE
 
-If you are using the [Cursor IDE](https://cursor.sh/), ControlFlow includes a `.cursor/rules/` directory with version-controlled Project Rules (`.mdc` files). Cursor loads these rules automatically when you open the project — no installation or extra configuration required. The rules give Cursor's AI agent high-level instructions about this repository's conventions, agent roles, and architectural principles.
+If you use [Cursor IDE](https://cursor.com/), ControlFlow ships level-3 integration in this repo:
 
-This helps the agent provide more relevant assistance, but it does **not** enable Cursor to run the full multi-agent orchestration system. For authoritative details, see [docs/agent-engineering/CURSOR-SUPPORT.md](../../docs/agent-engineering/CURSOR-SUPPORT.md).
+- **Rules** — `.cursor/rules/*.mdc` (conventions, orchestration discipline)
+- **Skills** — `.cursor/skills/controlflow-*` (Planner/Orchestrator workflow; entry: `controlflow-strict-workflow`)
+- **Subagents** — `.cursor/agents/controlflow-*.md` (11 roles; delegate via `Task` when available)
+
+Open the project in Cursor Agent mode and prompt: `Follow the controlflow-strict-workflow skill for this task.`
+
+To install into another repository, run `plugins/controlflow-cursor/scripts/install-project.ps1`. Cursor does **not** replicate VS Code `@Planner` or `agent/runSubagent`. See [docs/agent-engineering/CURSOR-SUPPORT.md](../../docs/agent-engineering/CURSOR-SUPPORT.md) and [plugins/controlflow-cursor/USAGE.md](../../plugins/controlflow-cursor/USAGE.md).
 
 ## Review Questions
 

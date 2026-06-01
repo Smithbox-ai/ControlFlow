@@ -1,0 +1,15 @@
+{
+  "skills": [
+    { "path": ".cursor/skills/controlflow-router/SKILL.md", "name": "controlflow-router" },
+    { "path": ".cursor/skills/controlflow-spec/SKILL.md", "name": "controlflow-spec" },
+    { "path": ".cursor/skills/controlflow-strict-workflow/SKILL.md", "name": "controlflow-strict-workflow" },
+    { "path": ".cursor/skills/controlflow-planning/SKILL.md", "name": "controlflow-planning" },
+    { "path": ".cursor/skills/controlflow-plan-audit/SKILL.md", "name": "controlflow-plan-audit" },
+    { "path": ".cursor/skills/controlflow-assumption-verifier/SKILL.md", "name": "controlflow-assumption-verifier" },
+    { "path": ".cursor/skills/controlflow-executability-verifier/SKILL.md", "name": "controlflow-executability-verifier" },
+    { "path": ".cursor/skills/controlflow-orchestration/SKILL.md", "name": "controlflow-orchestration" },
+    { "path": ".cursor/skills/controlflow-review/SKILL.md", "name": "controlflow-review" },
+    { "path": ".cursor/skills/controlflow-memory-hygiene/SKILL.md", "name": "controlflow-memory-hygiene" }
+  ],
+  "maxLines": 500
+}

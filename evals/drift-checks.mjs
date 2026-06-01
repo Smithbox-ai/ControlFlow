@@ -1146,6 +1146,20 @@ export function computeStructuralFingerprint() {
     }
   }
   walkCursorRules(CF_CURSOR_RULES_DIR);
+  // Cursor project skills and agents
+  function walkCursorPluginTree(dir) {
+    let entries;
+    try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const ent of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+      const full = join(dir, ent.name);
+      if (ent.isDirectory()) walkCursorPluginTree(full);
+      else if (ent.isFile() && (ent.name === 'SKILL.md' || ent.name.endsWith('.md'))) hashFile(full);
+    }
+  }
+  walkCursorPluginTree(join(CF_REPO_ROOT, '.cursor', 'skills'));
+  walkCursorPluginTree(join(CF_REPO_ROOT, '.cursor', 'agents'));
+  walkCursorPluginTree(join(CF_REPO_ROOT, 'plugins', 'controlflow-cursor', 'skills'));
+  walkCursorPluginTree(join(CF_REPO_ROOT, 'plugins', 'controlflow-cursor', 'agents'));
   // root agent prompt files
   try {
     for (const f of readdirSync(CF_REPO_ROOT).sort()) {

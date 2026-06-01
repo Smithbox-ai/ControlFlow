@@ -83,10 +83,12 @@ This rule resolves the gap when agents are loaded as global prompts (from `User/
 
 ### Rule 9 - Cursor IDE Support Does Not Change VS Code Tool Grants
 
-Cursor IDE support is a documentation and rules surface only (`.cursor/rules/*.mdc`). It does not:
+Cursor IDE support uses `.cursor/rules/`, `.cursor/skills/`, and `.cursor/agents/` (and the portable package `plugins/controlflow-cursor/`). It does not:
 
 - Add new entries to `governance/tool-grants.json` or `governance/agent-grants.json`.
 - Grant Cursor access to VS Code-specific capabilities such as `agent/runSubagent`.
-- Require new model-routing roles or executor agents.
+- Require new model-routing roles or executor agents in `plans/project-context.md`.
 
-When updating `.cursor/rules/*.mdc` files, agents must verify the change against official Cursor documentation (`https://cursor.com/docs/rules`) before editing frontmatter activation fields (`alwaysApply`, `globs`, `description`). Local-first rule (Rule 1) still applies — search the codebase before consulting external Cursor docs. The authoritative governance document for Cursor support is `docs/agent-engineering/CURSOR-SUPPORT.md`.
+Cursor subagents use Cursor-native tools (Read, Grep, Shell, Task, MCP). They do not inherit VS Code `tools:` frontmatter from `*.agent.md`.
+
+When updating Cursor assets, verify frontmatter against official Cursor documentation (`https://cursor.com/docs/rules`, `https://cursor.com/docs/subagents`, `https://cursor.com/docs/skills`) before editing. Local-first rule (Rule 1) still applies. The authoritative governance document is `docs/agent-engineering/CURSOR-SUPPORT.md`.

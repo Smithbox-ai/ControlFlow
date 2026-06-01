@@ -29,7 +29,7 @@ The repository contains adaptations of the ControlFlow system for non-VS Code en
 
 - **Codex CLI**: See `plugins/controlflow-codex/README.md` for the portable skills and artifacts adapter.
 - **Claude Code**: See `plugins/controlflow-claude-code/README.md` for the native plugin skills, agents, and local development lifecycle.
-- **Cursor IDE**: See [`CURSOR-SUPPORT.md`](CURSOR-SUPPORT.md) for the version-controlled Project Rules surface, activation guidance, limitations, and validation commands. Cursor support does not alter VS Code tool grants or add new executor roles.
+- **Cursor IDE**: See [`CURSOR-SUPPORT.md`](CURSOR-SUPPORT.md) for rules, skills, subagents, and `plugins/controlflow-cursor/`. Optional CI patterns: [`CURSOR-SDK.md`](CURSOR-SDK.md). Cursor support does not alter VS Code tool grants.
 
 ## Runtime capabilities (shipped in the ControlFlow revision program)
 

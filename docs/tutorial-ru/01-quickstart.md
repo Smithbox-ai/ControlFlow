@@ -133,9 +133,15 @@ Subagent-ы (`*-subagent.agent.md`) обычно запускаются **чер
 
 ## Использование в Cursor IDE
 
-Если вы используете [Cursor IDE](https://cursor.sh/), ControlFlow включает директорию `.cursor/rules/` с версионированными Project Rules (`.mdc` файлы). Cursor загружает эти правила автоматически при открытии проекта — установка и дополнительная настройка не требуются. Правила дают AI-агенту Cursor высокоуровневые инструкции о соглашениях, ролях агентов и архитектурных принципах этого репозитория.
+В [Cursor IDE](https://cursor.com/) в этом репозитории доступна интеграция уровня 3:
 
-Это помогает агенту предоставлять более релевантную помощь, но **не** позволяет Cursor запускать полноценную мультиагентную систему оркестрации. Авторитетные подробности см. в [docs/agent-engineering/CURSOR-SUPPORT.md](../../docs/agent-engineering/CURSOR-SUPPORT.md).
+- **Rules** — `.cursor/rules/*.mdc`
+- **Skills** — `.cursor/skills/controlflow-*` (вход: `controlflow-strict-workflow`)
+- **Subagents** — `.cursor/agents/controlflow-*.md` (11 ролей; делегирование через `Task`, если доступен)
+
+Откройте проект в режиме Agent и напишите: `Follow the controlflow-strict-workflow skill for this task.`
+
+Установка в другой репозиторий: `plugins/controlflow-cursor/scripts/install-project.ps1`. Cursor **не** повторяет VS Code `@Planner` и `agent/runSubagent`. Подробности: [CURSOR-SUPPORT.md](../../docs/agent-engineering/CURSOR-SUPPORT.md), [USAGE.md](../../plugins/controlflow-cursor/USAGE.md).
 
 ## Контрольные вопросы
 

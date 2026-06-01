@@ -368,12 +368,35 @@ Complexity routing matches the main project: `TRIVIAL` → optional; `SMALL` →
 
 ## ControlFlow for Cursor
 
-This repository includes a `.cursor/rules/` directory with version-controlled Project Rules (`.mdc` files). Cursor automatically loads these rules when you open the project — no installation or configuration required. The rules give Cursor's AI agent high-level instructions about this repository's conventions, agent roles, and architectural principles.
+ControlFlow ships a **Cursor plugin** (level 3 integration): Project Rules, workflow Skills, and 11 project Subagents — approximating the VS Code 13-agent system without `agent/runSubagent`.
 
-- **What it does:** Provides context and conventions to Cursor's agent.
-- **What it does NOT do:** It does not enable Cursor to run the VS Code subagent dispatch system.
+| Surface | Location | Purpose |
+| ------- | -------- | ------- |
+| Project Rules | [`.cursor/rules/`](.cursor/rules/) | Conventions, orchestration discipline, eval gate |
+| Skills | [`.cursor/skills/`](.cursor/skills/) | Planner/Orchestrator workflow (`controlflow-strict-workflow`, planning, orchestration, review) |
+| Subagents | [`.cursor/agents/`](.cursor/agents/) | Isolated audit, research, implementer roles |
+| Plugin package | [`plugins/controlflow-cursor/`](plugins/controlflow-cursor/) | Install into other repositories |
 
-For more details, see the authoritative guide at [docs/agent-engineering/CURSOR-SUPPORT.md](docs/agent-engineering/CURSOR-SUPPORT.md).
+### Quick start (this repo)
+
+Open the project in Cursor (Agent mode). No extra install required.
+
+```text
+Follow the controlflow-strict-workflow skill. Task: <your goal>. Save the plan to plans/<task-slug>-plan.md.
+```
+
+### Install into another repository
+
+```powershell
+powershell -ExecutionPolicy Bypass -File plugins/controlflow-cursor/scripts/install-project.ps1 -TargetRepo C:\path\to\your-app
+```
+
+### What Cursor does and does not do
+
+- **Does:** Tiered plan → review → phased execution → review; artifacts under `plans/`; delegation via `Task` when available.
+- **Does not:** `@Planner` / `@Orchestrator`, VS Code `runSubagent`, or deterministic model-routing enforcement.
+
+See [docs/agent-engineering/CURSOR-SUPPORT.md](docs/agent-engineering/CURSOR-SUPPORT.md) and [plugins/controlflow-cursor/USAGE.md](plugins/controlflow-cursor/USAGE.md).
 
 ## ControlFlow for Codex Usage and Validation
 

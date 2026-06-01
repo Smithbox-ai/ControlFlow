@@ -10,7 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- **Cursor IDE Support**: Added `.cursor/rules` to provide high-level guidance to the Cursor agent, along with documentation in `docs/agent-engineering/CURSOR-SUPPORT.md`.
+- **Cursor IDE plugin (level 3)**: Added `plugins/controlflow-cursor/` with 10 workflow skills, 11 project subagents (`.cursor/agents/`), orchestration rule, `install-project.ps1`, eval pass 3f, and expanded `docs/agent-engineering/CURSOR-SUPPORT.md` / `CURSOR-SDK.md`. Project Rules remain under `.cursor/rules/`.
 - **Claude Code Plugin**: Shipped a first-class plugin adaptation for Anthropic's Claude Code at `plugins/controlflow-claude-code/`.
   - Includes 10 ControlFlow workflow skills adapted for Claude native slash-invocation.
   - Adds 6 native plugin agents for isolated review, research, mapping, and verification tasks.

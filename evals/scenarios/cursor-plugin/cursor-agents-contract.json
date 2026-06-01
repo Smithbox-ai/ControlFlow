@@ -1,0 +1,16 @@
+{
+  "agents": [
+    { "path": ".cursor/agents/controlflow-code-mapper.md", "name": "controlflow-code-mapper", "readonly": true },
+    { "path": ".cursor/agents/controlflow-researcher.md", "name": "controlflow-researcher", "readonly": true },
+    { "path": ".cursor/agents/controlflow-plan-auditor.md", "name": "controlflow-plan-auditor", "readonly": true },
+    { "path": ".cursor/agents/controlflow-assumption-verifier.md", "name": "controlflow-assumption-verifier", "readonly": true },
+    { "path": ".cursor/agents/controlflow-executability-verifier.md", "name": "controlflow-executability-verifier", "readonly": true },
+    { "path": ".cursor/agents/controlflow-code-reviewer.md", "name": "controlflow-code-reviewer", "readonly": true },
+    { "path": ".cursor/agents/controlflow-browser-tester.md", "name": "controlflow-browser-tester", "readonly": true },
+    { "path": ".cursor/agents/controlflow-core-implementer.md", "name": "controlflow-core-implementer", "readonly": false },
+    { "path": ".cursor/agents/controlflow-ui-implementer.md", "name": "controlflow-ui-implementer", "readonly": false },
+    { "path": ".cursor/agents/controlflow-platform-engineer.md", "name": "controlflow-platform-engineer", "readonly": false },
+    { "path": ".cursor/agents/controlflow-technical-writer.md", "name": "controlflow-technical-writer", "readonly": false }
+  ],
+  "maxLines": 400
+}

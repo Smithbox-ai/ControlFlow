@@ -51,8 +51,19 @@
       "canonicalReferenceAnyOf": [
         "plugins/controlflow-codex/README.md",
         "plugins/controlflow-claude-code/README.md",
+        "plugins/controlflow-cursor/README.md",
         "plugins/controlflow-shared-source/README.md",
         "docs/agent-engineering/TOOL-ROUTING.md"
+      ],
+      "maxLines": 500
+    },
+    {
+      "path": ".cursor/rules/controlflow-orchestration.mdc",
+      "alwaysApplied": false,
+      "requiredActivationKeys": ["description", "globs"],
+      "canonicalReferenceAnyOf": [
+        "plans/project-context.md",
+        "docs/agent-engineering/CURSOR-SUPPORT.md"
       ],
       "maxLines": 500
     }
