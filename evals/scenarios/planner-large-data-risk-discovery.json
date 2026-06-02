@@ -7,6 +7,7 @@
       "label": "forecast-table-pagination-gap",
       "description": "Plan involving a query over a large forecast table with no mention of pagination or indexing — risk_review must flag data_volume as applicable HIGH",
       "input": {
+        "revision_mode": "initial_create",
         "query": "Add a REST endpoint that returns all forecast adjustments for a given user from the forecast_adjustments table",
         "context": "The forecast_adjustments table currently has ~2M rows and grows by ~50K rows per day."
       },
@@ -34,6 +35,7 @@
       "label": "small-config-edit-all-not-applicable",
       "description": "A trivial config file change — risk_review should mark all performance/data categories as not_applicable",
       "input": {
+        "revision_mode": "initial_create",
         "query": "Change the default log level from INFO to WARN in the application config file",
         "context": "Single-file change to config/app.yaml. No database or network calls involved."
       },
@@ -49,7 +51,8 @@
     {
       "label": "migration-rollback-required",
       "description": "Database schema migration plan must flag migration_rollback as applicable HIGH and include a research or rollback planning phase",
-      "input": {
+      "inrevision_mode": "initial_create",
+        "put": {
         "query": "Add a composite index on (user_id, created_at) columns on the forecast_adjustments table and backfill 2M rows with a new status column",
         "context": "Production PostgreSQL database. Backfill must not lock the table."
       },

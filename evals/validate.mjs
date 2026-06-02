@@ -73,6 +73,10 @@ import {
   validateCanonicalSourceMatrixHeading,
   validateCanonicalSourceMatrixContract,
   validateProjectContextRegistryMirror,
+  validateToolCountLabelConsistency,
+  validatePatternFileLineBudget,
+  validateDocCountConsistency,
+  validatePluginGenerationParity,
 } from './drift-checks.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -2276,6 +2280,71 @@ header('Pass 14: Drift Detection — Canonical Source Matrix Heading');
       }
     }
   }
+}
+
+// ─── Pass 15: Drift Detection — Tool-Label / Pattern-Budget / Doc-Count / Plugin-Parity (HIGH-2)
+// Wires four pre-existing drift-check functions (drift-detection.test.mjs already covers
+// them via negative-path tests; this pass is the additive CI gate so `npm test` catches
+// drift against the live repo at every run). Order matches the plan body.
+header('Pass 15: Drift Detection — Tool-Label / Pattern-Budget / Doc-Count / Plugin-Parity');
+
+// Resolve inputs once. ROOT is the pre-parsed top-level var (validate.mjs:73).
+const TOOL_LABEL_REGISTRY_PATH = join(ROOT, 'governance', 'project-context-registry.json');
+const TOOL_LABEL_GRANTS_PATH = join(ROOT, 'governance', 'tool-grants.json');
+const PATTERNS_DIR = join(ROOT, 'skills', 'patterns');
+const PLUGINS_ROOT = join(ROOT, 'plugins');
+
+// (1) tool-count-label consistency — registry "(N tools)" labels vs tool-grants array lengths
+try {
+  const registryRaw = readFileSync(TOOL_LABEL_REGISTRY_PATH, 'utf8');
+  const toolGrantsRaw = readFileSync(TOOL_LABEL_GRANTS_PATH, 'utf8');
+  const registryJson = JSON.parse(registryRaw);
+  const toolGrantsJson = JSON.parse(toolGrantsRaw);
+  const r = validateToolCountLabelConsistency(registryJson, toolGrantsJson);
+  if (r.ok) {
+    pass('Pass 15 (1/4): tool-count label consistency — registry "(N tools)" labels match tool-grants array lengths');
+  } else {
+    for (const err of r.errors) fail(`Pass 15 (1/4): tool-count label — ${err}`);
+  }
+} catch (e) {
+  fail(`Pass 15 (1/4): tool-count label — cannot read governance/project-context-registry.json or governance/tool-grants.json — ${e.message}`);
+}
+
+// (2) pattern-file line budget — every skills/patterns/*.md must be ≤100 lines
+try {
+  const r = validatePatternFileLineBudget(PATTERNS_DIR);
+  if (r.ok) {
+    pass('Pass 15 (2/4): pattern-file line budget — every skills/patterns/*.md file is ≤100 lines');
+  } else {
+    for (const err of r.errors) fail(`Pass 15 (2/4): pattern-file line budget — ${err}`);
+  }
+} catch (e) {
+  fail(`Pass 15 (2/4): pattern-file line budget — ${e.message}`);
+}
+
+// (3) doc-count consistency — canonical hardcoded counts in allowlisted docs match files on disk
+try {
+  const r = validateDocCountConsistency(ROOT);
+  if (r.ok) {
+    const truth = r.truth ? ` (truth: schemas=${r.truth.schemas}, skills=${r.truth.skills}, governance=${r.truth.governance}, agents=${r.truth.agents})` : '';
+    pass(`Pass 15 (3/4): doc-count consistency — allowlisted doc totals match files on disk${truth}`);
+  } else {
+    for (const err of r.errors) fail(`Pass 15 (3/4): doc-count — ${err}`);
+  }
+} catch (e) {
+  fail(`Pass 15 (3/4): doc-count — ${e.message}`);
+}
+
+// (4) plugin generation parity — controlflow-codex output matches shared-source (verbatim, no-delta)
+try {
+  const r = validatePluginGenerationParity(PLUGINS_ROOT);
+  if (r.ok) {
+    pass(`Pass 15 (4/4): plugin generation parity — controlflow-codex matches shared-source for all ${r.checked} managed file(s)`);
+  } else {
+    for (const err of r.errors) fail(`Pass 15 (4/4): plugin generation parity — ${err}`);
+  }
+} catch (e) {
+  fail(`Pass 15 (4/4): plugin generation parity — ${e.message}`);
 }
 
 // ─── Summary ─────────────────────────────────────────────────────────────────

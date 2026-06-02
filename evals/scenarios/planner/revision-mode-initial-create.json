@@ -1,0 +1,103 @@
+{
+  "_target_schema": "planner.plan.schema.json",
+  "_fixture_type": "schema",
+  "_expected_validation": "pass",
+  "_comment": "Phase 1 positive fixture for HIGH-1 schema contract: minimal valid plan with revision_mode: initial_create. No active plan exists; iter-1; revision_of and active_plan_path must be absent.",
+
+  "schema_version": "1.2.0",
+  "agent": "Planner",
+  "status": "READY_FOR_EXECUTION",
+  "task_title": "Add password reset endpoint",
+  "summary": "Add a password reset endpoint that issues a single-use reset token and accepts the token to set a new password.",
+  "confidence": 0.88,
+  "abstain": { "is_abstaining": false, "reasons": [] },
+  "phases": [
+    {
+      "phase_id": 1,
+      "title": "Implement password reset endpoint",
+      "objective": "Create POST /auth/password-reset and POST /auth/password-reset/confirm with token expiry.",
+      "wave": 1,
+      "executor_agent": "CoreImplementer-subagent",
+      "files": [
+        { "path": "src/auth/password-reset.ts", "action": "create", "reason": "Password reset endpoint handler" }
+      ],
+      "tests": ["npm test -- --testPathPattern=password-reset"],
+      "steps": [
+        "Write failing tests for token issuance and confirmation",
+        "Implement reset token generation with TTL",
+        "Implement confirm handler that validates token and updates password"
+      ],
+      "acceptance_criteria": [
+        "Endpoint issues a single-use token with 1-hour TTL",
+        "Confirm endpoint rejects expired or consumed tokens"
+      ],
+      "quality_gates": ["tests_pass", "schema_valid"]
+    }
+  ],
+  "open_questions": [],
+  "risks": [
+    { "risk": "Token enumeration via timing", "mitigation": "Use constant-time comparison and uniform response time" }
+  ],
+  "risk_review": [
+    {
+      "category": "data_volume",
+      "applicability": "not_applicable",
+      "impact": "LOW",
+      "evidence_source": "Single-user password reset flow; no bulk data access.",
+      "disposition": "not_applicable"
+    },
+    {
+      "category": "performance",
+      "applicability": "not_applicable",
+      "impact": "LOW",
+      "evidence_source": "O(1) token lookup keyed by token id.",
+      "disposition": "not_applicable"
+    },
+    {
+      "category": "concurrency",
+      "applicability": "applicable",
+      "impact": "MEDIUM",
+      "evidence_source": "Concurrent token use race conditions; must be single-use.",
+      "disposition": "resolved"
+    },
+    {
+      "category": "access_control",
+      "applicability": "applicable",
+      "impact": "HIGH",
+      "evidence_source": "Token must be opaque, unguessable, and expire.",
+      "disposition": "resolved"
+    },
+    {
+      "category": "migration_rollback",
+      "applicability": "not_applicable",
+      "impact": "LOW",
+      "evidence_source": "No schema changes required.",
+      "disposition": "not_applicable"
+    },
+    {
+      "category": "dependency",
+      "applicability": "not_applicable",
+      "impact": "LOW",
+      "evidence_source": "Uses existing token library in package.json.",
+      "disposition": "not_applicable"
+    },
+    {
+      "category": "operability",
+      "applicability": "not_applicable",
+      "impact": "LOW",
+      "evidence_source": "Standard REST endpoint, no new ops surface.",
+      "disposition": "not_applicable"
+    }
+  ],
+  "success_criteria": [
+    "Reset endpoint returns 202 with token id",
+    "Confirm endpoint accepts valid token and rejects reused tokens",
+    "All unit and integration tests pass"
+  ],
+  "complexity_tier": "SMALL",
+  "revision_mode": "initial_create",
+  "handoff": {
+    "target_agent": "Orchestrator",
+    "prompt": "Execute Phase 1 via CoreImplementer-subagent. SMALL tier enters PLAN_REVIEW per runtime policy."
+  }
+}

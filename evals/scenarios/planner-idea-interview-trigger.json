@@ -3,6 +3,7 @@
   "target_agent": "Planner",
   "goal": "A vague ideation request with no file names, acceptance criteria, or technology specifics triggers the Idea Interview Gate before plan generation",
   "input": {
+    "revision_mode": "initial_create",
     "query": "Can we make the agent system smarter and more reliable?",
     "context": "No specific files mentioned. No concrete acceptance criteria. No explicit technology or constraint named."
   },

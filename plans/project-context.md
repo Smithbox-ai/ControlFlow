@@ -56,17 +56,7 @@ Delegation to external or third-party agents is strictly prohibited.
 
 ## Semantic Risk Taxonomy
 
-Seven mandatory risk categories evaluated by Planner during planning:
-
-| Category | Description | Trigger Heuristics |
-| --- | --- | --- |
-| data_volume | Data scale and pagination concerns | Tables, datasets, batch ops, SELECT *, missing LIMIT |
-| performance | Query paths, algorithmic complexity | N+1 patterns, missing indexes, computed columns in hot paths |
-| concurrency | Parallel execution safety | Shared mutable state, parallel writes, background jobs |
-| access_control | Data visibility and authorization | New endpoints, ownership model changes, role transitions |
-| migration_rollback | Schema and data migration safety | DB schema changes, data transforms, file format changes |
-| dependency | External service and package contracts | External APIs, new packages, version upgrades |
-| operability | Deployment and observability | New services, infrastructure changes, monitoring gaps |
+see [RISK-TAXONOMY.md § Semantic Risk Categories](../docs/agent-engineering/RISK-TAXONOMY.md#semantic-risk-categories)
 
 ### Orchestrator → PlanAuditor Focus Area Mapping
 
@@ -117,7 +107,7 @@ When a semantic risk entry triggers PlanAuditor review, Orchestrator maps the ri
 | Review pipeline roster | `governance/project-context-registry.json` | Defines PLAN_REVIEW-only auditing agents and their routing roles. |
 | Agent role matrix | `governance/project-context-registry.json` | Defines schema outputs, tool profiles, and delegation sources for project agents. |
 | Complexity tiers | `plans/project-context.md` | Maps file counts/risk to pipeline depth. |
-| Semantic-risk taxonomy | `plans/project-context.md` | Defines the 7 risk categories evaluated during planning. |
+| Semantic-risk taxonomy | `docs/agent-engineering/RISK-TAXONOMY.md` | Defines the 7 risk categories evaluated during planning. |
 | Review routing | `governance/runtime-policy.json` | Active rules for PLAN_REVIEW and Completion Gate execution. |
 | Retry budgets | `governance/runtime-policy.json` | Exact numeric limits, backoffs, and escalation thresholds. |
 | Shared evidence discipline | `docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md` | Mandates evidence citations for claims across all agents. |

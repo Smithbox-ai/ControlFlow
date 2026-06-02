@@ -24,7 +24,7 @@
     },
     {
       "concern": "Semantic-risk taxonomy",
-      "authoritative_file": "plans/project-context.md",
+      "authoritative_file": "docs/agent-engineering/RISK-TAXONOMY.md",
       "notes": "Defines the 7 risk categories evaluated during planning."
     },
     {

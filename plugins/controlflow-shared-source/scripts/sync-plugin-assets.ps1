@@ -3,7 +3,7 @@ param(
     [string]$RepoRoot,
 
     [Alias("Host")]
-    [ValidateSet("all", "codex", "claude_code", "cursor")]
+    [ValidateSet("all", "codex", "claude_code")]
     [string]$TargetHost = "all",
 
     [switch]$Write
@@ -64,7 +64,7 @@ function Get-DisplayPath([string]$RepoRootPath, [string]$Path) {
 
 function Get-HostNames([string]$RequestedHost) {
     if ($RequestedHost -eq "all") {
-        return @("codex", "claude_code", "cursor")
+        return @("codex", "claude_code")
     }
     return @($RequestedHost)
 }
@@ -73,7 +73,6 @@ function Get-HostPluginRoot([string]$RepoRootPath, [string]$HostName) {
     switch ($HostName) {
         "codex" { return Join-Path $RepoRootPath "plugins\controlflow-codex" }
         "claude_code" { return Join-Path $RepoRootPath "plugins\controlflow-claude-code" }
-        "cursor" { return Join-Path $RepoRootPath "plugins\controlflow-cursor" }
         default { throw "Unsupported host: $HostName" }
     }
 }
@@ -82,7 +81,6 @@ function Get-HostOverrideRoot([string]$SharedRootPath, [string]$HostName) {
     switch ($HostName) {
         "codex" { return Join-Path $SharedRootPath "host-overrides\codex" }
         "claude_code" { return Join-Path $SharedRootPath "host-overrides\claude-code" }
-        "cursor" { return Join-Path $SharedRootPath "host-overrides\cursor" }
         default { throw "Unsupported host: $HostName" }
     }
 }

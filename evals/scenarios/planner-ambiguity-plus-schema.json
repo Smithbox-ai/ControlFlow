@@ -3,6 +3,7 @@
   "target_agent": "Planner",
   "goal": "Ambiguous planning request triggers askQuestions first; after clarification, Planner persists a markdown plan artifact and provides a concise handoff message",
   "input": {
+    "revision_mode": "initial_create",
     "query": "Improve the performance of the system",
     "context": "Repository contains both a Node.js API service and a React frontend. Request does not specify which subsystem or what kind of performance improvement is needed."
   },

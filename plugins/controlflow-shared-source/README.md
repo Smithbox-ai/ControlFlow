@@ -8,8 +8,6 @@ Generated outputs remain tracked and standalone under:
 - `plugins/controlflow-codex/templates/`
 - `plugins/controlflow-claude-code/skills/`
 - `plugins/controlflow-claude-code/templates/`
-- `plugins/controlflow-cursor/skills/`
-- `plugins/controlflow-cursor/templates/`
 
 The generator is intentionally additive. It does not move, delete, or require either existing plugin package at runtime.
 
@@ -37,7 +35,7 @@ Write declared generated targets only:
 powershell.exe -ExecutionPolicy Bypass -NoProfile -File plugins/controlflow-shared-source/scripts/sync-plugin-assets.ps1 -RepoRoot . -Write
 ```
 
-Use `-Host codex`, `-Host claude_code`, or `-Host cursor` to limit either command to one plugin output tree.
+Use `-Host codex` or `-Host claude_code` to limit either command to one plugin output tree.
 
 ## Safety Contract
 

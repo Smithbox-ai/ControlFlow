@@ -1,0 +1,104 @@
+{
+  "_target_schema": "planner.plan.schema.json",
+  "_fixture_type": "schema",
+  "_expected_validation": "pass",
+  "_comment": "Phase 1 positive fixture for HIGH-1 schema contract: valid plan with revision_mode: in_place_update and active_plan_path set. revision_of must be absent (same-path in-place update does not supersede).",
+
+  "schema_version": "1.2.0",
+  "agent": "Planner",
+  "status": "READY_FOR_EXECUTION",
+  "task_title": "Address PA-MAJOR-1 in active plan",
+  "summary": "Apply review finding PA-MAJOR-1 to the active plan artifact in place; reference the finding by id and use the active plan path rather than embedding the prior plan body.",
+  "confidence": 0.9,
+  "abstain": { "is_abstaining": false, "reasons": [] },
+  "phases": [
+    {
+      "phase_id": 1,
+      "title": "Patch active plan for PA-MAJOR-1",
+      "objective": "Edit the active plan at active_plan_path to add the missing rollback strategy section required by PA-MAJOR-1.",
+      "wave": 1,
+      "executor_agent": "CoreImplementer-subagent",
+      "files": [
+        { "path": "plans/code-quality-and-token-efficiency-2026-06-plan.md", "action": "modify", "reason": "Add rollback strategy section to address PA-MAJOR-1" }
+      ],
+      "tests": ["npm test"],
+      "steps": [
+        "Read active plan at active_plan_path",
+        "Add rollback strategy section addressing PA-MAJOR-1",
+        "Run schema validation against planner.plan.schema.json"
+      ],
+      "acceptance_criteria": [
+        "Active plan includes rollback strategy section",
+        "Schema validates against planner.plan.schema.json"
+      ],
+      "quality_gates": ["tests_pass", "schema_valid"]
+    }
+  ],
+  "open_questions": [],
+  "risks": [
+    { "risk": "Active plan edit may invalidate downstream readers", "mitigation": "Edit in place; preserve existing sections; reference finding by id" }
+  ],
+  "risk_review": [
+    {
+      "category": "data_volume",
+      "applicability": "not_applicable",
+      "impact": "LOW",
+      "evidence_source": "Documentation-only update.",
+      "disposition": "not_applicable"
+    },
+    {
+      "category": "performance",
+      "applicability": "not_applicable",
+      "impact": "LOW",
+      "evidence_source": "No runtime code path touched.",
+      "disposition": "not_applicable"
+    },
+    {
+      "category": "concurrency",
+      "applicability": "not_applicable",
+      "impact": "LOW",
+      "evidence_source": "Single-writer edit to plan artifact.",
+      "disposition": "not_applicable"
+    },
+    {
+      "category": "access_control",
+      "applicability": "not_applicable",
+      "impact": "LOW",
+      "evidence_source": "Plan artifact edit by Orchestrator-authorized executor.",
+      "disposition": "not_applicable"
+    },
+    {
+      "category": "migration_rollback",
+      "applicability": "not_applicable",
+      "impact": "LOW",
+      "evidence_source": "Documentation change; revertible via git.",
+      "disposition": "not_applicable"
+    },
+    {
+      "category": "dependency",
+      "applicability": "not_applicable",
+      "impact": "LOW",
+      "evidence_source": "No new dependencies.",
+      "disposition": "not_applicable"
+    },
+    {
+      "category": "operability",
+      "applicability": "not_applicable",
+      "impact": "LOW",
+      "evidence_source": "No new operational surface.",
+      "disposition": "not_applicable"
+    }
+  ],
+  "success_criteria": [
+    "Active plan persists at active_plan_path",
+    "PA-MAJOR-1 marked resolved",
+    "Schema validates with revision_mode: in_place_update"
+  ],
+  "complexity_tier": "SMALL",
+  "revision_mode": "in_place_update",
+  "active_plan_path": "plans/code-quality-and-token-efficiency-2026-06-plan.md",
+  "handoff": {
+    "target_agent": "Orchestrator",
+    "prompt": "Execute Phase 1 in place; same plan_path; do not create a new plan artifact."
+  }
+}

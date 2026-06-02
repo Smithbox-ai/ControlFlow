@@ -1028,3 +1028,121 @@ Full 6-phase LARGE-tier remediation of HIGH/MEDIUM schema bugs, security grant o
 3. Pre-existing repo drift (allowlist vs disk) can block verification gates; a synchronization fix is sometimes a prerequisite to phase verification and should be flagged as a separate decision in the preflight report.
 
 ---
+
+
+## Entry
+
+**Plan ID:** `token-efficiency-implementation-plan-iter6`
+**Date:** `2026-06-02`
+**Complexity Tier:** `LARGE`
+**Total Phases:** `6 / 6`
+
+### Review Pipeline
+
+| Agent | Result | Notes |
+| --- | --- | --- |
+| AssumptionVerifier-subagent | COMPLETE | Final reviewed plan had zero blocking mirages (2026-05-09 entry confirmed; closeout re-verification 2026-06-02) |
+| PlanAuditor-subagent | APPROVED | Iteration 6 approved after narrow corrective exception (2026-05-09 entry confirmed) |
+| ExecutabilityVerifier-subagent | PASS | Final plan review passed before execution (2026-05-09 entry confirmed) |
+| CodeReviewer-subagent | APPROVED | Phase 6 and final review approved; validated blocking issues: 0 (2026-05-09 entry confirmed) |
+
+**Total review iterations:** `6` / `5`
+**Convergence:** `Converged with approved narrow corrective exception`
+
+### Outcome
+
+**Status:** `SUCCESS`
+**CodeReviewer false positive rate:** `0 / 0` (`0%`)
+
+### Lessons Learned
+
+1. Token-efficiency work needs measurement fragments per phase, then one final merge, so parallel prompt/plugin compression cannot collide on shared evidence files.
+2. The safe compression target should be set from protected-anchor evidence; this run achieved 17.24% estimated-token reduction against a 5% target.
+3. Plugin validator success must be paired with separate reference and portability checks because strict lifecycle validation does not prove skill semantics.
+4. Closeout: status header is already `DONE` from prior execution; this entry records the Phase 6 closeout confirmation that the final-measurement artifact (`plans/artifacts/token-efficiency/measurement.md`) remains on disk with `target_status: PASS` and the session-outcome log is up to date for the Code Quality and Token Efficiency 2026-06 plan.
+
+---
+
+## Entry
+
+**Plan ID:** `comprehensive-project-optimization-plan-iter6`
+**Date:** `2026-06-02`
+**Complexity Tier:** `LARGE`
+**Total Phases:** `7 / 7`
+
+### Review Pipeline
+
+| Agent | Result | Notes |
+| --- | --- | --- |
+| AssumptionVerifier-subagent | COMPLETE | Final reviewed plan had zero blocking mirages before execution (2026-05-22 entry confirmed; closeout re-verification 2026-06-02) |
+| PlanAuditor-subagent | APPROVED | Iteration 6 approved after shared-source generator replan (2026-05-22 entry confirmed) |
+| ExecutabilityVerifier-subagent | WARN | WARN accepted by user with directives; no blocked steps (2026-05-22 entry confirmed) |
+| CodeReviewer-subagent | APPROVED | All 7 phase reviews and final gate approved; validated blocking issues: 0 at completion (2026-05-22 entry confirmed) |
+
+**Total review iterations:** `5` / `5`
+**Convergence:** `Converged with explicit user-approved ExecutabilityVerifier WARN directives`
+
+### Outcome
+
+**Status:** `SUCCESS`
+**CodeReviewer false positive rate:** `0 / 3` (`0%`)
+
+### Lessons Learned
+
+1. True Codex/Claude plugin deduplication must distinguish manual-source reduction from generated package-output duplication; standalone plugin portability can require retained generated copies.
+2. Offline evals can enforce dispatch contract shape for TODO and model-routing rules, but final reports must not claim live runtime model-parameter observation.
+3. Shared-source generator validation should include read-only drift detection, write-mode restoration, unmanaged-file preservation, and host-specific insertion coverage.
+4. Closeout: status header bumped from `READY_FOR_EXECUTION` to `DONE` in Phase 6 of the Code Quality and Token Efficiency 2026-06 plan after re-verification that the final-readiness ledger (`plans/artifacts/comprehensive-project-optimization/final-readiness-ledger.md`) remains on disk with `Status: READY_FOR_ORCHESTRATOR_FINAL_REVIEW` and all 11 validation-evidence rows report `PASS`.
+
+---
+
+
+---
+
+## Entry
+
+**Plan ID:** code-quality-and-token-efficiency-2026-06-plan
+**Date:** 2026-06-02
+**Complexity Tier:** LARGE
+**Total Phases:** 9 / 9 (3 waves: Wave 1 = Phases 1-5, Wave 2 = Phases 6-8, Wave 3 = Phase 9 final review)
+
+### Review Pipeline
+
+| Agent | Result | Notes |
+| --- | --- | --- |
+| AssumptionVerifier-subagent | APPROVED | iter1 had 5 non-blocking mirages; iter2 resolved them; 0 blocking at final |
+| PlanAuditor-subagent | APPROVED | iter1 had 1 CRITICAL + 3 MAJOR + 4 MINOR (PA-CRIT-1 Phase 5 lock-step, PA-MAJOR-1 Phase 4 substrings); iter2 resolved all; final score 86%+ |
+| ExecutabilityVerifier-subagent | PASS | iter1 had 0 blocking + 2 advisories on Phases 5+6; iter2 resolved |
+| CodeReviewer-subagent | APPROVED | 3 per-wave reviews (Wave 1: 96% / 0.93 conf; Wave 2: 96% / 0.92 conf; Wave 3 final: 97% / 0.92 conf); 0 validated blocking issues across all 3 reviews |
+
+**Total review iterations:** 2 / 5
+**Convergence:** Converged
+
+### Outcome
+
+**Status:** SUCCESS
+**CodeReviewer false positive rate:**   / 0 ( %)
+**Net test failure delta:** -2 (pre-plan Total: 329 | Passed: 316 | Failed: 13 → post-plan Total: 333 | Passed: 322 | Failed: 11; Pass 15 added 4 new passing checks, schema tightening in Phase 1 incidentally fixed 2 Pass 10 cross-plan pairs that depended on evision_mode-less fixtures)
+
+### Phase Summary
+
+| Phase | Tier | Executor | Result | Notes |
+| --- | --- | --- | --- | --- |
+| 1 | HIGH | CoreImplementer | COMPLETED | Schema evision_mode contract: required field + 3 optional properties + 2 new positive fixtures + 11 fixture updates |
+| 2 | HIGH | CoreImplementer | COMPLETED | Pass 15 in vals/validate.mjs: 4 drift checks wired (tool-label, pattern-budget, doc-count, plugin-parity). Pre-Phase-7 parity baseline = 33 managed files |
+| 3 | MED | TechnicalWriter | COMPLETED (user-approved exception) | MODEL-RESOLUTION-RULE.md hoist; 8-line drop vs plan target ≥25 (user accepted as durable source of truth = new doc) |
+| 4 | MED | TechnicalWriter | COMPLETED | FINAL-REVIEW-SCOPE.md hoist; -41 line drop (≥30 target); all 5 required substrings preserved (Pass 13) |
+| 5 | MED | TechnicalWriter | COMPLETED | RISK-TAXONOMY.md consolidation; Pass 14 lock-step preserved (canonical-source-matrix JSON ↔ project-context.md table) |
+| 6 | MED | CoreImplementer | COMPLETED | iter6 closeout: 2 session-outcome entries + 1 status bump (comprehensive-iter6 READY_FOR_EXECUTION → DONE); 47% reduction in Pass 10 unresolved pairs (174 → 89) |
+| 7 | MED | PlatformEngineer | COMPLETED (idempotent no-op + TODO) | Manifest was already narrow in HEAD 6cd7615; only cursor-ide-support-plan.md TODO annotation added. Confirmed via git log -p --all that prior commit removed cursor entries |
+| 8 | MED+LOW | CoreImplementer | COMPLETED | 2 status normalizations (COMPLETED/COMPLETE → DONE); rchive:dry returned 0 eligible (all below 14-day threshold); rchive:apply correctly NOT run |
+| 9 | (read-only) | CodeReviewer | APPROVED | Final review eview_scope: "final": 0 blocking, 97% scoring, novelty-filtered review across all 9 phases |
+
+### Lessons Learned
+
+1. **Plan body line-range estimates can drift from reality** — the Phase 3 success criterion (≥25 lines dropped) was based on a ~27 line estimate of the inlined block that turned out to be 13 lines. The byte-equivalent hoisted doc is the durable source of truth, not the inline anchor. Future plans should measure first, then set acceptance.
+2. **Two-tier fixture taxonomy needs explicit naming** — vals/scenarios/planner/*.json (schema-validated by Pass 1) vs vals/scenarios/planner-*.json (root-level behavioral scenario descriptors) are distinct. Plan body conflated them; Phase 1 honored both interpretations. Future plan authors should distinguish "schema fixtures" from "behavioral scenario descriptors."
+3. **Phase 7 idempotent no-op is a valid completion** — when plan premise (manifest has cursor entries) is satisfied by a prior commit (HEAD 6cd7615 already removed them), the phase can still complete by adding the planned TODO annotation. The plan's intent is achieved; the diff is just smaller.
+4. **Two transient retries per phase is a safe default** — Phases 4, 5, 7, 8 all hit 	ransient (model-unavailable) errors. The 	ransient_max: 3 budget from untime-policy.json was never exhausted, and silent completions on the second retry (where the work was done but the report truncated) are recoverable by on-disk verification.
+5. **Pass 15 (drift checks) is the new canonical CI gate** — cd evals && npm run test:structural now exercises 4 previously-drift-only functions on every run. The plugin-parity count is a useful proxy for manifest state (33 files post-Phase-2 baseline).
+6. **Wave batch approval with 1 per-wave approval is efficient** — Wave 1 (5 parallel phases), Wave 2 (3 parallel phases), Wave 3 (single read-only phase) all completed with one approval per wave, no per-phase approval required because no destructive phase was present.

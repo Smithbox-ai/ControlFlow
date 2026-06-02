@@ -7,6 +7,7 @@
     {
       "label": "TRIVIAL",
       "input": {
+        "revision_mode": "initial_create",
         "task_description": "Fix a typo in README.md"
       },
       "expected": {
@@ -18,6 +19,7 @@
     {
       "label": "SMALL",
       "input": {
+        "revision_mode": "initial_create",
         "task_description": "Add email validation to the user registration endpoint: update the request DTO, the controller guard, and the corresponding unit test (3 files, single domain)"
       },
       "expected": {
@@ -29,6 +31,7 @@
     {
       "label": "MEDIUM",
       "input": {
+        "revision_mode": "initial_create",
         "task_description": "Add cursor-based pagination to the /api/users endpoint: update controller, service, repository, database query helper, OpenAPI spec, integration test suite, and API client SDK (7 files spanning API layer, data layer, and documentation)"
       },
       "expected": {
@@ -39,7 +42,8 @@
     },
     {
       "label": "LARGE",
-      "input": {
+      "inrevision_mode": "initial_create",
+        "put": {
         "task_description": "Migrate authentication from session-based to JWT across all services, agent files, schemas, and CI configuration"
       },
       "expected": {

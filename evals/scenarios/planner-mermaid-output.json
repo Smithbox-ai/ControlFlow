@@ -9,6 +9,7 @@
       "label": "3-phase-plan-requires-diagrams",
       "description": "A plan with 3 phases must include at least one Mermaid diagram (phase dependency DAG)",
       "input": {
+        "revision_mode": "initial_create",
         "task_description": "Implement a 3-phase feature with independent research, implementation, and documentation phases",
         "constraints": [
           "Must produce Mermaid visualizations per plan quality standards"
@@ -32,6 +33,7 @@
       "label": "2-phase-plan-diagrams-optional",
       "description": "A plan with fewer than 3 phases does not require Mermaid diagrams",
       "input": {
+        "revision_mode": "initial_create",
         "task_description": "Simple 2-phase bug fix with test addition and implementation",
         "constraints": []
       },
@@ -47,7 +49,8 @@
     {
       "label": "complex-plan-multiple-diagrams",
       "description": "A complex plan should include both dependency DAG and sequence/state diagram",
-      "input": {
+      "inrevision_mode": "initial_create",
+        "put": {
         "task_description": "Implement a 6-phase migration with 3 waves, inter-phase contracts, and state machine logic",
         "constraints": [
           "Includes state machine transitions",
@@ -72,7 +75,8 @@
     {
       "label": "medium-tier-requires-sequence-diagram",
       "description": "A MEDIUM-complexity plan with parallel waves and approval gates must include both a flowchart DAG and a sequenceDiagram",
-      "input": {
+      "inrevision_mode": "initial_create",
+        "put": {
         "task_description": "Implement a 4-phase workflow with parallel review dispatch, approval gates, and wave-based execution across 8 files",
         "constraints": [
           "MEDIUM complexity tier",

@@ -3,6 +3,7 @@
   "target_agent": "Planner",
   "goal": "Planner persists a markdown plan artifact conforming to schemas/planner.plan.schema.json and provides a concise handoff message",
   "input": {
+    "revision_mode": "initial_create",
     "query": "Plan a focused refactor of the authentication API error handling",
     "context": "The request is unambiguous and should produce a normal planning response without clarification."
   },

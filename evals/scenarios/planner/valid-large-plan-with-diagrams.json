@@ -88,5 +88,6 @@
     "target_agent": "Orchestrator",
     "prompt": "LARGE-tier plan ready. Dispatch Phase 1 to CoreImplementer-subagent. Run PlanAuditor and ExecutabilityVerifier before execution."
   },
-  "iteration_budget": 3
+  "iteration_budget": 3,
+  "revision_mode": "initial_create"
 }

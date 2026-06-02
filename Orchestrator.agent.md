@@ -124,6 +124,7 @@ When emitting gate events, optionally also append one NDJSON line per event to `
 
 - `docs/agent-engineering/PART-SPEC.md`
 - `docs/agent-engineering/RELIABILITY-GATES.md`
+- `docs/agent-engineering/MODEL-RESOLUTION-RULE.md`
 - `schemas/orchestrator.gate-event.schema.json`
 - `schemas/code-reviewer.verdict.schema.json`
 - `schemas/planner.plan.schema.json`
@@ -134,6 +135,7 @@ When emitting gate events, optionally also append one NDJSON line per event to `
 - `docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md`
 - `docs/agent-engineering/OBSERVABILITY.md`
 - `plans/project-context.md` (if present)
+- `docs/agent-engineering/RISK-TAXONOMY.md`
 - `schemas/assumption-verifier.plan-audit.schema.json`
 - `schemas/executability-verifier.execution-report.schema.json`
 - `governance/runtime-policy.json` (Orchestrator operational knobs: approval actions, review routing, max iterations, retry budgets, stagnation thresholds)
@@ -168,17 +170,8 @@ Reference: `docs/agent-engineering/TOOL-ROUTING.md`
 ## Execution Protocol
 
 ### Universal Model Resolution Rule (Mandatory — All Dispatches)
-Before every `agent/runSubagent` call, regardless of dispatch context, apply this rule:
-1. Load `governance/model-routing.json`.
-2. Load `governance/runtime-policy.json` and resolve `runtime_model_mode` from per-dispatch override when present, else `model_dispatch.default_mode` (now defaults to `auto`; deterministic is the opt-in mode used for pinned dispatch).
-3. Set payload marker `runtime_model_mode` on every delegation payload for auditability and mode-consistency checks.
-4. Look up the target agent name in the top-level `agent_role_index` map to get its role.
-5. Read `roles[role].by_tier[complexity_tier]`. If the entry is `{ "inherit_from": "default" }`, use the role's top-level `primary` model; otherwise use the tier-specific `primary`.
-6. Pass the exact target as the outer `agentName` parameter to `agent/runSubagent`.
-7. **Deterministic mode (opt-in, used for pinned dispatch):** pass the resolved `primary` model string as the outer `model` parameter to `agent/runSubagent`. Never omit outer `model` in deterministic mode.
-8. **Auto mode:** omit the outer `model` parameter so Copilot platform auto-selection can choose the runtime model. Keep payload-level `model` optional in this mode and rely on `runtime_model_mode: auto` marker for contract semantics and audits.
-9. For initial planning dispatches before any plan `complexity_tier` exists: deterministic mode uses the target role's top-level `primary` model; auto mode still omits outer `model`. Missing tier context changes the resolution source (deterministic) or preserves omission (auto), not the mode contract.
-
+The runtime model for every subagent dispatch is selected by this rule. See [Universal Model Resolution Rule](docs/agent-engineering/MODEL-RESOLUTION-RULE.md) for the full 9-step rule. `runtime_model_mode` defaults to `auto` per `governance/runtime-policy.json#model_dispatch.default_mode`; deterministic is the opt-in mode.
+1. **Deterministic mode**: pass the resolved `primary` model string. Never omit outer `model` in deterministic mode. 2. **Auto mode**: omit the outer `model` parameter so Copilot platform auto-selection can choose the runtime model. 3. **Initial planning dispatches before any plan `complexity_tier` exists**: deterministic mode uses the target role's top-level `primary` model; auto mode still omits outer `model`. Missing tier context changes the resolution source (deterministic) or preserves omission (auto), not the mode contract.
 This rule covers all dispatch paths without exception: Plan Review Gate reviewers (PlanAuditor, AssumptionVerifier, ExecutabilityVerifier), phase CodeReviewer dispatch, final CodeReviewer dispatch, failure-classification retry dispatch, needs_replan Planner dispatch, and Implementation Loop executor dispatch.
 
 ### Dispatch Tool-Call Contract (Required Fields)
@@ -242,7 +235,7 @@ For `CodeReviewer-subagent`, `PlanAuditor-subagent`, and `AssumptionVerifier-sub
      - **LARGE**: Full pipeline — PlanAuditor + AssumptionVerifier + ExecutabilityVerifier.
      - Use `max_iterations_by_tier` from `governance/runtime-policy.json` for the iteration cap.
      - **Override**: Any plan with an applicable `risk_review` entry that is HIGH-impact and not `resolved` → force full pipeline regardless of tier.
-   - When triggered by a semantic `risk_review` entry, derive `focus_areas` for delegation using the mapping from `plans/project-context.md` — Semantic Risk Taxonomy.
+   - When triggered by a semantic `risk_review` entry, derive `focus_areas` for delegation using the mapping, see [RISK-TAXONOMY.md](docs/agent-engineering/RISK-TAXONOMY.md).
    - **Revision-Loop Invalidation (Closed World):**
      - Default to the full rerun path for the current tier when a revision touches `Planner.agent.md`, `Orchestrator.agent.md`, `governance/runtime-policy.json`, orchestration handoff tests/scenarios, review routing, verification commands, policy surfaces, phase structure, task or file paths, contracts, `risk_review`, `complexity_tier`, executability-bearing steps, or when the classification is ambiguous.
      - Selective rerun is allowed only for reviewer-local summary wording or evidence-citation text only, with no changes to plan artifacts, prompts, policy surfaces, tests, routing, commands, phase structure, task or file paths, contracts, `risk_review`, or `complexity_tier`.

@@ -42,45 +42,7 @@ Audit implementation plans for architectural defects, security vulnerabilities, 
 ### Audit Methodology
 For each plan, evaluate against these dimensions:
 
-1. **Security Audit**
-   - Untrusted input parsing without validation.
-   - Privilege escalation risks in tool grants.
-   - Secrets or credentials in plan artifacts.
-   - Missing authentication/authorization checks.
-
-2. **Architecture Audit**
-   - Circular dependencies between phases.
-   - File collision risks within waves (parallel phases editing same files).
-   - Missing inter-phase contracts for dependent data.
-   - Scope creep: phases that exceed their stated objective.
-
-3. **Dependency Conflict Detection**
-   - Phases in the same wave that modify overlapping files.
-   - External dependency additions without version pinning.
-   - Missing `dependencies` field for phases that require prior phase output.
-
-4. **Test Coverage Assessment**
-   - Phases without tests or acceptance criteria.
-   - Tautological test strategies (tests that cannot fail).
-   - Missing edge case coverage for error paths.
-
-5. **Destructive Risk Assessment**
-   - Irreversible operations without rollback plan.
-   - Bulk schema/contract rewrites without incremental migration.
-   - Production data exposure or deletion risks.
-
-6. **Contract Violation Check**
-   - Output schemas referenced but not defined.
-   - Status enums inconsistent with consuming agents.
-   - Missing `$ref` for shared contract fragments.
-
-7. **Executability Audit**
-   - Simulate executing the first 3 tasks from the plan artifact alone (no prior context).
-   - For each task, verify: concrete file paths present, input/output contracts defined, verification commands specified, acceptance criteria objectively testable.
-   - A task FAILS if a fresh executor would be blocked without additional clarification.
-   - MUST populate `executability_checklist` per schema. If any task fails, raise at minimum a MAJOR finding.
-
-8. **Performance & Data Volume Audit** — Activate when `audit_scope.requested_focus_areas` includes `performance`, or any plan `risk_review` entry has `category: data_volume` or `category: performance` with `applicability: applicable` and `impact: HIGH`/`MEDIUM`. Evaluate: dataset cardinality, algorithm/query complexity (O(n²) loops, missing indexes), pagination/streaming for large datasets, benchmark/load-test planning, and lock/contention risks. Evidence gap: if performance artifacts are absent, emit a `scope_gap` MINOR finding — do NOT return `ABSTAIN`.
+see [RISK-TAXONOMY.md § Audit Dimensions](docs/agent-engineering/RISK-TAXONOMY.md#audit-dimensions)
 
 ### Plan Artifact Handling
 - Read `plan_path` from delegation payload via `read/readFile`; do not rely on inline plan descriptions.
@@ -116,6 +78,7 @@ See [skills/patterns/preflect-core.md](skills/patterns/preflect-core.md) for the
 - `schemas/plan-auditor.plan-audit.schema.json`
 - `schemas/planner.plan.schema.json` (reference for expected plan structure)
 - `plans/project-context.md` (if present)
+- `docs/agent-engineering/RISK-TAXONOMY.md`
 
 ## Tools
 

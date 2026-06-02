@@ -81,6 +81,7 @@
   ],
   "success_criteria": ["Endpoint returns JWT on valid credentials", "Tests pass in CI"],
   "complexity_tier": "SMALL",
+  "revision_mode": "initial_create",
   "handoff": {
     "target_agent": "Orchestrator",
     "prompt": "Execute phases as planned. PLAN_REVIEW is required for SMALL tier per runtime policy."

@@ -18,7 +18,8 @@
     "risk_review",
     "success_criteria",
     "complexity_tier",
-    "handoff"
+    "handoff",
+    "revision_mode"
   ],
   "properties": {
     "schema_version": { "type": "string", "const": "1.2.0" },
@@ -282,6 +283,19 @@
     "revision_of": {
       "type": "string",
       "description": "Supersession lineage only: path of the prior plan artifact replaced by a newly created superseding plan. Set when revision_mode is new_artifact_supersession; omit for in_place_update and iter-1 initial plans."
+    },
+    "revision_mode": {
+      "type": "string",
+      "enum": ["initial_create", "in_place_update", "new_artifact_supersession"],
+      "description": "Discriminator for how this plan artifact relates to any prior plan artifact. initial_create: no prior plan exists (iter-1). in_place_update: edit the active plan at active_plan_path in place (PLAN_REVIEW fixes, same-path updates). new_artifact_supersession: produce a new plan artifact that supersedes the prior plan at existing_plan_path; lineage captured via revision_of."
+    },
+    "active_plan_path": {
+      "type": "string",
+      "description": "Existing active plan artifact Planner may edit when revision_mode is in_place_update. Omit for initial_create and new_artifact_supersession."
+    },
+    "existing_plan_path": {
+      "type": "string",
+      "description": "Prior plan artifact that a new superseding plan replaces when revision_mode is new_artifact_supersession. Omit for initial_create and in_place_update."
     },
     "context_packet_path": {
       "type": "string",

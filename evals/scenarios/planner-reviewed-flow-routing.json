@@ -4,6 +4,7 @@
   "description": "A Planner-authored plan artifact with review-triggering characteristics still enters Orchestrator's PLAN_REVIEW path. Planner persists the artifact and provides a concise handoff; Orchestrator owns the review gate, approvals, todo lifecycle, and execution gating.",
   "goal": "Verify that Planner persists a saved plan artifact with a plan_path handoff to Orchestrator, and that Orchestrator review applies under normal trigger conditions — preserving the architectural separation of plan authoring (Planner) and plan review/execution (Orchestrator)",
   "input": {
+    "revision_mode": "initial_create",
     "query": "Refactor the payment service to extract a shared retry-policy module used by three microservices, with migration steps for each consumer",
     "context": "This is a multi-phase, cross-service task. After Planner produces the plan artifact, Orchestrator evaluates PLAN_REVIEW triggers before dispatching subagents."
   },
