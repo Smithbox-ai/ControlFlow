@@ -9,6 +9,8 @@
 - **Phase** — фаза плана с фиксированным `executor_agent`.
 - **Wave** — группа фаз, исполняемых параллельно.
 - **Quality gate** — обязательное условие готовности фазы (tests_pass, lint_clean, schema_valid, safety_clear, human_approved_if_required).
+- **Phase task card** — compact handoff исполнителю с allowed files, forbidden areas, validation commands, acceptance checks, budgets и escalation rule.
+- **Resource profile** — optional execution profile, например `small_local`, из `governance/runtime-policy.json`.
 - **Completion gate** — финальная сводка задачи.
 - **Final review gate** — опциональное финальное ревью CodeReviewer для LARGE-задач.
 
@@ -43,6 +45,7 @@ sequenceDiagram
     O->>O: Pre-Phase Gate<br/>(проверить, что предыдущая фаза marked completed)
     O->>O: PreFlect (4 risk-класса)
     O->>O: Резолв phase.executor_agent
+    O->>O: Build phase_task_card<br/>(если small_local или есть card path)
     O->>E: delegate phase
     E-->>O: execution report
     O->>O: Verification Build Gate<br/>(build.state=PASS или независимый запуск)
@@ -57,11 +60,13 @@ sequenceDiagram
     end
 ```
 
+Когда активен `resource_profile: small_local`, Orchestrator применяет `resource_profiles.small_local` перед dispatch: снижает parallelism, требует compact context artifacts для `SMALL+` и передает `phase_task_card` implementation, documentation, platform или browser-testing исполнителям. Если file/read budget карточки превышен, executor возвращает `NEEDS_INPUT` или `needs_replan`, а не расширяет scope молча.
+
 ## Wave-aware execution
 
 **Правила:**
 1. Фазы группируются по `wave` (по возрастанию).
-2. В пределах волны фазы **могут** выполняться параллельно (до `max_parallel_agents`, default 10).
+2. В пределах волны фазы **могут** выполняться параллельно (до `max_parallel_agents`, default 10, либо cap активного resource profile).
 3. Wave N+1 ждёт окончания **всех** фаз wave N.
 4. Если фаза волны падает — failure classification routing решает: retry / replan / escalate.
 

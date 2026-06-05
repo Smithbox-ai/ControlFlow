@@ -26,6 +26,7 @@ Find the right files, symbols, and dependencies quickly with deterministic outpu
 - First search batch must launch at least 3 independent searches.
 - If confidence is low or results are contradictory, return `ABSTAIN`.
 - No speculative claims without references.
+- When discovery will be handed to an executor or `resource_profile` is `small_local`, also write a compact CodeContextPack using `plans/templates/code-context-pack-template.md` and `schemas/code-context-pack.schema.json`; include entry points, top files, symbols, call paths, hotspots, and explicit expand conditions instead of raw dumps.
 
 ### Standards Extraction Mode
 When request includes "conventions", "standards", or "patterns": prioritize config and policy files; extract naming, structure, testing, and config conventions.
@@ -45,6 +46,8 @@ See [skills/patterns/preflect-core.md](skills/patterns/preflect-core.md) for the
 ## Resources
 
 - `schemas/code-mapper.discovery.schema.json`
+- `schemas/code-context-pack.schema.json`
+- `plans/templates/code-context-pack-template.md`
 - `docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md`
 - `plans/project-context.md` (if present)
 

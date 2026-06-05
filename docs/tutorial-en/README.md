@@ -15,7 +15,7 @@ A practical guide to the ControlFlow multi-agent orchestration system. Suitable 
 | 06 | [Planning](06-planning.md) | How the Planner turns ideas into plans |
 | 07 | [Review Pipeline](07-review-pipeline.md) | Adversarial PLAN_REVIEW before execution |
 | 08 | [Execution Pipeline](08-execution-pipeline.md) | Phases, waves, quality gates |
-| 09 | [Schemas (Contracts)](09-schemas.md) | All 17 JSON schemas — purpose and key fields |
+| 09 | [Schemas (Contracts)](09-schemas.md) | All 20 JSON schemas — purpose and key fields |
 | 10 | [Governance](10-governance.md) | 7 governance files — permissions and runtime knobs |
 | 11 | [Skills (Patterns)](11-skills.md) | Reusable expert patterns for agents |
 | 12 | [Memory Architecture](12-memory.md) | Three-layer memory model |

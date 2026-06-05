@@ -54,7 +54,7 @@ Alphabetical reference for all key terms. Each entry includes a definition and c
 
 **Confidence** — A numeric value (0–1) in Planner output and gate events reflecting how certain the agent is in its assessment. → Ch.06
 
-**ControlFlow** — A prompt/governance/eval repository for an agent orchestration system. 13 agents, 17 schemas, 7 governance files, 20 skills. → Ch.00
+**ControlFlow** — A prompt/governance/eval repository for an agent orchestration system. 13 agents, 20 schemas, 7 governance files, 20 skills. → Ch.00
 
 **Convergence detection** — See stagnation. → Ch.07
 
@@ -204,7 +204,7 @@ Alphabetical reference for all key terms. Each entry includes a definition and c
 
 ## S
 
-**Schema** — A `schemas/*.json` file defining an agent output contract (JSON Schema draft 2020-12). 17 schemas total. → Ch.09
+**Schema** — A `schemas/*.json` file defining an agent output contract (JSON Schema draft 2020-12). 20 schemas total. → Ch.09
 
 **Scope drift** — Executing actions beyond the declared plan scope. Detected by PreFlect and llm-behavior-guidelines. → Ch.05, Ch.11
 

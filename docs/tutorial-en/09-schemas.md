@@ -2,7 +2,7 @@
 
 ## Why this chapter
 
-Understand **that schemas are contracts between agents**, not just JSON files. After this chapter you will know the purpose of each of the 17 schemas and where to find their key fields.
+Understand **that schemas are contracts between agents**, not just JSON files. After this chapter you will know the purpose of each of the 20 schemas and where to find their key fields.
 
 ## What a Schema Is in ControlFlow
 
@@ -35,8 +35,11 @@ A schema (`schemas/*.json`) is a **JSON Schema (draft 2020-12)** that fixes the 
 | 15 | `code-reviewer.verdict.schema.json` | CodeReviewer-subagent | Review verdict (validated_blocking_issues) |
 | 16 | `skill-proposal.schema.json` | Any acting subagent | Candidate skill-pattern proposal (human-approved before promotion) |
 | 17 | `runtime-policy.schema.json` | Governance config | Schema validating `governance/runtime-policy.json` |
+| 18 | `spec-capture.schema.json` | Planner | Compact spec-before-plan artifact |
+| 19 | `research-brief.schema.json` | Researcher-subagent | Compact research handoff with ranked options |
+| 20 | `code-context-pack.schema.json` | CodeMapper-subagent | Compact code map for bounded executor context |
 
-> **Note:** 14 agent output schemas + 3 shared/config schemas (`clarification-request`, `skill-proposal`, `runtime-policy`) = 17 files.
+> **Note:** 14 agent output schemas + 3 shared/config schemas (`clarification-request`, `skill-proposal`, `runtime-policy`) + 3 compact artifact schemas = 20 files.
 
 ## Schema Groups by Purpose
 
@@ -49,10 +52,13 @@ flowchart LR
     end
     subgraph Plan["Planning"]
         PL[planner.plan]
+        SC[spec-capture]
     end
     subgraph Disc["Discovery"]
         CM[code-mapper.discovery]
         RR[researcher.research-findings]
+        RB[research-brief]
+        CC[code-context-pack]
     end
     subgraph Rev["Plan Review"]
         PA[plan-auditor.plan-audit]

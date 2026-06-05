@@ -1,0 +1,20 @@
+{
+  "id": "research-brief-handoff",
+  "target_agent": "Planner",
+  "goal": "Planner preserves non-trivial Researcher findings as a compact ResearchBrief and executor context packet path.",
+  "input": {
+    "research_agent": "Researcher-subagent",
+    "non_trivial_findings": true,
+    "complexity_tier": "LARGE"
+  },
+  "expected": {
+    "schema": "schemas/planner.plan.schema.json",
+    "research_brief_schema": "schemas/research-brief.schema.json",
+    "research_brief_template": "plans/templates/research-brief-template.md",
+    "research_brief_path_present": true,
+    "context_packet_path_present": true,
+    "risk_review_present": true,
+    "complexity_tier_present": true,
+    "persisted_artifact": true
+  }
+}

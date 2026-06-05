@@ -40,6 +40,7 @@ Produce implementation plans that are deterministic, schema-compliant, and execu
 ### Mandatory Workflow Procedure
 1. Idea Interview Gate: BEFORE the Clarification Gate, evaluate whether the user request is vague or abstract. Trigger condition: the request contains **all three** of — (a) no specific file names or paths, (b) no concrete acceptance criteria, (c) no explicit technology or constraint named. If triggered, load `skills/patterns/idea-to-prompt.md` and execute the 5-step interview protocol using `vscode/askQuestions`. Replace the original vague request with the structured prompt assembled at the end of Step 5. Skip this gate entirely if any single concrete signal is present (a file path, an agent name, a schema reference, or a measurable goal).
 2. Clarification Gate: BEFORE proceeding to Design, evaluate the request against ALL five mandatory clarification classes in `docs/agent-engineering/CLARIFICATION-POLICY.md`. If ANY class matches, STOP and call `vscode/askQuestions` with 2-3 concrete options, affected files/components, and a recommended option with rationale. Do NOT proceed to Design until clarification is resolved or explicitly determined non-applicable. Decision rule: `vscode/askQuestions` is mandatory when competing interpretations change the top-level file set, `executor_agent`, architecture shape, or user-facing behavior. Do NOT call `vscode/askQuestions` for questions answerable by reading the codebase, when all options converge to equivalent outputs, or when the choice is a style or implementation detail already covered by existing configuration.
+   - **Spec Capture Gate:** For vague tasks and non-trivial `SMALL`, `MEDIUM`, or `LARGE` plans, create a compact spec artifact using `plans/templates/spec-template.md` and `schemas/spec-capture.schema.json` before final phase decomposition. Set `spec_path` in the plan unless the request is already fully specified and only-when-obvious.
 3. Semantic Risk Discovery Gate: AFTER clarification and BEFORE research delegation, evaluate all 7 semantic risk categories using `plans/project-context.md` — Semantic Risk Taxonomy as the canonical trigger table. **Skip this gate for TRIVIAL scope** (≤2 files, single concern, no data/infra/security surfaces) — record all seven categories with `applicability: "not_applicable"` and proceed directly to Complexity Gate. Use the `risk_review` field format in `schemas/planner.plan.schema.json`; for TRIVIAL plans each category sets `impact: "LOW"` and `disposition: "not_applicable"` with a brief `evidence_source` rationale.
 For all other scopes, record applicability, impact, evidence source, and disposition for each category in the `risk_review` array. Keep cryptographic and vulnerability review ownership with PlanAuditor rather than duplicating it here. Any category with `applicability: applicable` AND `impact: HIGH` that cannot be resolved from available evidence MUST set `disposition: research_phase_added` and trigger a dedicated research phase BEFORE implementation phases.
 4. Complexity Gate: AFTER semantic risk evaluation and BEFORE research delegation, classify the task complexity and emit `complexity_tier` in the plan output. Use `plans/project-context.md` as the canonical source for tier definitions and override rules. Planner owns the classification result and planner-local planning consequences only; Orchestrator applies tier-specific PLAN_REVIEW routing, reviewer activation, and iteration budgets using `governance/runtime-policy.json`.
@@ -55,6 +56,8 @@ For all other scopes, record applicability, impact, evidence source, and disposi
   Implementation agents load referenced skills before executing phase tasks.
 6. Research (delegate CodeMapper-subagent/Researcher-subagent when scope is large).
   - **Model Resolution:** For every `agent/runSubagent` dispatch to `CodeMapper-subagent` or `Researcher-subagent`, load `governance/model-routing.json`, resolve the subagent role via the top-level `agent_role_index`, then apply `roles[role].by_tier[complexity_tier]`. If the tier entry is `{ "inherit_from": "default" }`, inherit the role's default `primary` model and default `fallbacks`; otherwise use the tier-specific `primary` and tier-specific `fallbacks` when present. Resolve `runtime_model_mode` from per-dispatch override when present, else `governance/runtime-policy.json` `model_dispatch.default_mode` (now defaults to `auto`; deterministic is the opt-in mode used for pinned dispatch). Every research dispatch must pass the exact target as the outer `agentName` field and include payload marker `runtime_model_mode`. In deterministic mode (opt-in for pinned dispatch), pass the resolved `primary` as the outer `model` field; when `complexity_tier` is unavailable, deterministic mode uses the target role top-level `primary`. In auto mode, omit the outer `model` intentionally so Copilot selects subagent model automatically. Only pass a fallback list if/when `agent/runSubagent` explicitly supports one; otherwise pass only the resolved primary model string in deterministic mode. A payload-level `model` in the prompt/delegation payload is contract and audit context; it does not by itself select the runtime model and is not a substitute for the outer `model` field.
+  - When Researcher produces non-trivial findings, require a compact ResearchBrief artifact using `plans/templates/research-brief-template.md`; set `research_brief_path` and, when executor-facing, `context_packet_path`.
+  - When CodeMapper performs discovery for executor context, require a compact CodeContextPack artifact using `plans/templates/code-context-pack-template.md`; set `code_context_pack_path`.
 7. Design (structured design decisions and diagram selection):
    - **Design Decisions Checklist** — Before proceeding to Planning (Step 8), explicitly address four dimensions:
      1. **Boundary changes** — Does the task change system boundaries, add new actors, or modify integration points? If no boundary changes, state "No boundary changes."
@@ -67,6 +70,8 @@ For all other scopes, record applicability, impact, evidence source, and disposi
      - **LARGE:** Always include a Mermaid `sequenceDiagram` alongside the phase dependency DAG.
    - Record design decisions in the plan artifact's "Design Decisions" section (see plan document template).
 8. Planning (phase decomposition with quality gates).
+   - When `resource_profile` is `small_local`, keep each phase within the `resource_profiles.small_local.phase_file_limit` from `governance/runtime-policy.json` or add an explicit research/code-context phase before implementation.
+   - For non-trivial executor phases and all `resource_profile: small_local` work, prepare a one-screen phase task card from `plans/templates/phase-task-card-template.md` and record `phase_task_card_path` on the phase. The card includes allowed files, forbidden areas, validation commands, acceptance checks, max changed files, and an escalation rule.
 9. Handoff (artifact-first plan persistence plus `plan_path` handoff for Orchestrator; PLAN_REVIEW ownership remains with Orchestrator).
    - For MEDIUM/LARGE plans where Researcher produced a non-trivial evidence packet, set `context_packet_path` in the plan to the research digest artifact path so downstream executors can consume it without re-investigation.
 
@@ -111,10 +116,17 @@ Agent-specific additions:
 - `schemas/planner.plan.schema.json`
 - `schemas/researcher.research-findings.schema.json`
 - `schemas/code-mapper.discovery.schema.json`
+- `schemas/spec-capture.schema.json`
+- `schemas/research-brief.schema.json`
+- `schemas/code-context-pack.schema.json`
 - `docs/agent-engineering/CLARIFICATION-POLICY.md`
 - `docs/agent-engineering/TOOL-ROUTING.md`
 - `docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md`
 - `plans/project-context.md` (if present)
+- `plans/templates/spec-template.md`
+- `plans/templates/research-brief-template.md`
+- `plans/templates/code-context-pack-template.md`
+- `plans/templates/phase-task-card-template.md`
 - `skills/index.md` (domain skill mapping — read during Step 5)
 - `skills/patterns/llm-behavior-guidelines.md` (load on non-trivial tasks — anti-pattern guardrails: scope drift, over-abstraction, silent assumptions, weak success criteria)
 - `skills/patterns/source-grounding.md` (consider for external claims, provenance, and explicit `UNVERIFIED` state)
@@ -164,6 +176,8 @@ When complete, follow this output procedure **in mandatory order** — the artif
 The artifact structure is defined by `plans/templates/plan-document-template.md`. Load it when creating plan files. Do not duplicate or diverge from the template's structure in this file.
 
 The plan file must remain consistent with `schemas/planner.plan.schema.json`.
+
+For small-model/resource-bounded planning, set `resource_profile: small_local` when requested or when local small LLM execution is the likely target. In that mode, prefer `spec_path`, `research_brief_path`, `code_context_pack_path`, `context_packet_path`, and per-phase `phase_task_card_path` over broad inline context.
 
 ### Plan Quality Standards
 

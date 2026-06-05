@@ -1,0 +1,42 @@
+{
+  "_target_schema": "code-context-pack.schema.json",
+  "_fixture_type": "schema",
+  "_expected_validation": "pass",
+
+  "schema_version": "1.0.0",
+  "artifact_type": "CodeContextPack",
+  "scope": "Planner and delegation context packet contract wiring",
+  "entry_points": [
+    {
+      "path": "Planner.agent.md",
+      "symbol": "Research Scaling",
+      "line": 174
+    }
+  ],
+  "top_files": [
+    {
+      "path": "schemas/orchestrator.delegation-protocol.schema.json",
+      "purpose": "Executor context packet payload shape",
+      "read_priority": "must_read"
+    }
+  ],
+  "symbols": [
+    {
+      "path": "schemas/orchestrator.delegation-protocol.schema.json",
+      "symbol": "contextPacket"
+    }
+  ],
+  "call_paths": [
+    {
+      "name": "Plan to executor context handoff",
+      "path": ["Planner context_packet_path", "Orchestrator context_packet", "Executor first-read"]
+    }
+  ],
+  "hotspots": [
+    {
+      "path": "evals/scenarios/orchestrator/valid-context-packet-executor.json",
+      "risk": "Fixture compatibility should remain intact"
+    }
+  ],
+  "expand_when": ["A behavior test fails and the compact pack lacks the failing anchor"]
+}

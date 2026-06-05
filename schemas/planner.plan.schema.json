@@ -147,6 +147,10 @@
             "type": "array",
             "items": { "type": "string" },
             "description": "File paths to relevant skill patterns from the skills library."
+          },
+          "phase_task_card_path": {
+            "type": "string",
+            "description": "Optional path to a compact phase task card artifact prepared for executor dispatch, especially for resource_profile=small_local."
           }
         }
       }
@@ -279,6 +283,23 @@
       "maximum": 5,
       "default": 5,
       "description": "Maximum plan-review iterations before escalation to user. Governed by governance/runtime-policy.json; Planner sets this value to match the runtime policy iteration cap."
+    },
+    "resource_profile": {
+      "type": "string",
+      "enum": ["default", "small_local"],
+      "description": "Optional execution resource profile. small_local means Planner should prefer compact spec, research brief, code context pack, and phase task cards per governance/runtime-policy.json resource_profiles."
+    },
+    "spec_path": {
+      "type": "string",
+      "description": "Optional path to a SpecCapture artifact produced before plan finalization. Set for vague work and non-trivial SMALL/MEDIUM/LARGE plans unless the request is already fully specified."
+    },
+    "research_brief_path": {
+      "type": "string",
+      "description": "Optional path to a ResearchBrief artifact when Researcher produces non-trivial findings that Planner or executors must consume."
+    },
+    "code_context_pack_path": {
+      "type": "string",
+      "description": "Optional path to a CodeContextPack artifact from CodeMapper for bounded source navigation."
     },
     "revision_of": {
       "type": "string",

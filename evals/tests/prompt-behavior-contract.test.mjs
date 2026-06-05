@@ -809,6 +809,104 @@ console.log('\n=== External Evidence Adaptations — Behavioral Invariants ===')
 }
 
 // ──────────────────────────────────────────────
+// Compact planning artifacts and small-local execution profile
+// ──────────────────────────────────────────────
+console.log('\n=== Compact Artifacts — Small Local LLM Workflow ===');
+{
+  const planner = readAgent('Planner');
+  const researcher = readAgent('Researcher-subagent');
+  const codeMapper = readAgent('CodeMapper-subagent');
+  const orchestrator = readAgent('Orchestrator');
+  const core = readAgent('CoreImplementer-subagent');
+  const ui = readAgent('UIImplementer-subagent');
+  const platform = readAgent('PlatformEngineer-subagent');
+  const technicalWriter = readAgent('TechnicalWriter-subagent');
+  const browserTester = readAgent('BrowserTester-subagent');
+  const plannerSchema = JSON.parse(readFileSync(join(ROOT, 'schemas', 'planner.plan.schema.json'), 'utf8'));
+  const delegationSchema = JSON.parse(readFileSync(join(ROOT, 'schemas', 'orchestrator.delegation-protocol.schema.json'), 'utf8'));
+  const runtimePolicy = JSON.parse(readFileSync(join(ROOT, 'governance', 'runtime-policy.json'), 'utf8'));
+  const specScenario = JSON.parse(readFileSync(join(ROOT, 'evals', 'scenarios', 'spec-before-plan.json'), 'utf8'));
+  const researchBriefScenario = JSON.parse(readFileSync(join(ROOT, 'evals', 'scenarios', 'research-brief-handoff.json'), 'utf8'));
+  const codeContextScenario = JSON.parse(readFileSync(join(ROOT, 'evals', 'scenarios', 'code-context-pack-required.json'), 'utf8'));
+  const smallProfileScenario = JSON.parse(readFileSync(join(ROOT, 'evals', 'scenarios', 'small-model-resource-profile.json'), 'utf8'));
+  const taskCardScenario = JSON.parse(readFileSync(join(ROOT, 'evals', 'scenarios', 'phase-task-card-delegation.json'), 'utf8'));
+  const phaseProps = plannerSchema.properties?.phases?.items?.properties ?? {};
+  const planProps = plannerSchema.properties ?? {};
+  const executorShapes = delegationSchema.properties?.agents?.properties ?? {};
+  const phaseTaskCard = delegationSchema.$defs?.phaseTaskCard ?? {};
+
+  check(
+    'Planner: spec-before-plan contract is anchored to schema, template, and spec_path',
+    /Spec Capture Gate/i.test(planner) &&
+      /schemas\/spec-capture\.schema\.json/i.test(planner) &&
+      /plans\/templates\/spec-template\.md/i.test(planner) &&
+      /spec_path/i.test(planner) &&
+      planProps.spec_path != null &&
+      specScenario.expected?.spec_path_required_for_small_plus === true
+  );
+  check(
+    'Research brief handoff: Planner and Researcher preserve compact evidence before executor rereads',
+    /ResearchBrief/i.test(researcher) &&
+      /research-brief\.schema\.json/i.test(researcher) &&
+      /research_brief_path/i.test(planner) &&
+      /context_packet_path/i.test(planner) &&
+      planProps.research_brief_path != null &&
+      researchBriefScenario.expected?.context_packet_path_present === true
+  );
+  check(
+    'Code context pack: CodeMapper and Planner expose bounded executor-facing discovery',
+    /CodeContextPack/i.test(codeMapper) &&
+      /code-context-pack\.schema\.json/i.test(codeMapper) &&
+      /code_context_pack_path/i.test(planner) &&
+      planProps.code_context_pack_path != null &&
+      codeContextScenario.expected?.expand_when_required === true
+  );
+  check(
+    'Runtime policy: small_local resource profile has compact-artifact and phase-card knobs',
+    runtimePolicy.resource_profiles?.small_local?.max_parallel_agents === 2 &&
+      runtimePolicy.resource_profiles.small_local.context_packet_required_tiers.includes('SMALL') &&
+      runtimePolicy.resource_profiles.small_local.require_phase_task_card === true &&
+      runtimePolicy.resource_profiles.small_local.research_brief_required_for_non_trivial_research === true &&
+      smallProfileScenario.expected?.phase_task_card_required === true
+  );
+  check(
+    'Delegation schema: executor payloads can carry resource_profile and phase_task_card',
+    executorShapes['CoreImplementer-subagent']?.properties?.phase_task_card != null &&
+      executorShapes['UIImplementer-subagent']?.properties?.phase_task_card != null &&
+      executorShapes['PlatformEngineer-subagent']?.properties?.phase_task_card != null &&
+      executorShapes['TechnicalWriter-subagent']?.properties?.phase_task_card != null &&
+      executorShapes['BrowserTester-subagent']?.properties?.phase_task_card != null &&
+      executorShapes['CoreImplementer-subagent']?.properties?.resource_profile != null &&
+      taskCardScenario.expected?.phase_task_card_property_present === true
+  );
+  check(
+    'PhaseTaskCard shape: allowed files, validation commands, max changed files, and escalation rule are required',
+    Array.isArray(phaseTaskCard.required) &&
+      phaseTaskCard.required.includes('allowed_files') &&
+      phaseTaskCard.required.includes('validation_commands') &&
+      phaseTaskCard.required.includes('max_changed_files') &&
+      phaseTaskCard.required.includes('escalation_rule') &&
+      phaseProps.phase_task_card_path != null
+  );
+  check(
+    'Orchestrator: small_local dispatch builds phase_task_card and routes budget overflow to replan/input',
+    /resource_profile: small_local/i.test(orchestrator) &&
+      /phase_task_card/i.test(orchestrator) &&
+      /budgets are exceeded/i.test(orchestrator) &&
+      /needs_replan/i.test(orchestrator)
+  );
+  check(
+    'Implementers: phase_task_card is authoritative local scope and reports Scope Budget',
+    [core, ui, platform, technicalWriter, browserTester].every(src =>
+      /phase_task_card/i.test(src) &&
+      /allowed_files/i.test(src) &&
+      /forbidden_areas/i.test(src) &&
+      /Scope Budget/i.test(src)
+    )
+  );
+}
+
+// ──────────────────────────────────────────────
 // Summary
 // ──────────────────────────────────────────────
 console.log(`\n${'═'.repeat(50)}`);

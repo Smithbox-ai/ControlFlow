@@ -1,0 +1,17 @@
+{
+  "_target_schema": "spec-capture.schema.json",
+  "_fixture_type": "schema",
+  "_expected_validation": "pass",
+
+  "schema_version": "1.0.0",
+  "artifact_type": "SpecCapture",
+  "task_title": "Local small LLM workflow hardening",
+  "objective": "Add compact planning artifacts before implementation.",
+  "scope_in": ["Planner prompt", "artifact templates", "schema contracts"],
+  "scope_out": ["Runtime application code", "generated plugin outputs"],
+  "constraints": ["Keep compatibility with existing planner fixtures"],
+  "acceptance_criteria": ["Structural eval validates the new schema fixture"],
+  "validation_commands": ["cd evals && npm run test:structural"],
+  "non_goals": ["Hard-require every historical plan to migrate immediately"],
+  "open_questions": []
+}

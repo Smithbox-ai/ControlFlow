@@ -9,7 +9,7 @@
 ```text
 ControlFlow/
 ├── *.agent.md                       # 13 агентов (промпты)
-├── schemas/                         # 17 JSON-схем (контракты)
+├── schemas/                         # 20 JSON-схем (контракты)
 ├── governance/                      # 7 файлов политик
 │   ├── agent-grants.json
 │   ├── tool-grants.json

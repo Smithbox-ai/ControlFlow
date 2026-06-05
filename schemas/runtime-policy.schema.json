@@ -169,6 +169,16 @@
         "notes":              { "type": "string" }
       }
     },
+    "resource_profiles": {
+      "type": "object",
+      "description": "Optional resource-aware execution profiles. Profiles shape planning and delegation behavior; they do not change retry classification semantics.",
+      "additionalProperties": false,
+      "required": ["default", "small_local"],
+      "properties": {
+        "default": { "$ref": "#/$defs/resourceProfile" },
+        "small_local": { "$ref": "#/$defs/resourceProfile" }
+      }
+    },
     "final_review_gate": {
       "type": "object",
       "additionalProperties": false,
@@ -236,6 +246,35 @@
         "assumption_verifier":     { "type": "boolean" },
         "executability_verifier":  { "type": "boolean" },
         "code_review":             { "type": "boolean" }
+      }
+    },
+    "resourceProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_parallel_agents",
+        "phase_file_limit",
+        "max_changed_files_default",
+        "context_packet_required_tiers",
+        "require_phase_task_card",
+        "budget_exceeded_classification"
+      ],
+      "properties": {
+        "max_parallel_agents": { "type": "integer", "minimum": 1 },
+        "phase_file_limit": { "type": ["integer", "null"], "minimum": 1 },
+        "max_changed_files_default": { "type": ["integer", "null"], "minimum": 1 },
+        "context_packet_required_tiers": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["TRIVIAL", "SMALL", "MEDIUM", "LARGE"] }
+        },
+        "research_brief_required_for_non_trivial_research": { "type": "boolean" },
+        "code_context_pack_preferred": { "type": "boolean" },
+        "require_phase_task_card": { "type": "boolean" },
+        "budget_exceeded_classification": {
+          "type": "string",
+          "enum": ["needs_replan", "escalate"]
+        },
+        "notes": { "type": "string" }
       }
     }
   }

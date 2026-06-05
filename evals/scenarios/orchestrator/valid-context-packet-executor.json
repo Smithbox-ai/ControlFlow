@@ -25,11 +25,23 @@
       "phase_id": 3,
       "task_definition": "Implement the context packet contract per Phase 3 scope.",
       "model": "Claude Sonnet 4.6 (copilot)",
+      "resource_profile": "small_local",
       "context_packet": {
         "artifact_path": "plans/artifacts/gem-team-adoption/adoption-analysis.md",
         "summary": "Gem Team adoption analysis complete. High-value: context packet, skill promotion, pre-wave cache.",
         "key_findings": ["context_packet is optional, executor shapes only"],
         "do_not_re_read": ["plans/artifacts/gem-team-adoption/source-provenance.md"]
+      },
+      "phase_task_card": {
+        "objective": "Implement the context packet contract within the declared scope.",
+        "allowed_files": ["schemas/orchestrator.delegation-protocol.schema.json"],
+        "forbidden_areas": ["plugins/controlflow-codex/generated outputs"],
+        "context_artifacts": ["plans/artifacts/gem-team-adoption/adoption-analysis.md"],
+        "validation_commands": ["cd evals && npm run test:structural"],
+        "acceptance_checks": ["Delegation schema validates the context_packet and phase_task_card payload."],
+        "max_changed_files": 2,
+        "max_files_to_read_before_replan": 5,
+        "escalation_rule": "Return needs_replan if the schema work requires touching undeclared files."
       }
     },
     "UIImplementer-subagent": {

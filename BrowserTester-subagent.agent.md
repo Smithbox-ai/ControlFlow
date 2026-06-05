@@ -20,6 +20,8 @@ Keep the health-first gate, observation-first protocol, accessibility severity r
 
 If `context_packet` is present in your dispatch, read the referenced `artifact_path` first before opening raw source files. Skip re-investigation of paths listed in `do_not_re_read` unless contradicting evidence is found.
 
+If `phase_task_card` is present, treat it as the authoritative local scope. Do not create evidence outside `allowed_files`, do not enter `forbidden_areas`, and return `NEEDS_INPUT` or `FAILED` with `failure_classification: needs_replan` when the card's read budget would be exceeded.
+
 ### Scope IN
 - E2E browser test execution by running provided test scripts or harnesses via runCommands/runTasks.
 - UI/UX behavior verification against validation matrix.
@@ -111,6 +113,7 @@ Agent-specific fields:
 - `docs/agent-engineering/CLARIFICATION-POLICY.md`
 - `docs/agent-engineering/TOOL-ROUTING.md`
 - `schemas/browser-tester.execution-report.schema.json`
+- `plans/templates/phase-task-card-template.md`
 - `plans/project-context.md` (if present)
 
 ## Tools
@@ -157,6 +160,7 @@ Include these fields clearly labeled:
 - **Health Check** — application health gate result.
 - **Test Results** — passed/failed counts with failure details and evidence locations.
 - **Accessibility Findings** — WCAG violations with severity and element references.
+- **Scope Budget** — allowed evidence paths vs created evidence artifacts when a `phase_task_card` is present.
 - **Failure Classification** — when not COMPLETE: transient, fixable, needs_replan, or escalate.
 - **Summary** — concise overview of test results.
 

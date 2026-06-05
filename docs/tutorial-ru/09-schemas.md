@@ -2,7 +2,7 @@
 
 ## Зачем эта глава
 
-Понять, **что схемы — это контракты между агентами**, а не просто JSON-файлы. После этой главы вы будете знать назначение каждой из 17 схем и где искать ключевые поля.
+Понять, **что схемы — это контракты между агентами**, а не просто JSON-файлы. После этой главы вы будете знать назначение каждой из 20 схем и где искать ключевые поля.
 
 ## Что такое схема в ControlFlow
 
@@ -35,8 +35,11 @@ Schema (`schemas/*.json`) — это **JSON Schema (draft 2020-12)**, фикси
 | 15 | `code-reviewer.verdict.schema.json` | CodeReviewer-subagent | Review verdict (validated_blocking_issues) |
 | 16 | `skill-proposal.schema.json` | Любой acting subagent | Заявка на кандидат-паттерн (подтверждается человеком перед промоушеном) |
 | 17 | `runtime-policy.schema.json` | Governance config | Схема для валидации `governance/runtime-policy.json` |
+| 18 | `spec-capture.schema.json` | Planner | Compact spec-before-plan artifact |
+| 19 | `research-brief.schema.json` | Researcher-subagent | Compact research handoff с ranked options |
+| 20 | `code-context-pack.schema.json` | CodeMapper-subagent | Compact code map для bounded executor context |
 
-> **Note:** 14 agent output схем + 3 shared/config схемы (`clarification-request`, `skill-proposal`, `runtime-policy`) = 17 файлов.
+> **Note:** 14 agent output схем + 3 shared/config схемы (`clarification-request`, `skill-proposal`, `runtime-policy`) + 3 compact artifact схемы = 20 файлов.
 
 ## Группы схем по назначению
 
@@ -49,10 +52,13 @@ flowchart LR
     end
     subgraph Plan["Планирование"]
         PL[planner.plan]
+        SC[spec-capture]
     end
     subgraph Disc["Разведка"]
         CM[code-mapper.discovery]
         RR[researcher.research-findings]
+        RB[research-brief]
+        CC[code-context-pack]
     end
     subgraph Rev["Ревью плана"]
         PA[plan-auditor.plan-audit]

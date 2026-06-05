@@ -1,0 +1,19 @@
+{
+  "id": "spec-before-plan",
+  "target_agent": "Planner",
+  "goal": "Planner captures a compact spec artifact before finalizing vague or non-trivial SMALL+ plans.",
+  "input": {
+    "query": "Improve the reliability of local small LLM execution across planning and implementation.",
+    "complexity_tier": "MEDIUM",
+    "vague_scope": true
+  },
+  "expected": {
+    "schema": "schemas/planner.plan.schema.json",
+    "spec_schema": "schemas/spec-capture.schema.json",
+    "spec_template": "plans/templates/spec-template.md",
+    "spec_path_required_for_small_plus": true,
+    "risk_review_present": true,
+    "complexity_tier_present": true,
+    "persisted_artifact": true
+  }
+}

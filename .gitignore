@@ -16,6 +16,10 @@ plans/templates/*
 !plans/templates/gate-event-template.md
 !plans/templates/phase-completion-template.md
 !plans/templates/plan-document-template.md
+!plans/templates/spec-template.md
+!plans/templates/research-brief-template.md
+!plans/templates/code-context-pack-template.md
+!plans/templates/phase-task-card-template.md
 !plans/templates/session-notes-template.md
 !plans/templates/session-outcome-template.md
 !plans/templates/traceability-index-template.yaml

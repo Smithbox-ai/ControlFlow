@@ -31,7 +31,7 @@
 | 06 | [Планирование](06-planning.md) | Процедура Planner: idea interview, clarification gate, semantic risk gate, complexity gate, skills, research, design, planning, handoff | 10 |
 | 07 | [Ревью-пайплайн](07-review-pipeline.md) | PLAN_REVIEW: PlanAuditor, AssumptionVerifier, ExecutabilityVerifier, маршрутизация по тиру, бюджет итераций | 8 |
 | 08 | [Пайплайн исполнения](08-execution-pipeline.md) | Волны параллельного исполнения, executor_agent, quality gates, completion gate, optional final review | 8 |
-| 09 | [Схемы (контракты)](09-schemas.md) | Разбор всех 17 JSON-схем: какая для какого агента, ключевые поля | 10 |
+| 09 | [Схемы (контракты)](09-schemas.md) | Разбор всех 20 JSON-схем: какая для какого агента, ключевые поля | 10 |
 | 10 | [Governance](10-governance.md) | agent-grants, tool-grants, runtime-policy, model-routing, rename-allowlist | 8 |
 | 11 | [Skills (паттерны)](11-skills.md) | Skill library, протокол выбора (≤3 на фазу), 20 паттернов | 7 |
 | 12 | [Архитектура памяти](12-memory.md) | Трёхслойная модель: session / task-episodic / repo-persistent; роль NOTES.md | 6 |

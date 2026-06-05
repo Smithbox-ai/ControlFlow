@@ -20,6 +20,8 @@ Keep documentation parity, Mermaid rules, documentation-only constraints, and sc
 
 If `context_packet` is present in your dispatch, read the referenced `artifact_path` first before opening raw source files. Skip re-investigation of paths listed in `do_not_re_read` unless contradicting evidence is found.
 
+If `phase_task_card` is present, treat it as the authoritative local scope. Do not edit outside `allowed_files`, do not enter `forbidden_areas`, and return `NEEDS_INPUT` or `FAILED` with `failure_classification: needs_replan` when the card's max changed files or read budget would be exceeded.
+
 ### Scope IN
 - Technical documentation creation (API docs, architecture docs, guides).
 - Mermaid diagram generation for architecture/flow visualization.
@@ -91,6 +93,7 @@ Agent-specific fields:
 - `docs/agent-engineering/ADR-PROCESS.md`
 - `docs/agent-engineering/ADR-TEMPLATE.md`
 - `schemas/technical-writer.execution-report.schema.json`
+- `plans/templates/phase-task-card-template.md`
 - `plans/project-context.md` (if present)
 
 ## Tools
@@ -134,6 +137,7 @@ Include these fields clearly labeled:
 - **Status** — COMPLETE, NEEDS_INPUT, FAILED, or ABSTAIN.
 - **Docs Created/Updated** — list of documentation files with descriptions.
 - **Parity Status** — whether documentation matches current code state.
+- **Scope Budget** — allowed files vs changed documentation files when a `phase_task_card` is present.
 - **Failure Classification** — when not COMPLETE: transient, fixable, needs_replan, or escalate.
 - **Summary** — concise description of documentation work done.
 

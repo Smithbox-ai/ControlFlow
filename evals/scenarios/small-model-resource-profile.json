@@ -1,0 +1,25 @@
+{
+  "id": "small-model-resource-profile",
+  "target_agent": "Orchestrator",
+  "goal": "Orchestrator applies the small_local resource profile before dispatching resource-bounded phases.",
+  "input": {
+    "plan": {
+      "complexity_tier": "MEDIUM",
+      "resource_profile": "small_local",
+      "phases": [
+        {
+          "phase_id": 1,
+          "executor_agent": "CoreImplementer-subagent",
+          "phase_task_card_path": "plans/artifacts/demo/phase-1-card.md"
+        }
+      ]
+    }
+  },
+  "expected": {
+    "runtime_policy": "governance/runtime-policy.json",
+    "small_local_profile_present": true,
+    "max_parallel_agents_capped": true,
+    "compact_artifacts_required_for_small_plus": true,
+    "phase_task_card_required": true
+  }
+}

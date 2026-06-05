@@ -1,0 +1,38 @@
+{
+  "_target_schema": "research-brief.schema.json",
+  "_fixture_type": "schema",
+  "_expected_validation": "pass",
+
+  "schema_version": "1.0.0",
+  "artifact_type": "ResearchBrief",
+  "research_question": "Which files govern planner context packet behavior?",
+  "summary": [
+    "Planner owns context_packet_path selection.",
+    "Delegation protocol already supports executor context_packet."
+  ],
+  "top_files": [
+    {
+      "path": "schemas/planner.plan.schema.json",
+      "reason": "Defines plan-level context packet path",
+      "symbols": ["context_packet_path"]
+    }
+  ],
+  "key_findings": [
+    {
+      "finding": "Planner schema contains optional context_packet_path.",
+      "evidence": [
+        { "file": "schemas/planner.plan.schema.json", "line_start": 300 }
+      ]
+    }
+  ],
+  "ranked_options": [
+    {
+      "rank": 1,
+      "option": "Keep field optional and add behavior checks first.",
+      "tradeoffs": ["Maintains fixture compatibility", "Defers hard enforcement"],
+      "confidence": 0.88
+    }
+  ],
+  "uncertainties": [],
+  "do_not_re_read": ["schemas/planner.plan.schema.json"]
+}

@@ -9,6 +9,8 @@ Understand **what happens after plan approval**: how the Orchestrator invokes ex
 - **Phase** — a plan unit with a fixed `executor_agent`.
 - **Wave** — a group of phases executed in parallel.
 - **Quality gate** — a mandatory readiness condition for a phase (tests_pass, lint_clean, schema_valid, safety_clear, human_approved_if_required).
+- **Phase task card** — compact executor handoff with allowed files, forbidden areas, validation commands, acceptance checks, budgets, and escalation rule.
+- **Resource profile** — optional execution profile such as `small_local`, read from `governance/runtime-policy.json`.
 - **Completion gate** — the final task summary.
 - **Final review gate** — optional final CodeReviewer pass for LARGE tasks.
 
@@ -43,6 +45,7 @@ sequenceDiagram
     O->>O: Pre-Phase Gate\n(verify previous phase todo is marked completed)
     O->>O: PreFlect (4 risk classes)
     O->>O: Resolve phase.executor_agent
+    O->>O: Build phase_task_card\n(if small_local or card path exists)
     O->>E: delegate phase
     E-->>O: execution report
     O->>O: Verification Build Gate\n(build.state=PASS or independent run)
@@ -57,11 +60,13 @@ sequenceDiagram
     end
 ```
 
+When `resource_profile: small_local` is active, Orchestrator applies `resource_profiles.small_local` before dispatch: lower parallelism, require compact context artifacts for `SMALL+`, and send a `phase_task_card` to implementation, documentation, platform, or browser-testing executors. If the card's file or read budget is exceeded, the executor returns `NEEDS_INPUT` or `needs_replan` instead of widening scope silently.
+
 ## Wave-Aware Execution
 
 **Rules:**
 1. Phases are grouped by `wave` (ascending).
-2. Within a wave, phases **may** execute in parallel (up to `max_parallel_agents`, default 10).
+2. Within a wave, phases **may** execute in parallel (up to `max_parallel_agents`, default 10, or the active resource profile cap).
 3. Wave N+1 waits for **all** phases of wave N to complete.
 4. If a wave phase fails — failure classification routing decides: retry / replan / escalate.
 

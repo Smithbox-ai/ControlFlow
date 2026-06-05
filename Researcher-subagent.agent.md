@@ -32,6 +32,7 @@ If `context_packet` is present in your dispatch, read the referenced `artifact_p
 - If evidence is insufficient, output `ABSTAIN`.
 - Separate observed facts from hypotheses explicitly; tolerate naming/format variance without speculative inference.
 - For external framework/API/version claims, follow `skills/patterns/source-grounding.md`: prefer current official primary sources and label material unsupported claims `UNVERIFIED`.
+- For non-trivial research handoff, also write a compact ResearchBrief using `plans/templates/research-brief-template.md` and `schemas/research-brief.schema.json`; keep it to top files, key findings, ranked options, uncertainties, and `do_not_re_read` paths.
 
 ## Archive
 
@@ -54,6 +55,8 @@ See [skills/patterns/preflect-core.md](skills/patterns/preflect-core.md) for the
 
 - `schemas/researcher.research-findings.schema.json`
 - `schemas/code-mapper.discovery.schema.json`
+- `schemas/research-brief.schema.json`
+- `plans/templates/research-brief-template.md`
 - `docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md`
 - `plans/project-context.md` (if present)
 - `skills/patterns/source-grounding.md`

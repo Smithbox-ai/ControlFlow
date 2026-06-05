@@ -9,7 +9,7 @@ Get oriented in the repository within 30 minutes. After this chapter you can ope
 ```text
 ControlFlow/
 ├── *.agent.md              ← 13 agent prompt files (P.A.R.T. structure)
-├── schemas/                ← 17 JSON schemas (inter-agent contracts)
+├── schemas/                ← 20 JSON schemas (inter-agent contracts)
 ├── governance/             ← 7 JSON configs (permissions, policies, routing)
 ├── skills/
 │   ├── index.md            ← Skill registry

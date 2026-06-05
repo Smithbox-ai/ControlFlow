@@ -73,6 +73,7 @@ Do NOT use `vscode/askQuestions` for questions answerable from codebase evidence
 - Generate `trace_id` (UUID v4 format) at task start. Propagate to all gate events and subagent delegation payloads.
 - Include `trace_id`, `iteration_index`, and `max_iterations` in every gate-event emission per `schemas/orchestrator.gate-event.schema.json`.
 - Purpose: enable log correlation across multi-agent orchestration chains.
+- If the plan declares `resource_profile: small_local`, apply `governance/runtime-policy.json` `resource_profiles.small_local`: cap parallel phase dispatch, require compact context artifacts for SMALL/MEDIUM/LARGE phases, and prepare `phase_task_card` payloads before executor dispatch.
 
 ### Planner Revision Modes
 - Use `revision_mode: initial_create` when no active plan exists.
@@ -129,6 +130,7 @@ When emitting gate events, optionally also append one NDJSON line per event to `
 - `schemas/code-reviewer.verdict.schema.json`
 - `schemas/planner.plan.schema.json`
 - `schemas/orchestrator.delegation-protocol.schema.json` (on-demand — load only when constructing delegation calls)
+- `plans/templates/phase-task-card-template.md` (on-demand — load only when constructing resource-bounded executor payloads)
 - `docs/agent-engineering/CLARIFICATION-POLICY.md`
 - `docs/agent-engineering/TOOL-ROUTING.md`
 - `docs/agent-engineering/SCORING-SPEC.md`
@@ -261,6 +263,8 @@ For `CodeReviewer-subagent`, `PlanAuditor-subagent`, and `AssumptionVerifier-sub
    - Run PreFlect gate.
    - Resolve the phase owner from `phase.executor_agent`. This field is authoritative for delegation and approval summaries.
    - If a legacy phase omits `executor_agent`, do not infer silently. Route the plan back through `REPLAN` to Planner and stop the implementation batch until the phase is reissued with an explicit executor.
+   - Build a `phase_task_card` for executor payloads when the phase has `phase_task_card_path`, the plan uses `resource_profile: small_local`, or `governance/runtime-policy.json` `resource_profiles.small_local.require_phase_task_card` applies. The card must include objective, allowed files, forbidden areas, context artifacts, validation commands, acceptance checks, max changed files, and escalation rule.
+   - When `phase_task_card` budgets are exceeded, do not widen the phase silently. Route to Planner with `needs_replan` or stop with `NEEDS_INPUT` according to the card's escalation rule.
    - **Model Resolution:** Apply the Universal Model Resolution Rule (see Execution Protocol preamble above) before delegating execution: look up `phase.executor_agent` in `agent_role_index`, resolve `roles[role].by_tier[complexity_tier]`, and pass the resolved primary model as the `model` parameter. If the tier entry is `{ "inherit_from": "default" }`, use the role's default `primary`. Only pass a fallback list if `agent/runSubagent` explicitly supports one.
    - Delegate execution to the declared executor agent.
    - Verification Build Gate: after the implementation subagent reports completion, verify build success. Either confirm the execution report includes `build.state: PASS`, or if build evidence is absent or ambiguous, run the project's build command directly. If the build fails, route through Failure Classification Handling before proceeding.
@@ -313,7 +317,7 @@ Violating a stopping rule is equivalent to skipping a gate.
 ### Subagent Delegation Contracts
 For agent descriptions, roles, and expected deliverables, see `plans/project-context.md` — Agent Role Matrix.
 
-Each delegation must include: scope description, expected output format, and relevant context references.
+Each delegation must include: scope description, expected output format, relevant context references, and `resource_profile` when the plan declares one. Executor delegations should include `phase_task_card` whenever the phase card exists or the active profile is `small_local`.
 
 For detailed per-agent parameter shapes and required/optional fields, load `schemas/orchestrator.delegation-protocol.schema.json` on-demand. Do NOT load it into context preemptively — reference it only when constructing a delegation call.
 

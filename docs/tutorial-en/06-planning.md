@@ -8,9 +8,12 @@ Walk through **how the Planner turns an idea into a plan**: 10 sequential steps 
 
 - **Idea interview** — a structured dialogue with the user when a task is vague.
 - **Clarification gate** — check against 5 clarification classes from [CLARIFICATION-POLICY.md](../agent-engineering/CLARIFICATION-POLICY.md).
+- **Spec capture** — compact spec-before-plan artifact for vague or non-trivial `SMALL+` work.
 - **Semantic risk review** — mandatory assessment across 7 risk categories.
 - **Complexity gate** — classification into 4 tiers (TRIVIAL/SMALL/MEDIUM/LARGE).
 - **Skill selection** — choosing ≤3 skill patterns per phase.
+- **Research brief / code context pack** — bounded discovery artifacts consumed before broad rereads.
+- **Phase task card** — one-screen executor payload with allowed files, validation commands, budgets, and escalation rule.
 - **Living-Document guidance** — treating plan artifacts as restartable, continuously-updated documents.
 - **Handoff** — passing the finished plan to the Orchestrator via `target_agent` and `prompt`.
 
@@ -64,6 +67,8 @@ From [CLARIFICATION-POLICY.md](../agent-engineering/CLARIFICATION-POLICY.md) —
 If any class matches → `vscode/askQuestions` with **2–3 options**, each with pros/cons/affected files and a **recommendation**.
 
 If the task matches no class — gate passed, proceed.
+
+For vague tasks and non-trivial `SMALL`, `MEDIUM`, or `LARGE` plans, Planner creates a compact spec artifact from [`plans/templates/spec-template.md`](../../plans/templates/spec-template.md) and records `spec_path` in the plan. This is the first-class spec-before-plan checkpoint; TRIVIAL only-when-obvious tasks may skip it.
 
 ## Step 3. Semantic Risk Review
 
@@ -123,6 +128,8 @@ Delegation to external agents is **prohibited**.
 
 If the task's context is already available, this step can be skipped.
 
+When Researcher produces non-trivial findings, Planner records `research_brief_path` and usually `context_packet_path` so executors can read a compact brief before reopening source files. When CodeMapper performs discovery for executor context, Planner records `code_context_pack_path` from the compact code map instead of relying on raw search output.
+
 ## Step 7. Design Decisions
 
 **Mandatory** for all plans. 4 dimensions:
@@ -151,8 +158,11 @@ Each phase contains:
 - `quality_gates` — from enum: tests_pass / lint_clean / schema_valid / safety_clear / human_approved_if_required.
 - `failure_expectations` — array of `{scenario, classification, mitigation}`.
 - `skill_references` — paths from step 5.
+- `phase_task_card_path` — optional compact executor task card, required by `resource_profile: small_local` practice.
 
 **Inter-phase contracts** — if phase B depends on phase A, record `{from_phase, to_phase, interface, format}`.
+
+For `resource_profile: small_local`, phases should stay within `governance/runtime-policy.json → resource_profiles.small_local.phase_file_limit` or add a dedicated research/code-context phase first. Executor phases receive a Phase Task Card with allowed files, forbidden areas, validation commands, acceptance checks, max changed files, and an escalation rule.
 
 **Architectural visualization:**
 - 3+ phases → a `flowchart TD` (DAG of dependencies) is required.

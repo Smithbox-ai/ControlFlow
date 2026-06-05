@@ -1,0 +1,17 @@
+{
+  "id": "code-context-pack-required",
+  "target_agent": "CodeMapper-subagent",
+  "goal": "CodeMapper emits a compact CodeContextPack for executor-facing discovery instead of raw search dumps.",
+  "input": {
+    "resource_profile": "small_local",
+    "executor_handoff": true,
+    "scope_description": "Find the files that govern Planner context artifacts."
+  },
+  "expected": {
+    "schema": "schemas/code-mapper.discovery.schema.json",
+    "code_context_pack_schema": "schemas/code-context-pack.schema.json",
+    "code_context_pack_template": "plans/templates/code-context-pack-template.md",
+    "entry_points_required": true,
+    "expand_when_required": true
+  }
+}

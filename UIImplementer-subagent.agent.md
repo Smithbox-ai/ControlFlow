@@ -20,6 +20,8 @@ Keep the frontend-specific accessibility gates, responsive checks, design-system
 
 If `context_packet` is present in your dispatch, read the referenced `artifact_path` first before opening raw source files. Skip re-investigation of paths listed in `do_not_re_read` unless contradicting evidence is found.
 
+If `phase_task_card` is present, treat it as the authoritative local scope. Do not edit outside `allowed_files`, do not enter `forbidden_areas`, and return `NEEDS_INPUT` or `FAILED` with `failure_classification: needs_replan` when the card's max changed files or read budget would be exceeded.
+
 ### Scope IN
 - UI components and layout changes.
 - Styling within project design system.
@@ -76,6 +78,7 @@ Agent-specific fields:
 - `docs/agent-engineering/RELIABILITY-GATES.md`
 - `docs/agent-engineering/MIGRATION-CORE-FIRST.md`
 - `schemas/ui-implementer.execution-report.schema.json`
+- `plans/templates/phase-task-card-template.md`
 - `plans/project-context.md` (if present)
 - `docs/agent-engineering/TOOL-ROUTING.md`
 - `skills/patterns/llm-behavior-guidelines.md` (load on non-trivial tasks — anti-pattern guardrails: scope drift, over-abstraction, silent assumptions, weak success criteria)
@@ -116,6 +119,7 @@ Return a structured text report. Do NOT output raw JSON to chat.
 
 Include these fields clearly labeled:
 - **Status**, **Changes**, **Tests**, **Build**, **Accessibility**, **Responsive**, and **Summary**.
+- **Scope Budget** with allowed files vs changed files when a `phase_task_card` is present.
 - **Failure Classification** when not COMPLETE: transient, fixable, needs_replan, or escalate.
 
 Full contract reference: `schemas/ui-implementer.execution-report.schema.json`.
