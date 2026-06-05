@@ -2,6 +2,6 @@
 
 Repo-persistent active-objective state only. See `docs/agent-engineering/MEMORY-ARCHITECTURE.md` for the three-layer memory model; task-episodic history lives under `plans/artifacts/<task-slug>/`.
 
-- Active objective: Auto-default + selective pinning complete (4 pinned agents); full eval gate (`cd evals && npm test`) green.
-- Blockers: none.
-- Pending: optional follow-up to investigate pre-existing capability-matrix live-tree drift flags surfaced by the smoke test.
+- Active objective: Codex plugin selective-parity audit complete; LARGE implementation plan ready for PLAN_REVIEW.
+- Blockers: Full eval baseline fails at the pre-existing Pass 10 cross-plan overlap gate.
+- Pending: Resolve the overlap baseline through its owning plan before final plugin-parity verification.

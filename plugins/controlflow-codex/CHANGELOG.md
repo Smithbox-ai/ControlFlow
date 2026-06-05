@@ -4,6 +4,26 @@
 
 All notable changes to the `controlflow-codex` plugin are documented here. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-06-04
+
+### Added
+
+- Machine-checked selective core portability contract with adopted, adapted, and intentional-divergence dispositions.
+- Portable context refresh, pre-wave cache recommendations, diagnosis packets, wave approvals, transient throttling, revision/regression tracking, and aggregate final-review guidance.
+- Portable source-grounding and bounded decision-challenge references, adapted conceptually without importing external prompts, hooks, code, or agents.
+- `-StrictReviewByTier` validator mode with tier-derived review-artifact requirements and unresolved applicable `HIGH`-risk assumption-verifier override.
+
+### Changed
+
+- Strict lifecycle validation now requires the five headings as standalone headings in their documented order.
+- Planning template now carries lightweight trace, iteration, revision-lineage, context-packet, and verified-item fields.
+- README and USAGE now document selective parity, intentional divergences, exact lifecycle ordering, and tier-aware validation.
+
+### Notes
+
+- Public skill surface remains 10 namespaced `$controlflow-*` skills.
+- `model_unavailable`, VS Code model routing, tool grants, fixed agent roster, session telemetry, compaction, budgets, and quantitative review scoring remain intentionally excluded or deferred.
+
 ## [0.5.0] - 2026-05-08
 
 ### Added

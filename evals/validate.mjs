@@ -77,6 +77,7 @@ import {
   validatePatternFileLineBudget,
   validateDocCountConsistency,
   validatePluginGenerationParity,
+  validatePluginCorePortability,
 } from './drift-checks.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -2345,6 +2346,19 @@ try {
   }
 } catch (e) {
   fail(`Pass 15 (4/4): plugin generation parity — ${e.message}`);
+}
+
+// ─── Pass 16: Drift Detection — Selective Plugin-Core Portability ───────────
+header('Pass 16: Drift Detection — Selective Plugin-Core Portability');
+try {
+  const r = validatePluginCorePortability(ROOT);
+  if (r.ok) {
+    pass(`Pass 16: selective plugin-core portability contract valid for ${r.checked} invariant(s)`);
+  } else {
+    for (const err of r.errors) fail(`Pass 16: ${err}`);
+  }
+} catch (e) {
+  fail(`Pass 16: selective plugin-core portability — ${e.message}`);
 }
 
 // ─── Summary ─────────────────────────────────────────────────────────────────

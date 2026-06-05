@@ -1,0 +1,18 @@
+{
+  "id": "shared-component-impact-scan",
+  "target_agent": "Planner",
+  "goal": "A planned edit to a shared prompt, schema, validator, template, or public interface requires a usages and suspected-edit-location impact scan before modification.",
+  "input": {
+    "shared_surface": "schemas/planner.plan.schema.json",
+    "planned_change": "Add a new shared contract field."
+  },
+  "expected": {
+    "risk_review_present": true,
+    "complexity_tier_present": true,
+    "usages_inspected": true,
+    "symbols_or_consumers_inspected": true,
+    "suspected_edit_locations_recorded": true,
+    "adjacent_unrelated_cleanup_prohibited": true,
+    "skill_ref": "skills/patterns/llm-behavior-guidelines.md"
+  }
+}

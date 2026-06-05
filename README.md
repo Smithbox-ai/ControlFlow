@@ -265,7 +265,7 @@ See [`evals/README.md`](evals/README.md) for pass descriptions and how to add sc
 │   ├── tutorial-en/               # Full English-language tutorial (19 chapters)
 │   └── tutorial-ru/               # Full Russian-language tutorial (19 chapters)
 ├── governance/                    # Operational knobs and tool grants
-├── skills/                        # Reusable domain pattern library (18 patterns)
+├── skills/                        # Reusable domain pattern library (20 patterns)
 ├── evals/                         # Offline validation suite
 │   └── scenarios/                 # Eval scenario fixtures
 ├── plans/                         # Plan artifacts and templates
@@ -323,6 +323,8 @@ Create a new `.agent.md` file following the P.A.R.T structure (Prompt → Archiv
 A portable adaptation of ControlFlow for [OpenAI Codex CLI](https://github.com/openai/codex), located in [`plugins/controlflow-codex/`](plugins/controlflow-codex/).
 
 The plugin brings the core ControlFlow disciplines — phased planning, pre-execution plan review, assumption verification, orchestration, evidence-backed code review, and memory hygiene — into Codex without depending on VS Code-specific tool contracts, fixed agent rosters, or `@Agent` syntax.
+
+Version `0.6.0` adds machine-checked selective parity through `plugins/controlflow-shared-source/core-portability-matrix.json`: portable workflow invariants are adopted or adapted, while model routing, tool grants, the fixed roster, session telemetry, compaction, budgets, and `model_unavailable` remain explicit divergences.
 
 ### Included Skills
 
@@ -449,11 +451,10 @@ See [`plugins/controlflow-codex/USAGE.md`](plugins/controlflow-codex/USAGE.md) f
 powershell -ExecutionPolicy Bypass -File plugins/controlflow-codex/scripts/validate-strict-artifacts.ps1 `
   -RepoRoot . `
   -PlanPath plans/my-task-plan.md `
-  -RequirePlanAudit `
-  -RequireAssumptionVerifier
+  -StrictReviewByTier
 ```
 
-The `validate-strict-artifacts.ps1` script validates **Codex strict-plan artifacts only**. Do not use it for core VS Code plans. It enforces the mandatory lifecycle sections (`## Progress`, `## Discoveries`, `## Decision Log`, `## Outcomes`, `## Idempotence & Recovery`).
+The `validate-strict-artifacts.ps1` script validates **Codex strict-plan artifacts only**. Do not use it for core VS Code plans. It enforces the mandatory lifecycle sections (`## Progress`, `## Discoveries`, `## Decision Log`, `## Outcomes`, `## Idempotence & Recovery`) in exact order. `-StrictReviewByTier` derives required review artifacts from tier and applicable unresolved `HIGH` risk; the existing `-Require*` switches remain additive compatibility controls.
 
 ### Intentional Differences from the VS Code Version
 

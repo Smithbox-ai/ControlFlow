@@ -1,6 +1,6 @@
 {
   "name": "controlflow-codex",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "On-demand ControlFlow workflow skills for non-trivial Codex tasks: spec capture, planning, plan review, orchestration, review, and memory hygiene.",
   "author": {
     "name": "Local Workspace",
@@ -28,7 +28,7 @@
   "interface": {
     "displayName": "ControlFlow for Codex",
     "shortDescription": "On-demand workflow skills for non-trivial Codex tasks",
-    "longDescription": "Bring the portable and practical parts of ControlFlow into Codex when extra discipline is worth the overhead: spec-before-plan capture, a strict workflow entry point, Planner-style Markdown artifacts, plan-audit, assumption-verifier, and executability-verifier passes, complexity-aware orchestration, evidence-backed review, semantic risk checks, failure taxonomy, and memory hygiene.",
+    "longDescription": "Bring the portable and practical parts of ControlFlow into Codex when extra discipline is worth the overhead: spec-before-plan capture, strict plan validation, tier-aware review artifacts, phased orchestration, context refresh, bounded retries, evidence-backed final review, semantic risk checks, and memory hygiene.",
     "developerName": "Local Workspace",
     "category": "Coding",
     "capabilities": [

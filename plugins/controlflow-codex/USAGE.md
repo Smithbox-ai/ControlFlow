@@ -128,10 +128,12 @@ Move-Item "plans/artifacts/my-task" "plans/archive/$month/my-task-artifacts"
 - **Idempotence & Recovery** — укажите, какие фазы безопасно перезапускать и как восстановиться после сбоя. Пример:
   `Document in ## Idempotence & Recovery which phases are safe to re-run after an interrupted execution.`
 
-Эти секции — ControlFlow-нативная адаптация идей ExecPlan, а не буквальный импорт формата `PLANS.md` от OpenAI. Их порядок, имена и правила валидации определены внутри плагина. Локальный валидатор (`scripts/validate-strict-artifacts.ps1`) проверяет их наличие для строгих Codex-планов.
+Эти секции — ControlFlow-нативная адаптация идей ExecPlan, а не буквальный импорт формата `PLANS.md` от OpenAI. Их порядок, имена и правила валидации определены внутри плагина. Локальный валидатор (`scripts/validate-strict-artifacts.ps1`) проверяет их наличие и точный порядок для строгих Codex-планов.
 
 ## Validator
 
-Проверка структуры артефактов:
+Рекомендуемая проверка структуры и обязательных review-артефактов по tier:
 
-`powershell -ExecutionPolicy Bypass -File plugins/controlflow-codex/scripts/validate-strict-artifacts.ps1 -RepoRoot <repo-root> -PlanPath plans/<task-slug>-plan.md -RequirePlanAudit -RequireAssumptionVerifier -RequireExecutabilityVerifier`
+`powershell -ExecutionPolicy Bypass -File plugins/controlflow-codex/scripts/validate-strict-artifacts.ps1 -RepoRoot <repo-root> -PlanPath plans/<task-slug>-plan.md -StrictReviewByTier`
+
+Совместимые additive switches `-RequirePlanAudit`, `-RequireAssumptionVerifier` и `-RequireExecutabilityVerifier` остаются доступны, когда нужно потребовать конкретный артефакт независимо от tier.

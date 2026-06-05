@@ -1,0 +1,20 @@
+{
+  "id": "bounded-decision-challenge",
+  "target_agent": "Planner",
+  "goal": "One bounded challenge is used for a high-risk or non-trivial decision, while trivial choices and hidden external-agent loops are excluded.",
+  "input": {
+    "decision": "Change a shared validation contract.",
+    "risk": "HIGH",
+    "material_alternatives": 2
+  },
+  "expected": {
+    "risk_review_present": true,
+    "complexity_tier_present": true,
+    "challenge_rounds_max": 1,
+    "strongest_counterargument_recorded": true,
+    "simpler_or_safer_alternative_compared": true,
+    "trivial_choices_skipped": true,
+    "external_agents_or_cross_model_clis_invoked": false,
+    "skill_ref": "skills/patterns/decision-challenge.md"
+  }
+}

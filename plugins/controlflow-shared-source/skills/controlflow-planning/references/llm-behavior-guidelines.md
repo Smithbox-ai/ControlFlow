@@ -30,6 +30,7 @@ Portable ControlFlow-Codex guardrails for avoiding common LLM coding anti-patter
 - Touch only files and lines tied to the task.
 - Do not reformat, rename, or clean adjacent code unless the requested change made it necessary.
 - Mention unrelated observations in the report instead of editing them.
+- Before changing a shared prompt, schema, validator, template, or public interface, inspect usages and suspected edit locations.
 
 ### 4. Goal-Driven Execution
 

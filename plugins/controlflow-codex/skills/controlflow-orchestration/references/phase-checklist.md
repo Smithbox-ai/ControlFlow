@@ -7,6 +7,8 @@
 - Confirm the validation command or what evidence still needs discovery.
 - Confirm whether approval is required before touching anything risky.
 - Confirm whether the work stays local or could be delegated safely.
+- For a shared prompt, schema, validator, template, or public interface, inspect usages and suspected edit locations before changing it.
+- Check recent task artifacts for similar work; recommendations never auto-complete a phase or skip approval.
 
 ## Completion
 
@@ -14,4 +16,5 @@
 - Build or lint checks pass when they are relevant to the repo.
 - Review concerns were handled or explicitly deferred with rationale.
 - Any user-visible contract, docs, or schema updates were included.
+- The context packet records verified facts, invalidated assumptions, changed paths, and next-wave reuse notes.
 - The next phase is unblocked, or the blocker is called out clearly.

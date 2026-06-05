@@ -42,3 +42,17 @@ Use `-Host codex` or `-Host claude_code` to limit either command to one plugin o
 Write mode copies only the files declared by the manifest and any declared host override overlay. It does not delete unmanaged files or directories. Validation mode performs hash checks only and exits non-zero on drift.
 
 Host `generation-overrides.json` files may derive a generated text file from canonical source plus small declared insertions. Use this when a host needs a few invocation lines but a full file override would duplicate the canonical template.
+
+## Selective Core Portability
+
+`core-portability-matrix.json` records which core ControlFlow invariants portable plugins adopt, adapt, or intentionally exclude. It stores evidence paths and short semantic anchors rather than copying core policy prose. The offline eval suite validates this contract in Pass 16.
+
+### Portable Runtime Policy Subset
+
+The portable runtime-policy snapshot keeps host-neutral review routing, retry discipline, batch approval, pre-wave cache recommendations, and transient-wave throttling. It does not attempt to mirror every top-level core runtime-policy block.
+
+### Intentional Divergences
+
+- `model_unavailable` remains an intentional divergence because portable skills do not own model substitution.
+- VS Code model routing, tool grants, and the fixed agent roster remain core-only.
+- Core session telemetry, compaction, and budgets remain host-runtime concerns.

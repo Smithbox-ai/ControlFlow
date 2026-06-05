@@ -54,6 +54,7 @@ import {
   scanDocCountMismatches,
   validateDocCountConsistency,
   validatePluginGenerationParity,
+  validatePluginCorePortability,
 } from '../drift-checks.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -1728,6 +1729,97 @@ console.log('\n=== Plugin generation parity (controlflow-codex == shared-source,
         && badRes.errors.some(e => e.includes('skills/a.md') && e.includes('hash mismatch'))
         && badRes.errors.some(e => e.includes('skills/b.md') && e.includes('missing managed file')),
       `ok=${badRes.ok}, errors=${JSON.stringify(badRes.errors)}`
+    );
+  } finally {
+    rmSync(tmpBad, { recursive: true, force: true });
+  }
+}
+
+// ──────────────────────────────────────────────
+// Selective plugin-core portability contract
+// ──────────────────────────────────────────────
+console.log('\n=== Selective plugin-core portability contract ===');
+{
+  const ROOT = join(__dirname, '..', '..');
+  const realResult = validatePluginCorePortability(ROOT);
+  check(
+    `PC1: real selective portability matrix validates (${realResult.checked} invariants)`,
+    realResult.ok === true && realResult.checked > 0,
+    realResult.ok ? '' : `errors=${JSON.stringify(realResult.errors)}`
+  );
+
+  const tmpOk = join(tmpdir(), `cf-core-portability-ok-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+  mkdirSync(join(tmpOk, 'plugins', 'controlflow-shared-source'), { recursive: true });
+  try {
+    writeFileSync(join(tmpOk, 'core.md'), 'Core contract\n');
+    writeFileSync(join(tmpOk, 'plugin.md'), 'Portable semantic anchor\n');
+    const matrix = {
+      schema_version: '1.0.0',
+      plugin: 'controlflow-codex',
+      invariants: [{
+        id: 'demo',
+        disposition: 'adapt',
+        rationale: 'Synthetic positive.',
+        core_evidence: ['core.md'],
+        plugin_evidence: ['plugin.md'],
+        required_anchors: [{ path: 'plugin.md', anchors: ['Portable semantic anchor'] }],
+      }],
+    };
+    writeFileSync(
+      join(tmpOk, 'plugins', 'controlflow-shared-source', 'core-portability-matrix.json'),
+      JSON.stringify(matrix)
+    );
+    const okRes = validatePluginCorePortability(tmpOk);
+    check(
+      'PC2: valid disposition, evidence paths, and semantic anchor → accepted',
+      okRes.ok === true && okRes.checked === 1,
+      `errors=${JSON.stringify(okRes.errors)}`
+    );
+  } finally {
+    rmSync(tmpOk, { recursive: true, force: true });
+  }
+
+  const tmpBad = join(tmpdir(), `cf-core-portability-bad-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+  mkdirSync(join(tmpBad, 'plugins', 'controlflow-shared-source'), { recursive: true });
+  try {
+    writeFileSync(join(tmpBad, 'core.md'), 'Core contract\n');
+    writeFileSync(join(tmpBad, 'plugin.md'), 'Different wording\n');
+    const badMatrix = {
+      schema_version: '1.0.0',
+      plugin: 'controlflow-codex',
+      invariants: [
+        {
+          id: 'duplicate',
+          disposition: 'copy_everything',
+          rationale: '',
+          core_evidence: ['core.md', '../outside.md'],
+          plugin_evidence: ['missing.md'],
+          required_anchors: [{ path: 'plugin.md', anchors: ['Expected anchor'] }],
+        },
+        {
+          id: 'duplicate',
+          disposition: 'intentional_divergence',
+          rationale: 'Duplicate negative.',
+          core_evidence: ['core.md'],
+          plugin_evidence: ['plugin.md'],
+          required_anchors: [{ path: 'plugin.md', anchors: ['Expected anchor'] }],
+        },
+      ],
+    };
+    writeFileSync(
+      join(tmpBad, 'plugins', 'controlflow-shared-source', 'core-portability-matrix.json'),
+      JSON.stringify(badMatrix)
+    );
+    const badRes = validatePluginCorePortability(tmpBad);
+    check(
+      'PC3: duplicate id, invalid disposition, unsafe path, missing evidence, and missing anchor → rejected',
+      badRes.ok === false
+        && badRes.errors.some(e => e.includes('duplicate invariant id'))
+        && badRes.errors.some(e => e.includes('invalid disposition'))
+        && badRes.errors.some(e => e.includes('unsafe repo-relative path'))
+        && badRes.errors.some(e => e.includes('missing evidence file'))
+        && badRes.errors.some(e => e.includes('missing semantic anchor')),
+      `errors=${JSON.stringify(badRes.errors)}`
     );
   } finally {
     rmSync(tmpBad, { recursive: true, force: true });

@@ -1,0 +1,17 @@
+{
+  "id": "source-grounding-official-unverified",
+  "target_agent": "Researcher-subagent",
+  "goal": "External framework, API, version, and sibling-source claims prefer current official primary evidence and explicitly label material unsupported claims UNVERIFIED.",
+  "input": {
+    "local_repo_fact": "A local config file declares the current integration.",
+    "external_claim": "A third-party API supports a version-sensitive feature.",
+    "official_source_accessible": false
+  },
+  "expected": {
+    "local_repo_facts_use_local_evidence": true,
+    "external_claims_prefer_official_primary_sources": true,
+    "unsupported_material_claim_state": "UNVERIFIED",
+    "external_text_or_code_copied": false,
+    "skill_ref": "skills/patterns/source-grounding.md"
+  }
+}

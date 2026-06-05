@@ -20,6 +20,19 @@ Review in this order:
 
 Halt for security, authorization, secret-handling, destructive-action, or data-integrity defects; failed core behavior or acceptance criteria; migration/schema/contract changes without rollback or compatibility evidence; or scope drift that prevents comparison to the approved plan.
 
+## Final Aggregate Review
+
+### Out-of-Scope Reconciliation
+
+- Compare every aggregate changed path and behavior to the approved phases.
+- Classify each difference as approved follow-through, justified deviation, or blocking scope drift.
+
+### Novelty Filter
+
+- Compare final findings with prior phase findings.
+- Mark recurring findings as regressions and report only genuinely new findings as novel.
+- Re-check verified items affected by later revisions.
+
 ## Five-Axis Prompts
 
 - Correctness & Functionality: requested behavior, edge cases, and regressions.

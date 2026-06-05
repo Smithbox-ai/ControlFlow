@@ -33,7 +33,7 @@
 | 08 | [Пайплайн исполнения](08-execution-pipeline.md) | Волны параллельного исполнения, executor_agent, quality gates, completion gate, optional final review | 8 |
 | 09 | [Схемы (контракты)](09-schemas.md) | Разбор всех 17 JSON-схем: какая для какого агента, ключевые поля | 10 |
 | 10 | [Governance](10-governance.md) | agent-grants, tool-grants, runtime-policy, model-routing, rename-allowlist | 8 |
-| 11 | [Skills (паттерны)](11-skills.md) | Skill library, протокол выбора (≤3 на фазу), 18 паттернов | 7 |
+| 11 | [Skills (паттерны)](11-skills.md) | Skill library, протокол выбора (≤3 на фазу), 20 паттернов | 7 |
 | 12 | [Архитектура памяти](12-memory.md) | Трёхслойная модель: session / task-episodic / repo-persistent; роль NOTES.md | 6 |
 | 13 | [Таксономия сбоев](13-failure-taxonomy.md) | 4 класса: transient / fixable / needs_replan / escalate; retry-политики | 6 |
 | 14 | [Eval-харнесс](14-evals.md) | Устройство `cd evals && npm test`, режимы full/structural/behavior | 6 |

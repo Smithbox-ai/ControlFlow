@@ -1,0 +1,298 @@
+{
+  "schema_version": "1.0.0",
+  "plugin": "controlflow-codex",
+  "description": "Selective core-to-plugin portability contract. This file stores dispositions and evidence pointers, not duplicated policy prose.",
+  "invariants": [
+    {
+      "id": "context_packet_refresh",
+      "disposition": "adapt",
+      "rationale": "Portable wave handoffs should retain verified facts and invalidated assumptions without depending on VS Code dispatch schemas.",
+      "core_evidence": [
+        "Orchestrator.agent.md",
+        "evals/scenarios/context-packet-scope.json"
+      ],
+      "plugin_evidence": [
+        "plugins/controlflow-shared-source/skills/controlflow-orchestration/SKILL.md",
+        "plugins/controlflow-shared-source/skills/controlflow-orchestration/references/phase-checklist.md"
+      ],
+      "required_anchors": [
+        {
+          "path": "plugins/controlflow-shared-source/skills/controlflow-orchestration/SKILL.md",
+          "anchors": [
+            "Refresh the context packet after each completed wave"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pre_wave_cache_guard",
+      "disposition": "adapt",
+      "rationale": "The recommendation-only cache guard is host-neutral when expressed as a local artifact scan.",
+      "core_evidence": [
+        "Orchestrator.agent.md",
+        "governance/runtime-policy.json",
+        "evals/scenarios/pre-wave-cache-guard.json"
+      ],
+      "plugin_evidence": [
+        "plugins/controlflow-shared-source/skills/controlflow-orchestration/SKILL.md",
+        "plugins/controlflow-shared-source/skills/controlflow-orchestration/references/runtime-policy.json"
+      ],
+      "required_anchors": [
+        {
+          "path": "plugins/controlflow-shared-source/skills/controlflow-orchestration/SKILL.md",
+          "anchors": [
+            "Pre-Wave Cache Guard"
+          ]
+        },
+        {
+          "path": "plugins/controlflow-shared-source/skills/controlflow-orchestration/references/runtime-policy.json",
+          "anchors": [
+            "\"task_cache\""
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fixable_retry_diagnosis",
+      "disposition": "adopt",
+      "rationale": "A diagnosis packet before retry is portable and prevents unchanged repeated attempts.",
+      "core_evidence": [
+        "Orchestrator.agent.md",
+        "evals/scenarios/failure-retry-diagnosis.json"
+      ],
+      "plugin_evidence": [
+        "plugins/controlflow-shared-source/skills/controlflow-orchestration/SKILL.md",
+        "plugins/controlflow-shared-source/skills/controlflow-orchestration/references/failure-taxonomy.md"
+      ],
+      "required_anchors": [
+        {
+          "path": "plugins/controlflow-shared-source/skills/controlflow-orchestration/references/failure-taxonomy.md",
+          "anchors": [
+            "Diagnosis Packet"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "batch_approval",
+      "disposition": "adapt",
+      "rationale": "One approval per ordinary wave transfers cleanly while destructive or high-risk phases remain separately gated.",
+      "core_evidence": [
+        "Orchestrator.agent.md",
+        "governance/runtime-policy.json",
+        "evals/scenarios/wave-execution.json"
+      ],
+      "plugin_evidence": [
+        "plugins/controlflow-shared-source/skills/controlflow-orchestration/SKILL.md",
+        "plugins/controlflow-shared-source/skills/controlflow-orchestration/references/runtime-policy.json"
+      ],
+      "required_anchors": [
+        {
+          "path": "plugins/controlflow-shared-source/skills/controlflow-orchestration/SKILL.md",
+          "anchors": [
+            "one approval request per ordinary wave"
+          ]
+        },
+        {
+          "path": "plugins/controlflow-shared-source/skills/controlflow-orchestration/references/runtime-policy.json",
+          "anchors": [
+            "\"batch_approval\""
+          ]
+        }
+      ]
+    },
+    {
+      "id": "transient_wave_throttling",
+      "disposition": "adapt",
+      "rationale": "Reducing later-wave parallelism after repeated transient failures is portable retry discipline.",
+      "core_evidence": [
+        "Orchestrator.agent.md",
+        "governance/runtime-policy.json",
+        "evals/scenarios/orchestrator-retry-backoff.json"
+      ],
+      "plugin_evidence": [
+        "plugins/controlflow-shared-source/skills/controlflow-orchestration/references/runtime-policy.json",
+        "plugins/controlflow-shared-source/skills/controlflow-orchestration/references/failure-taxonomy.md"
+      ],
+      "required_anchors": [
+        {
+          "path": "plugins/controlflow-shared-source/skills/controlflow-orchestration/references/runtime-policy.json",
+          "anchors": [
+            "\"per_wave_transient_reduction_threshold\"",
+            "\"per_wave_parallelism_reduction_factor\""
+          ]
+        }
+      ]
+    },
+    {
+      "id": "revision_and_verified_item_regression",
+      "disposition": "adapt",
+      "rationale": "Portable plans need lightweight revision lineage and explicit regression checks without copying the core schema.",
+      "core_evidence": [
+        "Planner.agent.md",
+        "Orchestrator.agent.md",
+        "evals/scenarios/plan-revision-lineage.json"
+      ],
+      "plugin_evidence": [
+        "plugins/controlflow-shared-source/skills/controlflow-planning/SKILL.md",
+        "plugins/controlflow-shared-source/skills/controlflow-planning/references/plan-template.md",
+        "plugins/controlflow-shared-source/skills/controlflow-planning/references/planner-output-contract.md"
+      ],
+      "required_anchors": [
+        {
+          "path": "plugins/controlflow-shared-source/skills/controlflow-planning/references/plan-template.md",
+          "anchors": [
+            "### Verified Items",
+            "Revision Lineage"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "aggregate_final_review",
+      "disposition": "adapt",
+      "rationale": "Final review should compare the aggregate diff to the approved plan and distinguish new findings from known ones.",
+      "core_evidence": [
+        "CodeReviewer-subagent.agent.md",
+        "docs/agent-engineering/FINAL-REVIEW-SCOPE.md"
+      ],
+      "plugin_evidence": [
+        "plugins/controlflow-shared-source/skills/controlflow-strict-workflow/SKILL.md",
+        "plugins/controlflow-shared-source/skills/controlflow-review/SKILL.md",
+        "plugins/controlflow-shared-source/skills/controlflow-review/references/review-checklist.md"
+      ],
+      "required_anchors": [
+        {
+          "path": "plugins/controlflow-shared-source/skills/controlflow-review/references/review-checklist.md",
+          "anchors": [
+            "Novelty Filter",
+            "Out-of-Scope Reconciliation"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "portable_runtime_policy_subset",
+      "disposition": "adapt",
+      "rationale": "The plugin keeps only host-neutral execution knobs and documents the omitted core-only areas.",
+      "core_evidence": [
+        "governance/runtime-policy.json"
+      ],
+      "plugin_evidence": [
+        "plugins/controlflow-shared-source/skills/controlflow-orchestration/references/runtime-policy.json",
+        "plugins/controlflow-shared-source/README.md"
+      ],
+      "required_anchors": [
+        {
+          "path": "plugins/controlflow-shared-source/README.md",
+          "anchors": [
+            "Portable Runtime Policy Subset"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "model_unavailable",
+      "disposition": "intentional_divergence",
+      "rationale": "The portable skill workflow does not own Codex model substitution or routing.",
+      "core_evidence": [
+        "Orchestrator.agent.md",
+        "governance/runtime-policy.json"
+      ],
+      "plugin_evidence": [
+        "plugins/controlflow-shared-source/README.md"
+      ],
+      "required_anchors": [
+        {
+          "path": "plugins/controlflow-shared-source/README.md",
+          "anchors": [
+            "`model_unavailable` remains an intentional divergence"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "model_routing",
+      "disposition": "intentional_divergence",
+      "rationale": "Codex owns its model selection; the plugin must not recreate VS Code model-routing governance.",
+      "core_evidence": [
+        "governance/model-routing.json",
+        "docs/agent-engineering/MODEL-ROUTING.md"
+      ],
+      "plugin_evidence": [
+        "plugins/controlflow-shared-source/README.md",
+        "plugins/controlflow-codex/README.md"
+      ],
+      "required_anchors": [
+        {
+          "path": "plugins/controlflow-shared-source/README.md",
+          "anchors": [
+            "model routing"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tool_grants",
+      "disposition": "intentional_divergence",
+      "rationale": "Portable Codex skills do not reproduce VS Code-specific tool grant manifests.",
+      "core_evidence": [
+        "governance/tool-grants.json",
+        "docs/agent-engineering/TOOL-ROUTING.md"
+      ],
+      "plugin_evidence": [
+        "plugins/controlflow-shared-source/README.md",
+        "plugins/controlflow-codex/README.md"
+      ],
+      "required_anchors": [
+        {
+          "path": "plugins/controlflow-shared-source/README.md",
+          "anchors": [
+            "tool grants"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fixed_agent_roster",
+      "disposition": "intentional_divergence",
+      "rationale": "The plugin exposes skills rather than a fixed project-internal agent roster.",
+      "core_evidence": [
+        "plans/project-context.md",
+        "governance/agent-grants.json"
+      ],
+      "plugin_evidence": [
+        "plugins/controlflow-shared-source/README.md",
+        "plugins/controlflow-codex/README.md"
+      ],
+      "required_anchors": [
+        {
+          "path": "plugins/controlflow-shared-source/README.md",
+          "anchors": [
+            "fixed agent roster"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "session_compaction_budget_policy",
+      "disposition": "intentional_divergence",
+      "rationale": "Session telemetry, compaction, and budget enforcement depend on the core host runtime and remain outside portable plugin policy.",
+      "core_evidence": [
+        "governance/runtime-policy.json",
+        "Orchestrator.agent.md"
+      ],
+      "plugin_evidence": [
+        "plugins/controlflow-shared-source/README.md"
+      ],
+      "required_anchors": [
+        {
+          "path": "plugins/controlflow-shared-source/README.md",
+          "anchors": [
+            "session telemetry, compaction, and budgets"
+          ]
+        }
+      ]
+    }
+  ]
+}

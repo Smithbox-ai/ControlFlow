@@ -7,7 +7,8 @@ param(
 
     [switch]$RequirePlanAudit,
     [switch]$RequireAssumptionVerifier,
-    [switch]$RequireExecutabilityVerifier
+    [switch]$RequireExecutabilityVerifier,
+    [switch]$StrictReviewByTier
 )
 
 $ErrorActionPreference = "Stop"
@@ -23,6 +24,30 @@ function Assert-Contains([string]$Content, [string]$Needle, [string]$Label) {
     if ($Content -notmatch [regex]::Escape($Needle)) {
         throw "Missing required section '$Label'"
     }
+}
+
+function Test-UnresolvedHighRisk([string]$Content) {
+    foreach ($line in ($Content -split "`r?`n")) {
+        if ($line -notmatch '^\s*\|') {
+            continue
+        }
+
+        $columns = @($line.Trim().Trim('|').Split('|') | ForEach-Object { $_.Trim().Trim('`') })
+        if ($columns.Count -lt 5) {
+            continue
+        }
+
+        $applicability = $columns[1].ToLowerInvariant()
+        $impact = $columns[2].ToUpperInvariant()
+        $disposition = $columns[4].ToLowerInvariant()
+        if (($applicability -eq "applicable") -and
+            ($impact -eq "HIGH") -and
+            ($disposition -notin @("resolved", "not_applicable"))) {
+            return $true
+        }
+    }
+
+    return $false
 }
 
 $repoRootResolved = (Resolve-Path $RepoRoot).Path
@@ -72,9 +97,17 @@ $lifecycleSections = @(
 )
 
 $missingLifecycle = @()
+$lifecyclePositions = @()
 foreach ($section in $lifecycleSections) {
-    if ($planContent -notmatch [regex]::Escape($section)) {
+    $headingPattern = "(?m)^" + [regex]::Escape($section) + "\s*$"
+    $matches = [regex]::Matches($planContent, $headingPattern)
+    if ($matches.Count -eq 0) {
         $missingLifecycle += $section
+    } else {
+        $lifecyclePositions += [pscustomobject]@{
+            Heading = $section
+            Index = $matches[0].Index
+        }
     }
 }
 if ($missingLifecycle.Count -gt 0) {
@@ -84,20 +117,69 @@ if ($missingLifecycle.Count -gt 0) {
     throw "ControlFlow-Codex strict plan is missing $($missingLifecycle.Count) required lifecycle section(s) in: $planResolved"
 }
 
+$orderErrors = @()
+for ($i = 1; $i -lt $lifecyclePositions.Count; $i++) {
+    if ($lifecyclePositions[$i - 1].Index -ge $lifecyclePositions[$i].Index) {
+        $orderErrors += "'$($lifecyclePositions[$i].Heading)' must appear after '$($lifecyclePositions[$i - 1].Heading)'"
+    }
+}
+if ($orderErrors.Count -gt 0) {
+    foreach ($orderError in $orderErrors) {
+        Write-Output "Lifecycle section out of order: $orderError"
+    }
+    throw "ControlFlow-Codex strict plan lifecycle sections are out of order in: $planResolved"
+}
+
+$needsPlanAudit = $RequirePlanAudit.IsPresent
+$needsAssumptionVerifier = $RequireAssumptionVerifier.IsPresent
+$needsExecutabilityVerifier = $RequireExecutabilityVerifier.IsPresent
+
+if ($StrictReviewByTier) {
+    $tierMatch = [regex]::Match(
+        $planContent,
+        '(?mi)^\*\*Complexity Tier:\*\*\s*`?(TRIVIAL|SMALL|MEDIUM|LARGE)`?\s*$'
+    )
+    if (-not $tierMatch.Success) {
+        throw "Strict review-by-tier validation requires a parseable Complexity Tier in: $planResolved"
+    }
+
+    $complexityTier = $tierMatch.Groups[1].Value.ToUpperInvariant()
+    switch ($complexityTier) {
+        "SMALL" {
+            $needsPlanAudit = $true
+        }
+        "MEDIUM" {
+            $needsPlanAudit = $true
+            $needsAssumptionVerifier = $true
+        }
+        "LARGE" {
+            $needsPlanAudit = $true
+            $needsAssumptionVerifier = $true
+            $needsExecutabilityVerifier = $true
+        }
+    }
+
+    if (Test-UnresolvedHighRisk $planContent) {
+        $needsAssumptionVerifier = $true
+    }
+
+    Write-Output "Strict review-by-tier: tier=$complexityTier plan_audit=$needsPlanAudit assumption_verifier=$needsAssumptionVerifier executability_verifier=$needsExecutabilityVerifier"
+}
+
 $artifactChecks = @()
-if ($RequirePlanAudit) {
+if ($needsPlanAudit) {
     $artifactChecks += [pscustomobject]@{
         Path = Join-Path $artifactRoot "plan-audit.md"
         Sections = @("# Plan Audit Report", "**Status:**", "## Findings", "## Risk Summary", "## Recommendation", "## Evidence")
     }
 }
-if ($RequireAssumptionVerifier) {
+if ($needsAssumptionVerifier) {
     $artifactChecks += [pscustomobject]@{
         Path = Join-Path $artifactRoot "assumption-verifier.md"
         Sections = @("# Assumption Verifier Report", "**Status:**", "## Mirages Found", "## Dimensional Scores", "## Summary", "## Evidence")
     }
 }
-if ($RequireExecutabilityVerifier) {
+if ($needsExecutabilityVerifier) {
     $artifactChecks += [pscustomobject]@{
         Path = Join-Path $artifactRoot "executability-verifier.md"
         Sections = @("# Executability Verifier Report", "**Status:**", "## Tasks Simulated", "## Per-Task Checklist", "## Walkthrough Summary", "## Recommendation")

@@ -179,6 +179,8 @@ npm test
 | **12 — Governance Policy Assertions** | Runtime policy invariants for tool-output spill, session telemetry, model-routing hints, compaction, memory promotion order, and CodeReviewer security mode. |
 | **13 — Final Review Coupling** | `review_scope=final` coupling between CodeReviewer prompt behavior and schema fields, including injected context expectations. |
 | **14 — Canonical Source Matrix** | Ensures `plans/project-context.md` keeps the Canonical Source Matrix heading. |
+| **15 — Tool Labels / Pattern Budget / Doc Counts / Generation Parity** | Runs the existing live-tree drift checks for registry tool-count labels, skill-pattern line budgets, allowlisted documentation totals, and no-delta Codex generation parity. |
+| **16 — Selective Plugin-Core Portability** | Validates `core-portability-matrix.json`: unique invariant IDs, allowed dispositions, evidence paths, and declared semantic anchors without requiring byte parity with core prose. |
 
 ### Separate harnesses in `npm test`
 

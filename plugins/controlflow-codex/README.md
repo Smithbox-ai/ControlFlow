@@ -1,6 +1,6 @@
 # ControlFlow for Codex
 
-**Version:** 0.5.0
+**Version:** 0.6.0
 
 This repo-local plugin ports the parts of ControlFlow that transfer cleanly into [OpenAI Codex CLI](https://github.com/openai/codex):
 
@@ -69,6 +69,14 @@ Skip ControlFlow-Codex and prompt Codex directly when:
 
 The plugin does not install global hooks or replace Codex defaults. Its skills are namespaced as `$controlflow-*` and should be invoked only when that extra workflow discipline is useful.
 
+## Selective Core Parity
+
+ControlFlow-Codex follows a machine-checked selective portability contract in [`../controlflow-shared-source/core-portability-matrix.json`](../controlflow-shared-source/core-portability-matrix.json). The contract adapts host-neutral workflow behavior without copying core prompt prose or pretending that every VS Code runtime surface exists in Codex.
+
+Portable adaptations include context-packet refresh, pre-wave cache recommendations, diagnosis before fixable retry, one approval per ordinary wave, transient-wave throttling, revision/regression tracking, and aggregate final review.
+
+Intentional divergences include `model_unavailable`, VS Code model routing, tool grants, the fixed agent roster, session telemetry, compaction, and budget enforcement.
+
 ## Strict Mode
 
 The current version supports a stricter ControlFlow-style path for non-trivial work:
@@ -80,6 +88,8 @@ The current version supports a stricter ControlFlow-style path for non-trivial w
 - `controlflow-assumption-verifier` checks for mirages and assumption-fact confusion before execution for `MEDIUM+` work and unresolved high-risk plans
 - `controlflow-executability-verifier` simulates cold-start execution for `LARGE` work and other cases where executability confidence is weak; uses `skills/controlflow-executability-verifier/references/executability-checklist.md` for the 8-point checklist and TDD walk-through
 - `controlflow-strict-workflow` acts as the single recommended entry point when you want the full ControlFlow-Codex orchestration path instead of manually stitching skills together
+- wave execution refreshes context packets, checks recent related artifacts, and uses one approval request per ordinary wave while preserving separate destructive/high-risk gates
+- final review compares aggregate changed scope to the approved plan, reconciles out-of-scope changes, and filters previously resolved findings
 
 ## Installation Shape
 
@@ -134,4 +144,6 @@ Strict Codex plans in this plugin include five required lifecycle sections at th
 
 These sections are inspired by OpenAI ExecPlan living-document discipline but are a ControlFlow-native adaptation. They preserve ControlFlow artifact paths, no-fenced-code-block rules, strict plan dialect, and review-gated execution. This is not a literal import of OpenAI's `PLANS.md` format; the section names, validator enforcement, and plan template are defined and maintained within this plugin.
 
-The local validator at `scripts/validate-strict-artifacts.ps1` enforces these five headings for ControlFlow-Codex strict-plan artifacts. It does not validate core VS Code Planner artifacts unless Phase 7 of the adoption plan explicitly adds and tests that support.
+The local validator at `scripts/validate-strict-artifacts.ps1` enforces these five headings as standalone headings in the documented order for ControlFlow-Codex strict-plan artifacts. It does not validate core VS Code Planner artifacts.
+
+Use `-StrictReviewByTier` to infer review artifacts from the plan: `SMALL` requires plan audit, `MEDIUM` adds assumption verification, and `LARGE` adds executability verification. Any applicable unresolved `HIGH` semantic risk also requires assumption verification. Existing `-RequirePlanAudit`, `-RequireAssumptionVerifier`, and `-RequireExecutabilityVerifier` switches remain supported as additive compatibility controls.

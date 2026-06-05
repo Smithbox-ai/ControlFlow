@@ -1189,6 +1189,28 @@ export function computeStructuralFingerprint() {
       if (f.endsWith('.md')) hashFile(join(CF_REPO_ROOT, 'skills', 'patterns', f));
     }
   } catch { /* cold */ }
+  // Selective plugin portability contract plus every evidence file it declares.
+  const portabilityMatrixPath = join(
+    CF_REPO_ROOT,
+    'plugins',
+    'controlflow-shared-source',
+    'core-portability-matrix.json'
+  );
+  hashFile(portabilityMatrixPath);
+  try {
+    const matrix = JSON.parse(readFileSync(portabilityMatrixPath, 'utf8'));
+    const evidencePaths = new Set();
+    for (const invariant of matrix.invariants || []) {
+      for (const rel of invariant.core_evidence || []) evidencePaths.add(rel);
+      for (const rel of invariant.plugin_evidence || []) evidencePaths.add(rel);
+      for (const requirement of invariant.required_anchors || []) {
+        if (requirement && typeof requirement.path === 'string') evidencePaths.add(requirement.path);
+      }
+    }
+    for (const rel of [...evidencePaths].sort()) {
+      if (isSafeRepoRelativePath(rel)) hashFile(join(CF_REPO_ROOT, rel));
+    }
+  } catch { /* Pass 16 reports malformed matrix details. */ }
   return h.digest('hex');
 }
 
@@ -1619,7 +1641,7 @@ export function validatePatternFileLineBudget(patternsDir, maxLines = 100) {
 //     NOT build a general number extractor. Each pattern below is anchored to
 //     avoid known collisions, in particular:
 //       - "17 mirage patterns" / "17 patterns" / "17 паттернов" (AssumptionVerifier
-//         mirage count) must NOT be read as the skills-pattern count (18).
+//         mirage count) must NOT be read as the skills-pattern count.
 //       - "10 portable skills, 6 agents" (claude-code plugin line in README) must
 //         NOT be read as the repo skills/agents totals.
 //     When a phrasing is ambiguous we prefer NOT matching it over guessing.
@@ -1643,10 +1665,10 @@ const DOC_COUNT_PHRASE_PATTERNS = [
   // governance → governance/*.json
   { kind: 'governance', re: /(\d+)\s+governance\b/gi },           // EN "7 governance files", RU "7 governance(-файлов)"
   // skills → skills/patterns/*.md
-  { kind: 'skills', re: /(?<![≤<])(\d+)\s+skills\b(?!\s+per\b)/gi },// EN "18 skills" (NOT "10 portable skills", NOT "≤3 skills per phase")
-  { kind: 'skills', re: /pattern library \((\d+)\s+patterns\)/gi },// EN README "pattern library (18 patterns)"
+  { kind: 'skills', re: /(?<![≤<])(\d+)\s+skills\b(?!\s+per\b)/gi },// EN repo skills total (NOT "10 portable skills", NOT "≤3 skills per phase")
+  { kind: 'skills', re: /pattern library \((\d+)\s+patterns\)/gi },// EN README pattern-library total
   // RU skills total: anchored (mirrors EN) to a same-line skill-library marker —
-  // "Skill library ... 18 паттернов" (tutorial README) and "patterns/ ... 18 паттернов"
+  // "Skill library ... N паттернов" (tutorial README) and "patterns/ ... N паттернов"
   // (quickstart tree). The Latin "skill"/"patterns/" anchor excludes a bare genitive
   // mirage like "17 паттернов" (AssumptionVerifier taxonomy) from being misread as 18.
   // Trailing (?![а-яё]) is the Cyrillic word boundary (JS \b is ASCII-only, so it never
@@ -1827,4 +1849,113 @@ export function validatePluginGenerationParity(pluginsRoot) {
   }
 
   return { ok: errors.length === 0, errors, checked };
+}
+
+const PORTABILITY_DISPOSITIONS = new Set(['adopt', 'adapt', 'intentional_divergence']);
+
+function isSafeRepoRelativePath(rel) {
+  return typeof rel === 'string'
+    && rel.length > 0
+    && !/^[A-Za-z]:[\\/]/.test(rel)
+    && !rel.startsWith('/')
+    && !rel.startsWith('\\')
+    && !rel.split(/[\\/]/).includes('..');
+}
+
+/**
+ * Validate the selective core-to-plugin portability contract.
+ * The matrix stores dispositions and evidence pointers; semantic anchors prove
+ * that declared portable behavior or intentional divergence remains visible.
+ * @param {string} repoRoot - Absolute or relative repository root.
+ * @param {string} matrixRelativePath - Repo-relative matrix path.
+ * @returns {{ ok: boolean, errors: string[], checked: number }}
+ */
+export function validatePluginCorePortability(
+  repoRoot,
+  matrixRelativePath = 'plugins/controlflow-shared-source/core-portability-matrix.json'
+) {
+  const errors = [];
+  if (!isSafeRepoRelativePath(matrixRelativePath)) {
+    return { ok: false, errors: [`core-portability: unsafe matrix path "${matrixRelativePath}"`], checked: 0 };
+  }
+
+  let matrix;
+  try {
+    matrix = JSON.parse(readFileSync(join(repoRoot, matrixRelativePath), 'utf8'));
+  } catch (e) {
+    return { ok: false, errors: [`core-portability: cannot read matrix — ${e.message}`], checked: 0 };
+  }
+
+  if (matrix.schema_version !== '1.0.0') {
+    errors.push(`core-portability: unsupported schema_version "${matrix.schema_version}"`);
+  }
+  if (!Array.isArray(matrix.invariants) || matrix.invariants.length === 0) {
+    return { ok: false, errors: [...errors, 'core-portability: invariants[] missing or empty'], checked: 0 };
+  }
+
+  const ids = new Set();
+  const contentCache = new Map();
+  const readEvidence = (rel, label) => {
+    if (!isSafeRepoRelativePath(rel)) {
+      errors.push(`core-portability: ${label} has unsafe repo-relative path "${rel}"`);
+      return null;
+    }
+    if (contentCache.has(rel)) return contentCache.get(rel);
+    try {
+      const content = readFileSync(join(repoRoot, rel), 'utf8');
+      contentCache.set(rel, content);
+      return content;
+    } catch {
+      errors.push(`core-portability: ${label} missing evidence file "${rel}"`);
+      return null;
+    }
+  };
+
+  for (const invariant of matrix.invariants) {
+    const id = invariant && invariant.id;
+    if (typeof id !== 'string' || id.trim() === '') {
+      errors.push('core-portability: invariant missing non-empty id');
+      continue;
+    }
+    if (ids.has(id)) errors.push(`core-portability: duplicate invariant id "${id}"`);
+    ids.add(id);
+
+    if (!PORTABILITY_DISPOSITIONS.has(invariant.disposition)) {
+      errors.push(`core-portability: "${id}" has invalid disposition "${invariant.disposition}"`);
+    }
+    if (typeof invariant.rationale !== 'string' || invariant.rationale.trim() === '') {
+      errors.push(`core-portability: "${id}" missing rationale`);
+    }
+
+    const coreEvidence = Array.isArray(invariant.core_evidence) ? invariant.core_evidence : [];
+    const pluginEvidence = Array.isArray(invariant.plugin_evidence) ? invariant.plugin_evidence : [];
+    const evidenceSet = new Set([...coreEvidence, ...pluginEvidence]);
+    if (coreEvidence.length === 0) errors.push(`core-portability: "${id}" missing core_evidence[]`);
+    if (pluginEvidence.length === 0) errors.push(`core-portability: "${id}" missing plugin_evidence[]`);
+    for (const rel of coreEvidence) readEvidence(rel, `"${id}" core_evidence`);
+    for (const rel of pluginEvidence) readEvidence(rel, `"${id}" plugin_evidence`);
+
+    const requirements = Array.isArray(invariant.required_anchors) ? invariant.required_anchors : [];
+    if (requirements.length === 0) errors.push(`core-portability: "${id}" missing required_anchors[]`);
+    for (const requirement of requirements) {
+      const rel = requirement && requirement.path;
+      const anchors = requirement && Array.isArray(requirement.anchors) ? requirement.anchors : [];
+      if (!evidenceSet.has(rel)) {
+        errors.push(`core-portability: "${id}" anchor path "${rel}" is not declared as evidence`);
+      }
+      if (anchors.length === 0 || anchors.some(anchor => typeof anchor !== 'string' || anchor.length === 0)) {
+        errors.push(`core-portability: "${id}" anchor requirement for "${rel}" has no valid anchors`);
+        continue;
+      }
+      const content = readEvidence(rel, `"${id}" required_anchors`);
+      if (content === null) continue;
+      for (const anchor of anchors) {
+        if (!content.includes(anchor)) {
+          errors.push(`core-portability: "${id}" missing semantic anchor "${anchor}" in "${rel}"`);
+        }
+      }
+    }
+  }
+
+  return { ok: errors.length === 0, errors, checked: matrix.invariants.length };
 }

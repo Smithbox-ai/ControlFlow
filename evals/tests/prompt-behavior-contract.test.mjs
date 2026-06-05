@@ -350,6 +350,7 @@ console.log('\n=== CoreImplementer — Behavioral Invariants ===');
 console.log('\n=== CodeReviewer — Behavioral Invariants ===');
 {
   const src = readAgent('CodeReviewer-subagent');
+  const finalScope = readFileSync(join(ROOT, 'docs', 'agent-engineering', 'FINAL-REVIEW-SCOPE.md'), 'utf8');
 
   check(
     'CodeReviewer: validated_blocking_issues output field documented',
@@ -384,7 +385,7 @@ console.log('\n=== CodeReviewer — Behavioral Invariants ===');
 
   check(
     'CodeReviewer: CodeReviewer never owns fix cycles (final scope constraint)',
-    /never.*own.*fix.cycle|CodeReviewer.*NEVER.*own/i.test(src)
+    /never.*own.*fix.cycle|CodeReviewer.*NEVER.*own/i.test(finalScope)
   );
 
   // Phase 5: grant/wording alignment
@@ -400,7 +401,7 @@ console.log('\n=== CodeReviewer — Behavioral Invariants ===');
 
   check(
     'CodeReviewer: final scope prohibits self-sourcing plan artifacts (injected context only)',
-    /do NOT self.source.*plans\/artifacts|do not attempt to self.source.*plans\/artifacts/i.test(src)
+    /do NOT self.source.*plans\/artifacts|do not attempt to self.source.*plans\/artifacts/i.test(finalScope)
   );
 }
 
@@ -489,6 +490,7 @@ console.log('\n=== AssumptionVerifier — Behavioral Invariants ===');
 console.log('\n=== PlanAuditor — Behavioral Invariants ===');
 {
   const src = readAgent('PlanAuditor-subagent');
+  const schema = readFileSync(join(ROOT, 'schemas', 'plan-auditor.plan-audit.schema.json'), 'utf8');
 
   check(
     'PlanAuditor: APPROVED, NEEDS_REVISION, REJECTED status values present',
@@ -497,7 +499,8 @@ console.log('\n=== PlanAuditor — Behavioral Invariants ===');
 
   check(
     'PlanAuditor: executability_checklist output field documented',
-    /executability_checklist/i.test(src)
+    /schemas\/plan-auditor\.plan-audit\.schema\.json/i.test(src) &&
+    /executability_checklist/i.test(schema)
   );
 
   check(
@@ -765,6 +768,43 @@ console.log('\n=== Shared Policy — Behavioral Invariants ===');
     'Complexity tiers: TRIVIAL / SMALL / MEDIUM / LARGE',
     /TRIVIAL/i.test(src) && /SMALL/i.test(src) &&
     /MEDIUM/i.test(src) && /LARGE/i.test(src)
+  );
+}
+
+// ──────────────────────────────────────────────
+// Source grounding, impact scan, and bounded decision challenge
+// ──────────────────────────────────────────────
+console.log('\n=== External Evidence Adaptations — Behavioral Invariants ===');
+{
+  const researcher = readAgent('Researcher-subagent');
+  const planner = readAgent('Planner');
+  const llmBehavior = readFileSync(join(ROOT, 'skills', 'patterns', 'llm-behavior-guidelines.md'), 'utf8');
+  const sourceGrounding = readFileSync(join(ROOT, 'skills', 'patterns', 'source-grounding.md'), 'utf8');
+  const decisionChallenge = readFileSync(join(ROOT, 'skills', 'patterns', 'decision-challenge.md'), 'utf8');
+  const sourceScenario = JSON.parse(readFileSync(join(ROOT, 'evals', 'scenarios', 'source-grounding-official-unverified.json'), 'utf8'));
+  const impactScenario = JSON.parse(readFileSync(join(ROOT, 'evals', 'scenarios', 'shared-component-impact-scan.json'), 'utf8'));
+  const challengeScenario = JSON.parse(readFileSync(join(ROOT, 'evals', 'scenarios', 'bounded-decision-challenge.json'), 'utf8'));
+
+  check(
+    'Researcher: external claims prefer official primary sources and label unsupported material claims UNVERIFIED',
+    /official primary sources/i.test(researcher) && /UNVERIFIED/.test(researcher) &&
+    /UNVERIFIED/.test(sourceGrounding) && sourceScenario.expected?.unsupported_material_claim_state === 'UNVERIFIED'
+  );
+  check(
+    'Shared-component impact scan: usages/symbols and suspected edit locations required before shared-surface edits',
+    /shared-component usage impact scan/i.test(llmBehavior) &&
+    /usages\/symbols/i.test(llmBehavior) &&
+    impactScenario.expected?.usages_inspected === true &&
+    impactScenario.expected?.suspected_edit_locations_recorded === true
+  );
+  check(
+    'Decision challenge: bounded to one high-risk/non-trivial challenge with no external-agent or cross-model loop',
+    /high-risk or non-trivial/i.test(decisionChallenge) &&
+    /Stop after one challenge/i.test(decisionChallenge) &&
+    /Do not invoke external agents, cross-model CLIs/i.test(decisionChallenge) &&
+    /decision-challenge\.md/.test(planner) &&
+    challengeScenario.expected?.challenge_rounds_max === 1 &&
+    challengeScenario.expected?.external_agents_or_cross_model_clis_invoked === false
   );
 }
 

@@ -49,6 +49,8 @@ For all other scopes, record applicability, impact, evidence source, and disposi
   2. Match task keywords and domain signals against the index.
   3. Select ≤3 most relevant skill files based on task context and complexity tier.
   - For spec-bearing phases, consider `skills/patterns/spec-driven-development.md` when requirements, scope boundaries, acceptance criteria, or spec-before-plan discipline are central to safe planning.
+  - For phases depending on external framework/API/version claims or sibling-source adoption, consider `skills/patterns/source-grounding.md`.
+  - For high-risk or non-trivial decisions with materially different alternatives, consider one bounded `skills/patterns/decision-challenge.md`.
   4. Include selected skill file paths in each applicable phase's `skill_references` array.
   Implementation agents load referenced skills before executing phase tasks.
 6. Research (delegate CodeMapper-subagent/Researcher-subagent when scope is large).
@@ -115,6 +117,8 @@ Agent-specific additions:
 - `plans/project-context.md` (if present)
 - `skills/index.md` (domain skill mapping — read during Step 5)
 - `skills/patterns/llm-behavior-guidelines.md` (load on non-trivial tasks — anti-pattern guardrails: scope drift, over-abstraction, silent assumptions, weak success criteria)
+- `skills/patterns/source-grounding.md` (consider for external claims, provenance, and explicit `UNVERIFIED` state)
+- `skills/patterns/decision-challenge.md` (consider once for high-risk or non-trivial decisions)
 - Plan artifacts directory: `plans/` (default location for all plan and completion files)
 
 ## Tools

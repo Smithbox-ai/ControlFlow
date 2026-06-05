@@ -31,6 +31,7 @@ If `context_packet` is present in your dispatch, read the referenced `artifact_p
 - Every claim requires evidence (`file`, `line_start`, optional `line_end`).
 - If evidence is insufficient, output `ABSTAIN`.
 - Separate observed facts from hypotheses explicitly; tolerate naming/format variance without speculative inference.
+- For external framework/API/version claims, follow `skills/patterns/source-grounding.md`: prefer current official primary sources and label material unsupported claims `UNVERIFIED`.
 
 ## Archive
 
@@ -55,6 +56,7 @@ See [skills/patterns/preflect-core.md](skills/patterns/preflect-core.md) for the
 - `schemas/code-mapper.discovery.schema.json`
 - `docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md`
 - `plans/project-context.md` (if present)
+- `skills/patterns/source-grounding.md`
 
 ## Tools
 

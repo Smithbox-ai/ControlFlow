@@ -20,7 +20,7 @@ ControlFlow/
 │   └── project-context-registry.json
 ├── skills/
 │   ├── index.md                     # каталог skill-паттернов
-│   └── patterns/                    # 18 паттернов
+│   └── patterns/                    # 20 паттернов
 ├── evals/                           # оффлайн-проверки
 │   ├── package.json                 # npm test → канонический gate
 │   ├── validate.mjs                 # структурный проход

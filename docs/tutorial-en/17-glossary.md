@@ -54,7 +54,7 @@ Alphabetical reference for all key terms. Each entry includes a definition and c
 
 **Confidence** — A numeric value (0–1) in Planner output and gate events reflecting how certain the agent is in its assessment. → Ch.06
 
-**ControlFlow** — A prompt/governance/eval repository for an agent orchestration system. 13 agents, 17 schemas, 7 governance files, 18 skills. → Ch.00
+**ControlFlow** — A prompt/governance/eval repository for an agent orchestration system. 13 agents, 17 schemas, 7 governance files, 20 skills. → Ch.00
 
 **Convergence detection** — See stagnation. → Ch.07
 
