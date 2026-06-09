@@ -21,5 +21,5 @@ Codex-friendly replacements:
 - use repo files and Markdown artifacts instead of schema-shaped chat payloads
 - use `update_plan` for live state tracking
 - use local shell inspection before asking questions
-- use `spawn_agent` only when delegation is both available and desired by the user
+- use `multi_agent_v1.spawn_agent` only when delegation is available and the user explicitly asks for subagents, delegation, or parallel agent work
 - use concise progress updates instead of orchestration event logs

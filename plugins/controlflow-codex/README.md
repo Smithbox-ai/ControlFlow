@@ -11,6 +11,7 @@ This repo-local plugin ports the parts of ControlFlow that transfer cleanly into
 - pre-execution plan review
 - cold-start executability review
 - complexity-aware execution discipline
+- optional Codex subagent delegation
 - evidence-backed review
 - semantic risk checks
 - failure taxonomy
@@ -90,6 +91,12 @@ The current version supports a stricter ControlFlow-style path for non-trivial w
 - `controlflow-strict-workflow` acts as the single recommended entry point when you want the full ControlFlow-Codex orchestration path instead of manually stitching skills together
 - wave execution refreshes context packets, checks recent related artifacts, and uses one approval request per ordinary wave while preserving separate destructive/high-risk gates
 - final review compares aggregate changed scope to the approved plan, reconciles out-of-scope changes, and filters previously resolved findings
+
+## Subagent Delegation
+
+ControlFlow-Codex is skill-first and does not install a fixed VS Code-style subagent roster. When the user explicitly asks for subagents, delegation, or parallel agent work and the Codex runtime exposes `multi_agent_v1.spawn_agent`, `$controlflow-orchestration` may delegate bounded sidecar work.
+
+Use `explorer` subagents for specific read-only questions and `worker` subagents only for disjoint write scopes. Store subagent outputs under `plans/artifacts/<task-slug>/` so the main orchestration thread can review and resume from durable evidence. If subagent tooling is unavailable or not explicitly authorized, run the same workflow locally with the `$controlflow-*` skills and record the reason in the plan's lifecycle notes.
 
 ## Installation Shape
 

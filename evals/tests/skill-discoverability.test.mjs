@@ -226,6 +226,48 @@ console.log('\n=== skill-discoverability: resolver edge cases ===');
   );
 }
 
+// ── Suite: ControlFlow-Codex plugin workflow contract ────────────────────────
+
+console.log('\n=== skill-discoverability: ControlFlow-Codex plugin contract ===');
+{
+  const codexPlanningSkill = readFileSync(
+    join(ROOT, 'plugins', 'controlflow-shared-source', 'skills', 'controlflow-planning', 'SKILL.md'),
+    'utf8'
+  );
+  const codexOrchestrationSkill = readFileSync(
+    join(ROOT, 'plugins', 'controlflow-shared-source', 'skills', 'controlflow-orchestration', 'SKILL.md'),
+    'utf8'
+  );
+  const codexReadme = readFileSync(
+    join(ROOT, 'plugins', 'controlflow-codex', 'README.md'),
+    'utf8'
+  );
+
+  assert(
+    /Save to `plans\/<task-slug>-plan\.md`/i.test(codexPlanningSkill) &&
+    /references\/plan-template\.md/i.test(codexPlanningSkill),
+    'Codex planning skill saves strict Markdown plans under plans/'
+  );
+
+  assert(
+    /multi_agent_v1\.spawn_agent/i.test(codexOrchestrationSkill) &&
+    /explicitly asks|explicitly authorizes/i.test(codexOrchestrationSkill),
+    'Codex orchestration skill documents optional multi_agent_v1.spawn_agent delegation'
+  );
+
+  assert(
+    /subagent outputs/i.test(codexOrchestrationSkill) &&
+    /plans\/artifacts\/<task-slug>\//i.test(codexOrchestrationSkill),
+    'Codex orchestration skill stores subagent outputs in plans/artifacts/'
+  );
+
+  assert(
+    /Subagent/i.test(codexReadme) &&
+    /multi_agent_v1\.spawn_agent/i.test(codexReadme),
+    'Codex README exposes the subagent delegation contract'
+  );
+}
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 
 console.log(`\n=== skill-discoverability: ${passed} passed, ${failed} failed ===`);

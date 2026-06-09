@@ -27,6 +27,15 @@
 - `MEDIUM`: `plan-audit` + `assumption-verifier`
 - `LARGE`: `plan-audit` + `assumption-verifier` + `executability-verifier`
 
+## Субагенты в Codex
+
+Плагин не устанавливает фиксированный VS Code-style roster субагентов. Если пользователь явно просит субагентов, делегирование или параллельную агентную работу, а текущий Codex runtime предоставляет `multi_agent_v1.spawn_agent`, `$controlflow-orchestration` может делегировать ограниченные sidecar-задачи.
+
+- `explorer`: точечные read-only вопросы по кодовой базе.
+- `worker`: только непересекающиеся write scopes.
+- Outputs субагентов сохраняйте в `plans/artifacts/<task-slug>/`.
+- Если subagent tooling недоступен или не авторизован явно, выполняйте тот же workflow локально через `$controlflow-*` skills и фиксируйте причину в `## Decision Log`.
+
 ## Документационные alias-подсказки
 
 Эти сокращения помогают быстро вспомнить нужный skill, но не являются исполняемыми slash commands.

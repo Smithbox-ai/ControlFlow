@@ -127,6 +127,16 @@ const orchestratorDispatchContract = extractBetween(
   '### Dispatch Tool-Call Contract (Required Fields)',
   '#### Capable-Reviewer Model Routing'
 );
+const plannerRevisionModes = extractBetween(
+  orch,
+  '### Planner Revision Modes',
+  '## Archive'
+);
+const implementationLoop = extractBetween(
+  orch,
+  '5. **Implementation Loop (Per Phase)**',
+  '6. **Completion Gate**'
+);
 const universalModelResolutionRule = extractBetween(
   orch,
   '### Universal Model Resolution Rule',
@@ -146,6 +156,28 @@ check(
 check(
   'Runtime policy: model_dispatch.auto_mode_allow_outer_model_omission is enabled',
   runtimePolicy?.model_dispatch?.auto_mode_allow_outer_model_omission === true
+);
+
+check(
+  'Model resolution prompt: auto mode has no unconditional outer model requirement',
+  !/No `agent\/runSubagent` dispatch may omit the `model` parameter/i.test(orch) &&
+  /auto mode[\s\S]{0,180}omit(?:s)? the outer `model`/i.test(universalModelResolutionRule) &&
+  /deterministic mode[\s\S]{0,180}Never omit outer `model`/i.test(universalModelResolutionRule)
+);
+
+check(
+  'Model resolution prompt: Planner revisions use mode-conditional outer model handling',
+  /replan\/update dispatches[\s\S]{0,360}deterministic mode[\s\S]{0,180}outer `model`/i.test(plannerRevisionModes) &&
+  /replan\/update dispatches[\s\S]{0,480}auto mode[\s\S]{0,180}omit(?:s)? outer `model`/i.test(plannerRevisionModes) &&
+  !/For replan\/update dispatches, the outer `agent\/runSubagent` call must include/i.test(plannerRevisionModes)
+);
+
+check(
+  'Model resolution prompt: Implementation Loop defers model field to the Universal Model Resolution Rule',
+  /Apply the Universal Model Resolution Rule/i.test(implementationLoop) &&
+  /deterministic mode[\s\S]{0,240}outer `model`/i.test(implementationLoop) &&
+  /auto mode[\s\S]{0,240}omit(?:s)? the outer `model`/i.test(implementationLoop) &&
+  !/pass the resolved primary model as the `model` parameter/i.test(implementationLoop)
 );
 
 // ──────────────────────────────────────────────
@@ -499,7 +531,7 @@ console.log('\n=== Orchestrator — Planner Revision Payload Contract ===');
   );
   check(
     'Planner replan/update dispatch: prompt requires trace_id, iteration_index, revision_mode, revision_reason, and selected path field before active-plan edits',
-    /Planner payload must include payload-level `model`, `trace_id`, review-loop `iteration_index`, `revision_mode`, `revision_reason`/i.test(orch) &&
+    /Planner payload must include `runtime_model_mode`, payload-level `model` when deterministic mode requires it, `trace_id`, review-loop `iteration_index`, `revision_mode`, `revision_reason`/i.test(orch) &&
     /active_plan_path` for `in_place_update` or `existing_plan_path` for `new_artifact_supersession`/i.test(orch) &&
     /edit only the supplied `active_plan_path`/i.test(planner)
   );
@@ -825,7 +857,7 @@ console.log('\n=== Orchestrator — Outer Dispatch Contract ===');
 
 check(
   'Dispatch contract: required fields are scoped to the outer agent/runSubagent tool-call envelope',
-  /Every `agent\/runSubagent` call must include these outer tool-call fields/i.test(orchestratorDispatchContract) &&
+  /Every `agent\/runSubagent` call must follow these outer tool-call envelope rules/i.test(orchestratorDispatchContract) &&
   /\*\*`agentName`\*\*/.test(orchestratorDispatchContract) &&
   /\*\*`model`\*\*/.test(orchestratorDispatchContract)
 );
@@ -1115,7 +1147,8 @@ check(
 
 const missingOuterModelCase = negativeCases.find(c => c.case_id === 'missing-outer-model');
 check(
-  'Model resolution negative scenario: missing outer model is rejected even when agentName is present',
+  'Model resolution negative scenario: missing outer model is rejected only in deterministic mode',
+  missingOuterModelCase?.input_context?.runtime_model_mode === 'deterministic' &&
   missingOuterModelCase?.broken_dispatch?.outer_fields?.agentName_present === true &&
   missingOuterModelCase?.broken_dispatch?.outer_fields?.model_present === false &&
   missingOuterModelCase?.expected?.violates === 'missing_outer_model'
@@ -1123,7 +1156,8 @@ check(
 
 const payloadOnlyModelCase = negativeCases.find(c => c.case_id === 'payload-only-model');
 check(
-  'Model resolution negative scenario: payload-only model is not runtime enforcement',
+  'Model resolution negative scenario: payload-only model is insufficient only in deterministic mode',
+  payloadOnlyModelCase?.input_context?.runtime_model_mode === 'deterministic' &&
   payloadOnlyModelCase?.broken_dispatch?.outer_fields?.model_present === false &&
   payloadOnlyModelCase?.broken_dispatch?.payload_fields?.model_present === true &&
   payloadOnlyModelCase?.expected?.violates === 'payload_only_model'
@@ -1161,6 +1195,7 @@ check(
 const omittedDueMissingTierCase = negativeCases.find(c => c.case_id === 'omitted-model-due-missing-tier-context');
 check(
   `Model resolution negative scenario: missing tier context still resolves top-level primary ${capablePlannerPrimary}`,
+  omittedDueMissingTierCase?.input_context?.runtime_model_mode === 'deterministic' &&
   omittedDueMissingTierCase?.input_context?.complexity_tier_present === false &&
   omittedDueMissingTierCase?.broken_dispatch?.outer_fields?.model_present === false &&
   omittedDueMissingTierCase?.expected?.resolution_when_tier_missing === 'top_level_primary' &&

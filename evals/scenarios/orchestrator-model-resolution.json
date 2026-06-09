@@ -249,7 +249,10 @@
       },
       {
         "case_id": "missing-outer-model",
-        "description": "Broken dispatch supplies the outer agentName but omits the outer model field entirely.",
+        "description": "Broken deterministic-mode dispatch supplies the outer agentName but omits the outer model field entirely.",
+        "input_context": {
+          "runtime_model_mode": "deterministic"
+        },
         "broken_dispatch": {
           "outer_fields": {
             "agentName_present": true,
@@ -263,14 +266,17 @@
         "expected": {
           "rejected": true,
           "violates": "missing_outer_model",
-          "reason": "Every internal dispatch must pass the governance-resolved primary model as the outer model parameter.",
+          "reason": "Deterministic-mode internal dispatch must pass the governance-resolved primary model as the outer model parameter.",
           "offline_detection_scope": "structural_contract",
           "live_runtime_assertion": false
         }
       },
       {
         "case_id": "payload-only-model",
-        "description": "Broken dispatch carries a payload-level model for audit context but omits the outer model runtime selector.",
+        "description": "Broken deterministic-mode dispatch carries a payload-level model for audit context but omits the outer model runtime selector.",
+        "input_context": {
+          "runtime_model_mode": "deterministic"
+        },
         "broken_dispatch": {
           "outer_fields": {
             "agentName_present": true,
@@ -368,10 +374,11 @@
       },
       {
         "case_id": "omitted-model-due-missing-tier-context",
-        "description": "Broken dispatch omits model because no complexity_tier is available yet instead of using the target role top-level primary.",
+        "description": "Broken deterministic-mode dispatch omits model because no complexity_tier is available yet instead of using the target role top-level primary.",
         "input_context": {
           "target_agent": "Planner",
           "role": "capable-planner",
+          "runtime_model_mode": "deterministic",
           "complexity_tier_present": false,
           "dispatch_family": "initial_planner_dispatch"
         },
@@ -387,7 +394,7 @@
           "violates": "omitted_model_missing_tier_context",
           "resolution_when_tier_missing": "top_level_primary",
           "resolved_primary_model": "GPT-5.5 (copilot)",
-          "reason": "Missing tier context changes the resolution source, not the requirement to pass an outer model field.",
+          "reason": "In deterministic mode, missing tier context changes the resolution source, not the requirement to pass an outer model field.",
           "offline_detection_scope": "structural_contract",
           "live_runtime_assertion": false
         }

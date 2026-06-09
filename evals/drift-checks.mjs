@@ -304,6 +304,9 @@ export function validateModelResolutionScenarioNegatives(scenario) {
 
   const missingOuterModel = byId.get('missing-outer-model');
   if (missingOuterModel) {
+    if (missingOuterModel?.input_context?.runtime_model_mode !== 'deterministic') {
+      errors.push('missing-outer-model: input runtime_model_mode must be deterministic');
+    }
     if (missingOuterModel?.broken_dispatch?.outer_fields?.agentName_present !== true) {
       errors.push('missing-outer-model: outer agentName must be present so the failure is isolated to model');
     }
@@ -317,6 +320,9 @@ export function validateModelResolutionScenarioNegatives(scenario) {
 
   const payloadOnlyModel = byId.get('payload-only-model');
   if (payloadOnlyModel) {
+    if (payloadOnlyModel?.input_context?.runtime_model_mode !== 'deterministic') {
+      errors.push('payload-only-model: input runtime_model_mode must be deterministic');
+    }
     if (payloadOnlyModel?.broken_dispatch?.outer_fields?.model_present !== false) {
       errors.push('payload-only-model: outer model must be absent');
     }
@@ -391,6 +397,9 @@ export function validateModelResolutionScenarioNegatives(scenario) {
 
   const omittedDueMissingTier = byId.get('omitted-model-due-missing-tier-context');
   if (omittedDueMissingTier) {
+    if (omittedDueMissingTier?.input_context?.runtime_model_mode !== 'deterministic') {
+      errors.push('omitted-model-due-missing-tier-context: input runtime_model_mode must be deterministic');
+    }
     if (omittedDueMissingTier?.input_context?.complexity_tier_present !== false) {
       errors.push('omitted-model-due-missing-tier-context: complexity_tier_present must be false');
     }

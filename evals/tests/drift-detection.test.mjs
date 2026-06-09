@@ -783,6 +783,7 @@ console.log('\n=== Check #6c — model resolution scenario negative cases ===');
         },
         {
           case_id: 'missing-outer-model',
+          input_context: { runtime_model_mode: 'deterministic' },
           broken_dispatch: {
             outer_fields: { agentName_present: true, model_present: false },
             payload_fields: { model_present: false },
@@ -791,6 +792,7 @@ console.log('\n=== Check #6c — model resolution scenario negative cases ===');
         },
         {
           case_id: 'payload-only-model',
+          input_context: { runtime_model_mode: 'deterministic' },
           broken_dispatch: {
             outer_fields: { agentName_present: true, model_present: false },
             payload_fields: { model_present: true },
@@ -820,7 +822,7 @@ console.log('\n=== Check #6c — model resolution scenario negative cases ===');
         },
         {
           case_id: 'omitted-model-due-missing-tier-context',
-          input_context: { complexity_tier_present: false },
+          input_context: { runtime_model_mode: 'deterministic', complexity_tier_present: false },
           broken_dispatch: { outer_fields: { agentName_present: true, model_present: false } },
           expected: { rejected: true, violates: 'omitted_model_missing_tier_context', resolution_when_tier_missing: 'top_level_primary', resolved_primary_model: 'GPT-5.5 (copilot)', offline_detection_scope: 'structural_contract', live_runtime_assertion: false },
         },
@@ -852,6 +854,15 @@ console.log('\n=== Check #6c — model resolution scenario negative cases ===');
     'negative: payload-only-model case with outer model present is flagged',
     payloadOnlyConflated.ok === false && payloadOnlyConflated.errors.some(e => e.includes('payload-only-model')),
     `ok=${payloadOnlyConflated.ok}, errors=${JSON.stringify(payloadOnlyConflated.errors)}`
+  );
+
+  const missingDeterministicModeScenario = JSON.parse(JSON.stringify(validScenario));
+  delete missingDeterministicModeScenario.input.negative_cases.find(c => c.case_id === 'missing-outer-model').input_context.runtime_model_mode;
+  const missingDeterministicMode = validateModelResolutionScenarioNegatives(missingDeterministicModeScenario);
+  check(
+    'negative: deterministic missing-outer-model case without deterministic marker is flagged',
+    missingDeterministicMode.ok === false && missingDeterministicMode.errors.some(e => e.includes('missing-outer-model')),
+    `ok=${missingDeterministicMode.ok}, errors=${JSON.stringify(missingDeterministicMode.errors)}`
   );
 
   const autoModeRejectedScenario = JSON.parse(JSON.stringify(validScenario));
