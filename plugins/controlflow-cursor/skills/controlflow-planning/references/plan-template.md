@@ -5,6 +5,10 @@
 **Schema Version:** `1.2.0`  
 **Complexity Tier:** `TRIVIAL` | `SMALL` | `MEDIUM` | `LARGE`  
 **Confidence:** `0.0-1.0`  
+**Trace ID:** Stable task identifier
+**Iteration Index:** Positive integer
+**Revision Lineage:** `initial` | prior plan path or revision identifier
+**Context Packet:** artifact path or `none`
 **Abstain:** `is_abstaining: false` or `true` with reasons  
 **Summary:** One concise paragraph describing the task and approach.
 
@@ -102,6 +106,10 @@ Every plan must include all seven categories exactly once.
 ## Progress
 
 - Phase-by-phase progress notes updated during execution.
+
+### Verified Items
+
+- Record previously verified behavior with evidence and re-check it after revisions that could invalidate it.
 
 ## Discoveries
 

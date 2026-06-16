@@ -12,6 +12,11 @@
           "dest_path": "skills",
           "override_path": "skills",
           "allowed_deltas": true
+        },
+        "cursor": {
+          "dest_path": "skills",
+          "override_path": "skills",
+          "allowed_deltas": true
         }
       }
     },
@@ -26,6 +31,10 @@
           "dest_path": "templates",
           "override_path": "templates",
           "allowed_deltas": true
+        },
+        "cursor": {
+          "dest_path": "templates",
+          "allowed_deltas": false
         }
       }
     }

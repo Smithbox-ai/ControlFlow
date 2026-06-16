@@ -19,6 +19,15 @@ Review in this order:
 - If a large review cannot be split, review by file area and risk axis and state
   confidence limits.
 
+## Over-Engineering Pass
+
+- After correctness, security, data integrity, and scope checks, ask what can delete, inline, or replace with a standard library or native platform feature.
+- Flag one-use abstractions, speculative configuration, wrappers with no policy value,
+  and new dependencies that an already-installed dependency or platform primitive covers.
+- Treat over-engineering as a maintainability signal. Block only when it creates real
+  review, behavior, test, dependency, or operability risk; otherwise report it as a
+  non-blocking simplification opportunity.
+
 ## Stop-the-Line Decision Points
 
 Halt for security, authorization, secret-handling, destructive-action, or data-integrity

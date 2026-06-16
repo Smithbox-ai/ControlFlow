@@ -26,10 +26,13 @@ main ControlFlow prompt set.
 ### 2. Simplicity First
 
 - Build only the requested behavior.
+- Apply the Minimum Viable Change Ladder before adding code, phases, dependencies, or abstractions: does this need to exist, can existing project behavior cover it, can the standard library or native platform cover it, can an already-installed dependency cover it, can one localized line or existing helper cover it, and only then write the minimum new code that works.
 - Avoid one-use abstractions, speculative configurability, and defensive branches that
   cannot happen under current constraints.
 - If the solution is much larger than the task warrants, stop and simplify before
   continuing.
+- Do not simplify away trust-boundary validation, data-loss prevention, security,
+  accessibility, rollback guidance, or explicitly requested behavior.
 
 ### 3. Surgical Changes
 
@@ -51,6 +54,7 @@ main ControlFlow prompt set.
 | ------- | --------------- |
 | Assume a missing requirement because the likely answer seems obvious | Ask when the answer changes scope, behavior, or file set; otherwise record the bounded assumption. |
 | Add abstraction because a future task might need it | Build the requested behavior only; record future options separately. |
+| Add a dependency or custom helper before checking existing options | Check existing project behavior, standard library, native platform, and already-installed dependency options first. |
 | Clean up adjacent code while editing nearby lines | Keep edits tied to task scope and report unrelated observations without changing them. |
 | Skip verification because a change is prompt-only or documentation-only | Run the smallest relevant check plus any workflow-required gate. |
 | Treat a narrow pass as proof of a broad claim | Match the command to the claim and state what remains unverified. |

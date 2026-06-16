@@ -47,7 +47,9 @@
     "transient_max": 3,
     "fixable_max": 1,
     "needs_replan_max": 1,
-    "escalate_max": 0
+    "escalate_max": 0,
+    "per_wave_transient_reduction_threshold": 2,
+    "per_wave_parallelism_reduction_factor": 0.5
   },
   "stagnation_detection": {
     "same_phase_failure_escalation_threshold": 3,
@@ -58,6 +60,16 @@
     "confidence_threshold": 0.9,
     "high_risk_scope_triggers_review": true,
     "applicable_high_impact_risk_triggers_review": true
+  },
+  "batch_approval": {
+    "approval_per": "wave",
+    "exception_destructive_phases": "per_phase"
+  },
+  "task_cache": {
+    "enabled": true,
+    "lookback_phases": 10,
+    "similarity_scope": "phase_title_and_file_targets",
+    "recommendation_only": true
   },
   "final_review_gate": {
     "enabled_by_default": false,

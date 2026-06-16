@@ -3,7 +3,7 @@ param(
     [string]$RepoRoot,
 
     [Alias("Host")]
-    [ValidateSet("all", "codex", "claude_code")]
+    [ValidateSet("all", "codex", "claude_code", "cursor")]
     [string]$TargetHost = "all",
 
     [switch]$Write
@@ -64,7 +64,7 @@ function Get-DisplayPath([string]$RepoRootPath, [string]$Path) {
 
 function Get-HostNames([string]$RequestedHost) {
     if ($RequestedHost -eq "all") {
-        return @("codex", "claude_code")
+        return @("codex", "claude_code", "cursor")
     }
     return @($RequestedHost)
 }
@@ -73,6 +73,7 @@ function Get-HostPluginRoot([string]$RepoRootPath, [string]$HostName) {
     switch ($HostName) {
         "codex" { return Join-Path $RepoRootPath "plugins\controlflow-codex" }
         "claude_code" { return Join-Path $RepoRootPath "plugins\controlflow-claude-code" }
+        "cursor" { return Join-Path $RepoRootPath "plugins\controlflow-cursor" }
         default { throw "Unsupported host: $HostName" }
     }
 }
@@ -81,6 +82,7 @@ function Get-HostOverrideRoot([string]$SharedRootPath, [string]$HostName) {
     switch ($HostName) {
         "codex" { return Join-Path $SharedRootPath "host-overrides\codex" }
         "claude_code" { return Join-Path $SharedRootPath "host-overrides\claude-code" }
+        "cursor" { return Join-Path $SharedRootPath "host-overrides\cursor" }
         default { throw "Unsupported host: $HostName" }
     }
 }
@@ -280,18 +282,30 @@ foreach ($hostName in (Get-HostNames $TargetHost)) {
                 $sourceDisplay = "$sourceDisplay + $(Get-DisplayPath $repoRootResolved $contentOverrideSpecPath)"
             }
 
+            $expectedHash = if ($null -ne $expectedBytes) { Get-Sha256FromBytes $expectedBytes } else { Get-Sha256 $sourcePath }
+
             if ($Write) {
+                $alreadyCurrent = $false
+                if (Test-Path $destPath -PathType Leaf) {
+                    $alreadyCurrent = ((Get-Sha256 $destPath) -eq $expectedHash)
+                }
+
                 $parent = Split-Path $destPath -Parent
                 if (-not (Test-Path $parent -PathType Container)) {
                     New-Item -ItemType Directory -Force -Path $parent | Out-Null
                 }
-                if ($null -ne $expectedBytes) {
-                    [System.IO.File]::WriteAllBytes($destPath, $expectedBytes)
+
+                if ($alreadyCurrent) {
+                    Write-Output "SKIP: $hostName $(Get-DisplayPath $repoRootResolved $destPath) already current"
                 } else {
-                    Copy-Item -Path $sourcePath -Destination $destPath -Force
+                    if ($null -ne $expectedBytes) {
+                        [System.IO.File]::WriteAllBytes($destPath, $expectedBytes)
+                    } else {
+                        [System.IO.File]::WriteAllBytes($destPath, [System.IO.File]::ReadAllBytes($sourcePath))
+                    }
+                    $writtenCount++
+                    Write-Output "WRITE: $hostName $(Get-DisplayPath $repoRootResolved $destPath) <= $sourceDisplay"
                 }
-                $writtenCount++
-                Write-Output "WRITE: $hostName $(Get-DisplayPath $repoRootResolved $destPath) <= $sourceDisplay"
             }
 
             if (-not (Test-Path $destPath -PathType Leaf)) {
@@ -299,7 +313,6 @@ foreach ($hostName in (Get-HostNames $TargetHost)) {
                 continue
             }
 
-            $expectedHash = if ($null -ne $expectedBytes) { Get-Sha256FromBytes $expectedBytes } else { Get-Sha256 $sourcePath }
             $actualHash = Get-Sha256 $destPath
             if ($expectedHash -ne $actualHash) {
                 $errors += "Generated output drift for ${hostName}: $(Get-DisplayPath $repoRootResolved $destPath) expected $expectedHash from $sourceDisplay, actual $actualHash"

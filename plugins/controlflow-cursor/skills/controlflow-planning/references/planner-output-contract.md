@@ -29,3 +29,6 @@ Use this strict contract when writing plan artifacts.
 - Do not inline the entire plan in chat when a file artifact is required.
 - Do not skip any of the 7 semantic risk categories.
 - Do not mark a plan `READY_FOR_EXECUTION` when confidence is below `0.9`.
+- Record revision lineage and iteration state for non-trivial plan revisions.
+- Keep `### Verified Items` inside `## Progress` and re-check affected items after each revision.
+- When a context packet exists, carry its artifact path into orchestration and refresh it after waves.

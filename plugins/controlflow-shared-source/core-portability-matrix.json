@@ -172,6 +172,40 @@
       ]
     },
     {
+      "id": "minimum_viable_change_ladder",
+      "disposition": "adapt",
+      "rationale": "The simplicity ladder is host-neutral and prevents portable plugin workflows from adding avoidable abstractions, dependencies, or generated surfaces.",
+      "core_evidence": [
+        "skills/patterns/code-simplification.md",
+        "skills/patterns/llm-behavior-guidelines.md"
+      ],
+      "plugin_evidence": [
+        "plugins/controlflow-shared-source/skills/controlflow-planning/references/llm-behavior-guidelines.md",
+        "plugins/controlflow-shared-source/skills/controlflow-review/references/review-checklist.md",
+        "plugins/controlflow-shared-source/skills/controlflow-plan-audit/references/audit-checklist.md"
+      ],
+      "required_anchors": [
+        {
+          "path": "skills/patterns/code-simplification.md",
+          "anchors": [
+            "Minimum Viable Change Ladder"
+          ]
+        },
+        {
+          "path": "plugins/controlflow-shared-source/skills/controlflow-planning/references/llm-behavior-guidelines.md",
+          "anchors": [
+            "Minimum Viable Change Ladder"
+          ]
+        },
+        {
+          "path": "plugins/controlflow-shared-source/skills/controlflow-review/references/review-checklist.md",
+          "anchors": [
+            "over-engineering"
+          ]
+        }
+      ]
+    },
+    {
       "id": "portable_runtime_policy_subset",
       "disposition": "adapt",
       "rationale": "The plugin keeps only host-neutral execution knobs and documents the omitted core-only areas.",

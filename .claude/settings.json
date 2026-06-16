@@ -1,0 +1,9 @@
+{
+  "rules": [
+    ".claude/rules/planning.md"
+  ],
+  "env": {
+    "CONTROLFLOW_PLAN_DIR": "plans",
+    "CONTROLFLOW_SKILL_PREFIX": "/controlflow-claude-code"
+  }
+}
