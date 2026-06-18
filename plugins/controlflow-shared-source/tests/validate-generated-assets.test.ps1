@@ -101,23 +101,6 @@ try {
 }
 
 # ---------------------------------------------------------------------------
-# TEST 4: Claude template invocations are derived without full template overlays.
-# ---------------------------------------------------------------------------
-Write-Output "TEST 4: Claude template content overrides must preserve invocation lines"
-$claudeTemplateOverrideRoot = Join-Path $repoRootResolved "plugins\controlflow-shared-source\host-overrides\claude-code\templates"
-$claudePlanAuditTemplate = Join-Path $repoRootResolved "plugins\controlflow-claude-code\templates\plan-audit-report-template.md"
-$fullTemplateOverrides = @(Get-ChildItem -Path $claudeTemplateOverrideRoot -File)
-$planAuditTemplateText = Get-Content -Path $claudePlanAuditTemplate -Raw
-if (($fullTemplateOverrides.Count -eq 0) -and ($planAuditTemplateText -match [regex]::Escape('Invoke via: `/controlflow-claude-code:controlflow-plan-audit`'))) {
-    Write-Output "  PASS: Claude template invocation line is generated without full template overlays"
-    $passedCount++
-} else {
-    Write-Output "  FAIL: Claude template content override reduction is not intact"
-    Write-Output "    fullTemplateOverrides=$($fullTemplateOverrides.Count)"
-    $failedCount++
-}
-
-# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 Write-Output ""

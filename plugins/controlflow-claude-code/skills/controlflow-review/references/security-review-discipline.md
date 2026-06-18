@@ -1,7 +1,6 @@
 # Security Review Discipline
 
-Use this reference when `/controlflow-claude-code:controlflow-review` or
-`/controlflow-claude-code:controlflow-plan-audit` enters a security-focused review pass.
+Use this reference when `/controlflow-claude-code:controlflow-review` enters a security-focused review pass.
 
 ## Confidence Threshold
 
@@ -57,6 +56,6 @@ Each security finding should include:
 | Situation | Use |
 | --- | --- |
 | User asks for a security review specifically | This reference + controlflow-review |
-| Plan touches authentication, authorization, secrets, or trust boundaries | This reference during controlflow-plan-audit |
+| Plan touches authentication, authorization, secrets, or trust boundaries | This reference during controlflow-verify (security-boundary mirage check) and controlflow-review |
 | General code review with security only as one dimension | Apply the threshold and exclusion list, but do not gate the whole review on it |
 | Ordinary refactor with no trust-boundary impact | Skip this reference |

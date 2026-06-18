@@ -71,7 +71,7 @@ console.log('\n=== ponytail-adaptation: portable plugin contract ===');
   const guidelinePaths = [
     'plugins/controlflow-shared-source/skills/controlflow-planning/references/llm-behavior-guidelines.md',
     'plugins/controlflow-codex/skills/controlflow-planning/references/llm-behavior-guidelines.md',
-    'plugins/controlflow-claude-code/skills/controlflow-planning/references/llm-behavior-guidelines.md',
+    'plugins/controlflow-claude-code/skills/controlflow-plan/references/llm-behavior-guidelines.md',
     'plugins/controlflow-cursor/skills/controlflow-planning/references/llm-behavior-guidelines.md',
     '.cursor/skills/controlflow-planning/references/llm-behavior-guidelines.md',
   ];
@@ -104,7 +104,7 @@ console.log('\n=== ponytail-adaptation: portable plugin contract ===');
   const auditPaths = [
     'plugins/controlflow-shared-source/skills/controlflow-plan-audit/references/audit-checklist.md',
     'plugins/controlflow-codex/skills/controlflow-plan-audit/references/audit-checklist.md',
-    'plugins/controlflow-claude-code/skills/controlflow-plan-audit/references/audit-checklist.md',
+    'plugins/controlflow-claude-code/skills/controlflow-verify/references/verify-phases.md',
     'plugins/controlflow-cursor/skills/controlflow-plan-audit/references/audit-checklist.md',
     '.cursor/skills/controlflow-plan-audit/references/audit-checklist.md',
   ];
@@ -127,8 +127,10 @@ console.log('\n=== ponytail-adaptation: plugin generation hosts ===');
   for (const target of manifest.targets) {
     const hosts = Object.keys(target.host_outputs ?? {});
     check(`${target.source_path} target includes codex host output`, hosts.includes('codex'));
-    check(`${target.source_path} target includes claude_code host output`, hosts.includes('claude_code'));
     check(`${target.source_path} target includes cursor host output`, hosts.includes('cursor'));
+    // claude-code is standalone/hand-maintained and intentionally NOT generated —
+    // locking the decoupling in prevents accidental re-coupling via the generator.
+    check(`${target.source_path} target does NOT generate claude_code (standalone plugin)`, !hosts.includes('claude_code'));
   }
 
   check('sync script knows the cursor plugin root', syncScript.includes('plugins\\controlflow-cursor'));

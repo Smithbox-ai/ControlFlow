@@ -1,13 +1,11 @@
 # ControlFlow Shared Source Generator
 
-This directory is the source-of-truth root for generated ControlFlow plugin skill and template assets shared by the Codex, Claude Code, and Cursor plugin packages.
+This directory is the source-of-truth root for generated ControlFlow plugin skill and template assets shared by the Codex and Cursor plugin packages. The Claude Code plugin (`plugins/controlflow-claude-code/`) is standalone and hand-maintained — it is intentionally NOT generated or managed by this generator.
 
 Generated outputs remain tracked and standalone under:
 
 - `plugins/controlflow-codex/skills/`
 - `plugins/controlflow-codex/templates/`
-- `plugins/controlflow-claude-code/skills/`
-- `plugins/controlflow-claude-code/templates/`
 - `plugins/controlflow-cursor/skills/`
 - `plugins/controlflow-cursor/templates/`
 
@@ -19,7 +17,6 @@ The generator is intentionally additive. It does not move, delete, or require an
 - `skills/` contains canonical shared skill sources.
 - `templates/` contains canonical shared report template sources.
 - `host-overrides/codex/` contains Codex-specific overlays when needed.
-- `host-overrides/claude-code/` contains Claude Code-specific overlays and compact `generation-overrides.json` content insertions.
 - `host-overrides/cursor/` contains Cursor-specific skill overlays.
 - `scripts/sync-plugin-assets.ps1` validates or writes declared generated targets.
 - `scripts/validate-generated-assets.ps1` runs read-only drift validation.
@@ -38,7 +35,7 @@ Write declared generated targets only:
 powershell.exe -ExecutionPolicy Bypass -NoProfile -File plugins/controlflow-shared-source/scripts/sync-plugin-assets.ps1 -RepoRoot . -Write
 ```
 
-Use `-Host codex`, `-Host claude_code`, or `-Host cursor` to limit either command to one plugin output tree.
+Use `-Host codex` or `-Host cursor` to limit either command to one plugin output tree.
 
 ## Safety Contract
 

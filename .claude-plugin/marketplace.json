@@ -5,14 +5,14 @@
     "email": "local@example.invalid"
   },
   "metadata": {
-    "description": "Local marketplace for the ControlFlow Claude Code plugin (v0.1.0).",
-    "version": "0.1.0"
+    "description": "Local marketplace for the ControlFlow Claude Code plugin (v0.2.0).",
+    "version": "0.2.0"
   },
   "plugins": [
     {
       "name": "controlflow-claude-code",
-      "version": "0.1.0",
-      "description": "ControlFlow workflow skills and agents for Claude Code: spec capture, strict planning, plan audit, assumption verification, executability verification, orchestration discipline, evidence-backed review, and memory hygiene.",
+      "version": "0.2.0",
+      "description": "Lightweight standalone ControlFlow plugin for Claude Code: high-quality plan generation in the shared ControlFlow format, inline adversarial plan verification (zero subagents), and evidence-backed review with proactive vulnerability/error search layered over the native Claude Code toolset. 3 skills, 0 subagents — designed to coexist with native tools without conflict or token overload.",
       "author": {
         "name": "Local Workspace",
         "email": "local@example.invalid",
@@ -24,16 +24,14 @@
       "keywords": [
         "controlflow",
         "claude-code",
-        "workflow",
-        "spec",
         "planning",
-        "plan-audit",
-        "assumption-verifier",
-        "executability-verifier",
-        "router",
+        "plan-verification",
+        "adversarial-verification",
         "review",
-        "orchestration",
-        "memory"
+        "vulnerability-search",
+        "evidence-backed",
+        "workflow",
+        "standalone"
       ],
       "source": "./plugins/controlflow-claude-code"
     }
