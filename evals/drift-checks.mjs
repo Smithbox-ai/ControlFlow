@@ -1968,3 +1968,113 @@ export function validatePluginCorePortability(
 
   return { ok: errors.length === 0, errors, checked: matrix.invariants.length };
 }
+
+// ── Check #N: CLAUDE.md ↔ planner plan contract drift ─────────────────────────
+// Remediation Phase 4 — ensures the human-facing control doc (CLAUDE.md) never
+// drifts from the machine-enforced plan contract in schemas/planner.plan.schema.json,
+// governance/project-context-registry.json, and governance/runtime-policy.json.
+
+function extractYamlHeaderField(content, key) {
+  const fenceMatch = content.match(/^```yaml\r?\n([\s\S]*?)\r?\n```/m);
+  if (!fenceMatch) return null;
+  const match = fenceMatch[1].match(new RegExp(`^${key}:\\s*(.+?)\\s*$`, 'm'));
+  return match ? match[1].trim() : null;
+}
+
+function extractConfidenceThreshold(content) {
+  const match = content.match(/below\s+([0-9]+(?:\.[0-9]+)?)/i);
+  return match ? parseFloat(match[1]) : null;
+}
+
+function extractExecutorEnumFromClaude(content) {
+  // Matches a sentence like:
+  // Every phase declares exactly one `executor_agent` from: `A`, `B`, `C`
+  const match = content.match(/executor_agent[^\n]*from:\s*(`[A-Za-z-]+-subagent`(?:\s*,\s*`[A-Za-z-]+-subagent`)*)/);
+  if (!match) return [];
+  return [...match[1].matchAll(/`([A-Za-z-]+-subagent)`/g)].map(m => m[1]);
+}
+
+/**
+ * Validate that a CLAUDE.md-shaped control document matches the canonical plan
+ * contract declared in the planner schema, project-context registry, and runtime
+ * policy.
+ * @param {string} claudeMdContent - Full CLAUDE.md text.
+ * @param {object} plannerSchema - Parsed schemas/planner.plan.schema.json.
+ * @param {object} projectContextRegistry - Parsed governance/project-context-registry.json.
+ * @param {object} runtimePolicy - Parsed governance/runtime-policy.json.
+ * @returns {{ ok: boolean, errors: string[], checked: number }}
+ */
+export function checkControlFlowContractDrift(claudeMdContent, plannerSchema, projectContextRegistry, runtimePolicy) {
+  const errors = [];
+  let checked = 0;
+
+  const expectedAgent = plannerSchema?.properties?.agent?.const;
+  const expectedSchemaVersion = plannerSchema?.properties?.schema_version?.const;
+  const expectedExecutors = Array.isArray(projectContextRegistry?.phase_executor_agents)
+    ? projectContextRegistry.phase_executor_agents.map(a => a.agent).filter(Boolean)
+    : [];
+  const expectedConfidence = runtimePolicy?.plan_review_gate_trigger_conditions?.confidence_threshold;
+
+  if (typeof expectedAgent !== 'string') {
+    errors.push('contract-drift: planner schema missing properties.agent.const');
+  }
+  if (typeof expectedSchemaVersion !== 'string') {
+    errors.push('contract-drift: planner schema missing properties.schema_version.const');
+  }
+  if (expectedExecutors.length === 0) {
+    errors.push('contract-drift: project-context registry missing phase_executor_agents');
+  }
+  if (typeof expectedConfidence !== 'number') {
+    errors.push('contract-drift: runtime-policy missing plan_review_gate_trigger_conditions.confidence_threshold');
+  }
+  if (errors.length > 0) {
+    return { ok: false, errors, checked: 0 };
+  }
+
+  // Agent
+  checked++;
+  const agent = extractYamlHeaderField(claudeMdContent, 'Agent');
+  if (agent === null) {
+    errors.push('contract-drift: CLAUDE.md header missing Agent field');
+  } else if (agent !== expectedAgent) {
+    errors.push(`contract-drift: CLAUDE.md Agent "${agent}" does not match planner schema const "${expectedAgent}"`);
+  }
+
+  // Schema Version
+  checked++;
+  const schemaVersion = extractYamlHeaderField(claudeMdContent, 'Schema Version');
+  if (schemaVersion === null) {
+    errors.push('contract-drift: CLAUDE.md header missing Schema Version field');
+  } else if (schemaVersion !== expectedSchemaVersion) {
+    errors.push(`contract-drift: CLAUDE.md Schema Version "${schemaVersion}" does not match planner schema const "${expectedSchemaVersion}"`);
+  }
+
+  // Confidence threshold
+  checked++;
+  const confidence = extractConfidenceThreshold(claudeMdContent);
+  if (confidence === null) {
+    errors.push('contract-drift: CLAUDE.md missing confidence threshold phrase (e.g. "below 0.9")');
+  } else if (confidence !== expectedConfidence) {
+    errors.push(`contract-drift: CLAUDE.md confidence threshold ${confidence} does not match runtime-policy ${expectedConfidence}`);
+  }
+
+  // Executor enum
+  checked++;
+  const executors = extractExecutorEnumFromClaude(claudeMdContent);
+  const executorSet = new Set(executors);
+  const expectedSet = new Set(expectedExecutors);
+  const missing = expectedExecutors.filter(a => !executorSet.has(a));
+  const extra = executors.filter(a => !expectedSet.has(a));
+  if (executors.length === 0) {
+    errors.push('contract-drift: CLAUDE.md missing executor_agent enum sentence');
+  } else {
+    if (missing.length > 0) {
+      errors.push(`contract-drift: CLAUDE.md executor enum missing [${missing.join(', ')}]`);
+    }
+    if (extra.length > 0) {
+      errors.push(`contract-drift: CLAUDE.md executor enum has unexpected [${extra.join(', ')}]`);
+    }
+  }
+
+  return { ok: errors.length === 0, errors, checked };
+}

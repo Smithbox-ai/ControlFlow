@@ -1,6 +1,6 @@
 # ControlFlow for Claude Code - Usage
 
-Version: 0.1.0
+Version: 0.2.0
 
 ## Local Development Installation
 
@@ -13,16 +13,48 @@ To load this plugin from a local directory during development:
    claude --plugin-dir ./plugins/controlflow-claude-code
    ```
 
-3. Verify it loaded by listing available skills:
+3. Verify it loaded by invoking a skill:
 
    ```text
-   /controlflow-claude-code:controlflow-router
+   /controlflow-claude-code:controlflow-plan
    ```
 
 ## Plugin Marketplace Installation
 
-Marketplace distribution is deferred for v0.1.0. Use the local `--plugin-dir`
-workflow above while the plugin is validated for broader distribution.
+The repo-root `.claude-plugin/marketplace.json` registers this plugin for a local
+marketplace at version 0.2.0. To install it via the marketplace (instead of the
+`--plugin-dir` dev workflow above):
+
+1. Register the repo as a marketplace (run from repo root):
+
+   ```sh
+   claude plugin marketplace add ./  --scope user
+   ```
+
+   `--scope user` installs globally into `~/.claude` (available in every project).
+   Use `--scope project` to scope it to the current project only, or `--scope local`
+   for a one-off local registration. The marketplace name is `controlflow-marketplace`
+   (defined in `.claude-plugin/marketplace.json`).
+
+2. Install the plugin (default scope is `user` = global in `~/.claude`):
+
+   ```sh
+   claude plugin install controlflow-claude-code@controlflow-marketplace
+   ```
+
+3. Verify it is installed and enabled:
+
+   ```sh
+   claude plugin list
+   ```
+
+After install, the three skills are available in every session as
+`/controlflow-claude-code:controlflow-plan`,
+`/controlflow-claude-code:controlflow-verify`, and
+`/controlflow-claude-code:controlflow-review` (no restart needed for a new session).
+To update after pulling repo changes, re-run `claude plugin install ...` (marketplace
+reads the current working tree). To remove: `claude plugin uninstall
+controlflow-claude-code@controlflow-marketplace`.
 
 ## Validating the Plugin Locally
 
@@ -35,20 +67,11 @@ JSON manifest parse check (run from repo root):
 Skill frontmatter check (run from repo root):
 
 ```powershell
-   powershell -Command "Get-ChildItem plugins/controlflow-claude-code/skills -Recurse -Filter SKILL.md | ForEach-Object { $content = Get-Content $_ -Raw; if ($content -notmatch 'description:') { throw ('Missing description frontmatter in: ' + $_.FullName) } }"
+   powershell -Command "Get-ChildItem plugins/controlflow-claude-code/skills -Recurse -Filter SKILL.md | ForEach-Object { $content = Get-Content $_ -Raw; if ($content -notmatch 'name:' -or $content -notmatch 'description:') { throw ('Missing required frontmatter in: ' + $_.FullName) } }"
 ```
 
-Agent frontmatter check (run from repo root):
-
-```powershell
-   powershell -Command "Get-ChildItem plugins/controlflow-claude-code/agents -Filter '*.md' | ForEach-Object { $content = Get-Content $_ -Raw; if ($content -notmatch 'name:' -or $content -notmatch 'description:') { throw ('Missing required frontmatter in agent: ' + $_.FullName) } }"
-```
-
-Full plugin validator (available after Phase 5):
-
-```powershell
-   powershell -ExecutionPolicy Bypass -NoProfile -File plugins/controlflow-claude-code/tests/validate-claude-artifacts.test.ps1 -RepoRoot .
-```
+There are **no plugin agents** in 0.2.0 (verification runs inline), so there is no
+`agents/` directory and no agent-frontmatter check.
 
 Claude Code native validation (requires claude CLI):
 
@@ -64,26 +87,34 @@ Skills are invoked using the namespaced slash syntax:
 /controlflow-claude-code:{skill-name}
 ```
 
-Example: to start a planning session, run:
+The three skills:
 
 ```text
-   /controlflow-claude-code:controlflow-planning
+/controlflow-claude-code:controlflow-plan     # generate a plan in the shared ControlFlow format
+/controlflow-claude-code:controlflow-verify   # inline adversarial plan verification (zero subagents)
+/controlflow-claude-code:controlflow-review    # evidence-backed review, layered over native /code-review
 ```
 
-Example: to run a plan audit after the plan is saved, run:
+Typical MEDIUM/LARGE flow (routing lives in the repo `CLAUDE.md`):
 
 ```text
-   /controlflow-claude-code:controlflow-plan-audit
+/controlflow-claude-code:controlflow-plan      # plan -> plans/<task-slug>-plan.md
+/controlflow-claude-code:controlflow-verify    # verdict -> plans/artifacts/<task-slug>/verify-verdict.md
+# ... implement ...
+/controlflow-claude-code:controlflow-review     # review the diff against the plan
 ```
 
-## Report Templates
+## Verification Artifacts
 
-Report templates are in templates/. Use them as starting structures for audit and
-verification outputs. Final reports should be saved to plans/artifacts/{task-slug}/.
+`controlflow-verify` writes a single combined verdict to
+`plans/artifacts/{task-slug}/verify-verdict.md` (structural audit + mirage findings +
+executability verdict + overall APPROVED/NEEDS_REVISION/REJECTED). There are no separate
+per-verifier report templates in 0.2.0.
 
 ## Repo-Wide Verification
 
-The canonical repo verification command (runs the full offline eval suite):
+The canonical repo verification command (runs the full offline eval suite, which includes
+the CLAUDE.md drift anchors and plugin manifest parity):
 
 ```sh
    cd evals && npm test

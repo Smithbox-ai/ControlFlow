@@ -78,6 +78,7 @@ import {
   validateDocCountConsistency,
   validatePluginGenerationParity,
   validatePluginCorePortability,
+  checkControlFlowContractDrift,
 } from './drift-checks.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -2359,6 +2360,52 @@ try {
   }
 } catch (e) {
   fail(`Pass 16: selective plugin-core portability — ${e.message}`);
+}
+
+// ─── Pass 17: Drift Detection — CLAUDE.md ↔ Plan Contract ────────────────────
+// Remediation Phase 4 — live-tree guard against the control doc drifting from the
+// machine-enforced plan contract (schema consts, registry executor enum, runtime
+// policy confidence threshold).
+header('Pass 17: Drift Detection — CLAUDE.md ↔ Plan Contract');
+{
+  const claudeMdPath = join(ROOT, 'CLAUDE.md');
+  const plannerSchemaPath = join(SCHEMAS_DIR, 'planner.plan.schema.json');
+  const registryPath = join(ROOT, 'governance', 'project-context-registry.json');
+  const runtimePolicyPath = join(ROOT, 'governance', 'runtime-policy.json');
+
+  if (!existsSync(claudeMdPath)) {
+    fail('Pass 17: CLAUDE.md missing');
+  } else if (!existsSync(plannerSchemaPath)) {
+    fail('Pass 17: schemas/planner.plan.schema.json missing');
+  } else if (!existsSync(registryPath)) {
+    fail('Pass 17: governance/project-context-registry.json missing');
+  } else if (!existsSync(runtimePolicyPath)) {
+    fail('Pass 17: governance/runtime-policy.json missing');
+  } else {
+    let claudeMdContent;
+    let plannerSchema;
+    let registryJson;
+    let runtimePolicyJson;
+    try {
+      claudeMdContent = readFileSync(claudeMdPath, 'utf8');
+      plannerSchema = JSON.parse(readFileSync(plannerSchemaPath, 'utf8'));
+      registryJson = JSON.parse(readFileSync(registryPath, 'utf8'));
+      runtimePolicyJson = JSON.parse(readFileSync(runtimePolicyPath, 'utf8'));
+    } catch (e) {
+      fail(`Pass 17: cannot parse required contract source — ${e.message}`);
+    }
+
+    if (claudeMdContent && plannerSchema && registryJson && runtimePolicyJson) {
+      const r = checkControlFlowContractDrift(claudeMdContent, plannerSchema, registryJson, runtimePolicyJson);
+      if (r.ok) {
+        pass(`Pass 17: CLAUDE.md aligns with plan contract (${r.checked} field(s) checked)`);
+      } else {
+        for (const err of r.errors) {
+          fail(`Pass 17: ${err}`);
+        }
+      }
+    }
+  }
 }
 
 // ─── Summary ─────────────────────────────────────────────────────────────────

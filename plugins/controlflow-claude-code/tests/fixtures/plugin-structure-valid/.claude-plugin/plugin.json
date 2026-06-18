@@ -1,5 +1,0 @@
-{
-  "name": "controlflow-test-valid",
-  "version": "0.0.0",
-  "description": "Minimal valid plugin structure fixture for validate-claude-artifacts.ps1 layout tests. Not a real plugin."
-}
