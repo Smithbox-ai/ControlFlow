@@ -1,5 +1,0 @@
-{
-  "name": "controlflow-test-invalid",
-  "version": "0.0.0",
-  "description": "Invalid plugin structure fixture: skills/ placed inside .claude-plugin/ instead of at plugin root. Used to test layout validation in validate-claude-artifacts.ps1."
-}

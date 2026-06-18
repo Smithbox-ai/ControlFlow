@@ -1,0 +1,41 @@
+{
+  "name": "controlflow-marketplace",
+  "owner": {
+    "name": "Local Workspace",
+    "email": "local@example.invalid"
+  },
+  "metadata": {
+    "description": "Local marketplace for the ControlFlow Claude Code plugin (v0.1.0).",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "controlflow-claude-code",
+      "version": "0.1.0",
+      "description": "ControlFlow workflow skills and agents for Claude Code: spec capture, strict planning, plan audit, assumption verification, executability verification, orchestration discipline, evidence-backed review, and memory hygiene.",
+      "author": {
+        "name": "Local Workspace",
+        "email": "local@example.invalid",
+        "url": "https://github.com/Smithbox-ai/ControlFlow"
+      },
+      "homepage": "https://github.com/Smithbox-ai/ControlFlow",
+      "repository": "https://github.com/Smithbox-ai/ControlFlow",
+      "license": "MIT",
+      "keywords": [
+        "controlflow",
+        "claude-code",
+        "workflow",
+        "spec",
+        "planning",
+        "plan-audit",
+        "assumption-verifier",
+        "executability-verifier",
+        "router",
+        "review",
+        "orchestration",
+        "memory"
+      ],
+      "source": "./plugins/controlflow-claude-code"
+    }
+  ]
+}
