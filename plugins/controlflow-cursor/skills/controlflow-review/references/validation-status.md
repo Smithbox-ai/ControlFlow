@@ -13,4 +13,5 @@
 ## unvalidated
 
 - Use when the concern is plausible but not yet proven.
-- State what would validate it. Do not present these as blockers unless the risk is extreme and clearly explained.
+- State what would validate it. Do not present these as blockers unless the risk is
+  extreme and clearly explained.

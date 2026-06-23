@@ -1,4 +1,0 @@
-interface:
-  display_name: "ControlFlow Planning"
-  short_description: "Write strict ControlFlow-style plan artifacts in plans/"
-  default_prompt: "Use $controlflow-planning to write a strict plan artifact in plans/ for this repository change."

@@ -4,6 +4,18 @@ All notable changes to this plugin will be documented here.
 
 Format: Added / Changed / Fixed / Removed per release.
 
+## [1.0.0] - 2026-06-23
+
+### Changed
+
+- Manifest (`plugin.json`) and README/USAGE version bumped 0.2.0 → 1.0.0 to mark the release of the slim Copilot-first ControlFlow surface alongside the regenerated Codex (1.0.0) and Cursor (1.0.0) siblings.
+- USAGE version references updated from 0.2.0 to 1.0.0.
+
+### Notes
+
+- The three skills (`controlflow-plan`, `controlflow-verify`, `controlflow-review`) are unchanged in content from 0.2.0; they already match the canonical `.github/skills/` surface modulo the `/controlflow-claude-code:` invocation prefix.
+- The root `.claude-plugin/marketplace.json` is out of scope for the plugin-sync phase and is synced separately during release.
+
 ## [0.2.0] - 2026-06-18
 
 ### Changed

@@ -235,16 +235,16 @@ console.log('\n=== skill-discoverability: resolver edge cases ===');
   );
 }
 
-// ── Suite: ControlFlow-Codex plugin workflow contract ────────────────────────
+// ── Suite: ControlFlow-Codex plugin workflow contract (slim 3-skill) ─────────
 
 console.log('\n=== skill-discoverability: ControlFlow-Codex plugin contract ===');
 {
-  const codexPlanningSkill = readFileSync(
-    join(ROOT, 'plugins', 'controlflow-shared-source', 'skills', 'controlflow-planning', 'SKILL.md'),
+  const codexPlanSkill = readFileSync(
+    join(ROOT, 'plugins', 'controlflow-shared-source', 'skills', 'controlflow-plan', 'SKILL.md'),
     'utf8'
   );
-  const codexOrchestrationSkill = readFileSync(
-    join(ROOT, 'plugins', 'controlflow-shared-source', 'skills', 'controlflow-orchestration', 'SKILL.md'),
+  const codexVerifySkill = readFileSync(
+    join(ROOT, 'plugins', 'controlflow-shared-source', 'skills', 'controlflow-verify', 'SKILL.md'),
     'utf8'
   );
   const codexReadme = readFileSync(
@@ -253,27 +253,21 @@ console.log('\n=== skill-discoverability: ControlFlow-Codex plugin contract ==='
   );
 
   assert(
-    /Save to `plans\/<task-slug>-plan\.md`/i.test(codexPlanningSkill) &&
-    /references\/plan-template\.md/i.test(codexPlanningSkill),
-    'Codex planning skill saves strict Markdown plans under plans/'
+    /Save to `plans\/<task-slug>-plan\.md`/i.test(codexPlanSkill) &&
+    /schemas\/planner\.plan\.schema\.json/i.test(codexPlanSkill),
+    'Codex plan skill saves plans under plans/ and single-sources the schema'
   );
 
   assert(
-    /multi_agent_v1\.spawn_agent/i.test(codexOrchestrationSkill) &&
-    /explicitly asks|explicitly authorizes/i.test(codexOrchestrationSkill),
-    'Codex orchestration skill documents optional multi_agent_v1.spawn_agent delegation'
+    /zero subagent/i.test(codexVerifySkill) &&
+    /APPROVED/i.test(codexVerifySkill) &&
+    /NEEDS_REVISION|REJECTED/i.test(codexVerifySkill),
+    'Codex verify skill runs inline (zero subagents) with a terminal verdict'
   );
 
   assert(
-    /subagent outputs/i.test(codexOrchestrationSkill) &&
-    /plans\/artifacts\/<task-slug>\//i.test(codexOrchestrationSkill),
-    'Codex orchestration skill stores subagent outputs in plans/artifacts/'
-  );
-
-  assert(
-    /Subagent/i.test(codexReadme) &&
-    /multi_agent_v1\.spawn_agent/i.test(codexReadme),
-    'Codex README exposes the subagent delegation contract'
+    /3 skills, 0 subagents/i.test(codexReadme),
+    'Codex README describes the slim 3-skill, 0-subagent model'
   );
 }
 
