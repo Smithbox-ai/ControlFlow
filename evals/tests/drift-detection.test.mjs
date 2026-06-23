@@ -888,58 +888,18 @@ console.log('\n=== Check #6c — model resolution scenario negative cases ===');
 // ──────────────────────────────────────────────
 console.log('\n=== Check #7 — Reference-integrity: model-routing.json ===');
 {
-  const ROOT = join(__dirname, '..', '..');
-  const projectContextPath = join(ROOT, 'plans', 'project-context.md');
-  const routingJsonPath = join(ROOT, 'governance', 'model-routing.json');
-
-  // RI-1: plans/project-context.md contains a reference to governance/model-routing.json
-  const projectContextContent = readFileSync(projectContextPath, 'utf8');
+  // Phase 3: governance/model-routing.json + the 13 root *.agent.md files are
+  // retired. The slim model ships one @controlflow-planner agent at
+  // .github/agents/controlflow-planner.agent.md that uses Copilot's Auto model
+  // picker (no model: frontmatter, no model-routing surface). RI-1/RI-2/RI-3
+  // asserted model-routing reference-integrity across the 13 agents; with no
+  // surviving model-routing surface there is no equivalent to re-anchor to —
+  // the runtime-policy contract anchors are already asserted by
+  // controlflow-contract-drift.test.mjs. Retired per the Phase 2 re-anchoring
+  // clause (c): explicitly noted as no-surviving-equivalent, not silently dropped.
   check(
-    'RI-1: plans/project-context.md contains reference to governance/model-routing.json',
-    projectContextContent.includes('governance/model-routing.json')
-  );
-
-  // RI-2: governance/model-routing.json actually exists on disk (resolvable)
-  check(
-    'RI-2: governance/model-routing.json exists on disk',
-    existsSync(routingJsonPath)
-  );
-
-  // RI-3: model_role values in agent frontmatters are valid routing JSON role keys
-  //       AND all consumers[] entries across all roles collectively cover all 13 agent filenames.
-  const routingJson = JSON.parse(readFileSync(routingJsonPath, 'utf8'));
-
-  // Collect all consumers registered in routing JSON
-  const allConsumers = new Set();
-  for (const role of Object.values(routingJson.roles || {})) {
-    for (const c of (role.consumers || [])) {
-      allConsumers.add(c);
-    }
-  }
-
-  // Read all 13 *.agent.md files from repo root
-  const agentFiles = readdirSync(ROOT).filter(f => f.endsWith('.agent.md'));
-  let allRolesValid = true;
-  const roleErrors = [];
-
-  for (const agentFile of agentFiles) {
-    const content = readFileSync(join(ROOT, agentFile), 'utf8');
-    const result = validateModelRole(content, routingJson);
-    if (!result.ok) {
-      allRolesValid = false;
-      roleErrors.push(`${agentFile}: ${result.errors.join(', ')}`);
-    }
-  }
-
-  // Every agent filename must appear in at least one consumers[] list
-  const uncoveredAgents = agentFiles.filter(f => !allConsumers.has(f));
-
-  check(
-    'RI-3: all model_role values in agent frontmatters are valid role keys AND all 13 agents appear in consumers[]',
-    allRolesValid && uncoveredAgents.length === 0,
-    allRolesValid && uncoveredAgents.length === 0
-      ? ''
-      : `roleErrors=[${roleErrors.join('; ')}] uncovered=[${uncoveredAgents.join(', ')}]`
+    'RI-1/RI-2/RI-3: model-routing reference-integrity retired (Phase 3 retired model-routing.json + 13 agents; no surviving equivalent — runtime-policy anchors covered by controlflow-contract-drift.test.mjs)',
+    true
   );
 }
 
@@ -970,21 +930,14 @@ console.log('\n=== Check #8 — Compaction Ladder presence in MEMORY-ARCHITECTUR
 // ──────────────────────────────────────────────
 console.log('\n=== Check #9 — Rule 6 / Tool Output Spill presence in TOOL-ROUTING.md ===');
 {
-  const ROOT = join(__dirname, '..', '..');
-  const trPath = join(ROOT, 'docs', 'agent-engineering', 'TOOL-ROUTING.md');
-  const content = existsSync(trPath) ? readFileSync(trPath, 'utf8') : '';
-
-  const rule6Idx = content.indexOf('Rule 6');
-  const spillIdx = content.indexOf('Tool Output Spill');
+  // Phase 3: docs/agent-engineering/TOOL-ROUTING.md is retired (the slim model
+  // delegates tool routing to native Copilot — no TOOL-ROUTING surface). D1/D2
+  // asserted in-tool-routing discipline that has no surviving equivalent to
+  // re-anchor to. Retired per the Phase 2 re-anchoring clause (c): explicitly
+  // noted as no-surviving-equivalent, not silently dropped.
   check(
-    'D1: TOOL-ROUTING.md contains "Rule 6" and "Tool Output Spill" within 100 chars of each other',
-    rule6Idx !== -1 && spillIdx !== -1 && Math.abs(rule6Idx - spillIdx) <= 100,
-    `rule6Idx=${rule6Idx}, spillIdx=${spillIdx}`
-  );
-
-  check(
-    'D2: TOOL-ROUTING.md references "tool_output_policy"',
-    content.includes('tool_output_policy')
+    'D1/D2: TOOL-ROUTING.md Rule 6 / Tool Output Spill presence retired (Phase 3 retired TOOL-ROUTING.md; slim model delegates tool routing to native Copilot — no surviving equivalent)',
+    true
   );
 }
 
@@ -1001,31 +954,24 @@ console.log('\n=== Check #9 — Rule 6 / Tool Output Spill presence in TOOL-ROUT
 console.log('\n=== Check #9b — Rule 8 path-resolution availability (re-anchored) ===');
 {
   const ROOT = join(__dirname, '..', '..');
-  const trPath = join(ROOT, 'docs', 'agent-engineering', 'TOOL-ROUTING.md');
   const ciPath = join(ROOT, '.github', 'copilot-instructions.md');
-  const toolRouting = existsSync(trPath) ? readFileSync(trPath, 'utf8') : '';
   const sharedInstructions = existsSync(ciPath) ? readFileSync(ciPath, 'utf8') : '';
 
-  const requiredTokens = [
-    '{{VSCODE_USER_PROMPTS_FOLDER}}/',
-    'Never fabricate file contents',
-    'missing governance file contained default values',
-  ];
-
+  // Phase 3: docs/agent-engineering/TOOL-ROUTING.md is retired. D3/D5 asserted
+  // TOOL-ROUTING.md Rule 8 content + its one-way cross-reference to the stub;
+  // with TOOL-ROUTING.md gone there is no surviving equivalent to re-anchor to
+  // (the stub .github/copilot-instructions.md is the sole surviving
+  // path-resolution continuity surface, asserted by D4 below). Retired per the
+  // Phase 2 re-anchoring clause (c): explicitly noted as no-surviving-equivalent,
+  // not silently dropped.
   check(
-    'D3: TOOL-ROUTING.md contains Rule 8 resource path fallback',
-    toolRouting.includes('Rule 8 - Resource Path Resolution Fallback') &&
-    requiredTokens.every(token => toolRouting.includes(token))
+    'D3/D5: TOOL-ROUTING.md Rule 8 fallback + cross-reference retired (Phase 3 retired TOOL-ROUTING.md; stub copilot-instructions.md is the surviving path-resolution surface, asserted by D4 — no surviving equivalent for D3/D5)',
+    true
   );
 
   check(
     'D4: copilot-instructions.md references plans/project-context.md as stable reference',
     sharedInstructions.includes('plans/project-context.md')
-  );
-
-  check(
-    'D5: TOOL-ROUTING.md Rule 8 one-way cross-reference to copilot-instructions.md',
-    toolRouting.includes('intentionally duplicated in `.github/copilot-instructions.md`')
   );
 }
 
@@ -1062,20 +1008,17 @@ console.log('\n=== Check #10 — review_scope=final bidirectional coupling ===')
     `ok=${n2.ok}, errors=${JSON.stringify(n2.errors)}`
   );
 
-  // Real-world positive: actual CodeReviewer-subagent.agent.md + code-reviewer.verdict.schema.json must be coupled
-  const ROOT_REAL = join(__dirname, '..', '..');
-  const realAgent = existsSync(join(ROOT_REAL, 'CodeReviewer-subagent.agent.md'))
-    ? readFileSync(join(ROOT_REAL, 'CodeReviewer-subagent.agent.md'), 'utf8')
-    : '';
-  let realSchema = {};
-  try {
-    realSchema = JSON.parse(readFileSync(join(ROOT_REAL, 'schemas', 'code-reviewer.verdict.schema.json'), 'utf8'));
-  } catch { /* will fail below */ }
-  const realResult = validateReviewScopeFinalCoupling(realAgent, realSchema);
+  // F4 (real-repo CodeReviewer-subagent.agent.md ↔ code-reviewer.verdict.schema.json
+  // coupling) retired in Phase 3: CodeReviewer-subagent.agent.md is retired with
+  // the 13-agent core; the slim model performs review via the controlflow-review
+  // skill (no separate CodeReviewer agent file). The bidirectional agent↔schema
+  // coupling has no surviving equivalent to re-anchor to. Retired per the Phase 2
+  // re-anchoring clause (c): explicitly noted as no-surviving-equivalent, not
+  // silently dropped. F1/F2/F3 above are synthetic parser-contract regression
+  // guards for validateReviewScopeFinalCoupling and remain valid.
   check(
-    'F4: actual CodeReviewer-subagent.agent.md and code-reviewer.verdict.schema.json are coupled',
-    realResult.ok === true,
-    realResult.ok ? '' : `errors=${JSON.stringify(realResult.errors)}`
+    'F4: real-repo CodeReviewer agent ↔ verdict schema coupling retired (Phase 3 retired CodeReviewer-subagent.agent.md; slim review is the controlflow-review skill, no separate agent file — no surviving equivalent; F1–F3 guard the parser contract)',
+    true
   );
 }
 
@@ -1517,19 +1460,17 @@ console.log('\n=== Check #14 — project-context registry mirror contract ===');
 // ──────────────────────────────────────────────
 console.log('\n=== Check #15 — tool-count label consistency ===');
 {
-  // Positive (real repo): registry "(N tools)" labels match tool-grants array lengths.
-  const ROOT = join(__dirname, '..', '..');
-  const realRegistry = JSON.parse(
-    readFileSync(join(ROOT, 'governance', 'project-context-registry.json'), 'utf8')
-  );
-  const realToolGrants = JSON.parse(
-    readFileSync(join(ROOT, 'governance', 'tool-grants.json'), 'utf8')
-  );
-  const realResult = validateToolCountLabelConsistency(realRegistry, realToolGrants);
+  // TC1 (real-repo tool-grants label consistency) retired in Phase 3:
+  // governance/tool-grants.json is retired — the slim model delegates tool
+  // access to native Copilot (no tool-grants surface, no "(N tools)" labels in
+  // the slim registry to cross-check). No surviving equivalent to re-anchor to.
+  // Retired per the Phase 2 re-anchoring clause (c): explicitly noted as
+  // no-surviving-equivalent, not silently dropped. TC2–TC5 below are synthetic
+  // parser-contract regression guards for validateToolCountLabelConsistency and
+  // remain valid independent of the retired surface.
   check(
-    'TC1: real governance registry/tool-grants "(N tools)" labels are consistent',
-    realResult.ok === true,
-    realResult.ok ? '' : `errors=${JSON.stringify(realResult.errors)}`
+    'TC1: real-repo tool-grants label consistency retired (Phase 3 retired governance/tool-grants.json; slim model delegates tools to native Copilot — no surviving equivalent; TC2–TC5 guard the parser contract)',
+    true
   );
 
   // Synthetic positive baseline.

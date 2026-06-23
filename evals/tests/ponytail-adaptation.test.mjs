@@ -73,7 +73,8 @@ console.log('\n=== ponytail-adaptation: portable plugin contract ===');
     'plugins/controlflow-codex/skills/controlflow-planning/references/llm-behavior-guidelines.md',
     'plugins/controlflow-claude-code/skills/controlflow-plan/references/llm-behavior-guidelines.md',
     'plugins/controlflow-cursor/skills/controlflow-planning/references/llm-behavior-guidelines.md',
-    '.cursor/skills/controlflow-planning/references/llm-behavior-guidelines.md',
+    // Phase 3: .cursor/skills/ mirror retired — Cursor ships as the
+    // plugins/controlflow-cursor/ plugin (kept above), not a root .cursor/ mirror.
   ];
 
   for (const relPath of guidelinePaths) {
@@ -90,7 +91,8 @@ console.log('\n=== ponytail-adaptation: portable plugin contract ===');
     'plugins/controlflow-codex/skills/controlflow-review/references/review-checklist.md',
     'plugins/controlflow-claude-code/skills/controlflow-review/references/review-checklist.md',
     'plugins/controlflow-cursor/skills/controlflow-review/references/review-checklist.md',
-    '.cursor/skills/controlflow-review/references/review-checklist.md',
+    // Phase 3: .cursor/skills/ mirror retired — Cursor ships as the
+    // plugins/controlflow-cursor/ plugin (kept above), not a root .cursor/ mirror.
   ];
 
   for (const relPath of reviewPaths) {
@@ -106,7 +108,8 @@ console.log('\n=== ponytail-adaptation: portable plugin contract ===');
     'plugins/controlflow-codex/skills/controlflow-plan-audit/references/audit-checklist.md',
     'plugins/controlflow-claude-code/skills/controlflow-verify/references/verify-phases.md',
     'plugins/controlflow-cursor/skills/controlflow-plan-audit/references/audit-checklist.md',
-    '.cursor/skills/controlflow-plan-audit/references/audit-checklist.md',
+    // Phase 3: .cursor/skills/ mirror retired — Cursor ships as the
+    // plugins/controlflow-cursor/ plugin (kept above), not a root .cursor/ mirror.
   ];
 
   for (const relPath of auditPaths) {

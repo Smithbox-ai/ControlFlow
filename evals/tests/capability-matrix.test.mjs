@@ -357,16 +357,13 @@ function editToolTokens(tools = []) {
 }
 
 {
-  const grantsPath = join(ROOT, 'governance', 'tool-grants.json');
-  const grantsRaw = JSON.parse(readFileSync(grantsPath, 'utf8'));
-  let liveViolations = 0;
-  for (const agentFile of readOnlyDenylistedAgents) {
-    const manifestTokens = editToolTokens(grantsRaw[agentFile] ?? []);
-    const agentPath = join(ROOT, agentFile);
-    const frontmatterTokens = editToolTokens(parseAgentFrontmatter(readFileSync(agentPath, 'utf8')).tools);
-    liveViolations += manifestTokens.length + frontmatterTokens.length;
-  }
-  assert(liveViolations === 0, 'live read-only denylisted agents have no edit tools in grants or frontmatter');
+  // Phase 3: governance/tool-grants.json + the 13 root *.agent.md files are
+  // retired (slim model delegates tool access to native Copilot — no
+  // tool-grants surface, no read-only denylisted agent roster). This live
+  // check asserted the retired denylist had no edit tools in grants/frontmatter;
+  // no surviving equivalent to re-anchor to. Retired per the Phase 2 re-anchoring
+  // clause (c): explicitly noted as no-surviving-equivalent, not silently dropped.
+  assert(true, 'live read-only denylist edit-tool check retired (Phase 3 retired tool-grants.json + 13 agents; slim model delegates tools to native Copilot — no surviving equivalent)');
 }
 
 // ── renderMatrixMarkdown ──────────────────────────────────────────────────────
@@ -424,62 +421,17 @@ console.log('\n=== capability-matrix: renderMatrixMarkdown ===');
 console.log('\n=== capability-matrix: live tree smoke test ===');
 
 {
-  const grantsPath = join(ROOT, 'governance', 'tool-grants.json');
-  const registryPath = join(ROOT, 'governance', 'project-context-registry.json');
-
-  const grantsRaw = JSON.parse(readFileSync(grantsPath, 'utf8'));
-
-  const nonMetaKeys = Object.keys(grantsRaw).filter((k) => !k.startsWith('_'));
-
-  // Build agents map from agent files on disk
-  const agents = new Map();
-  for (const agentFile of nonMetaKeys) {
-    const agentPath = join(ROOT, agentFile);
-    try {
-      const content = readFileSync(agentPath, 'utf8');
-      agents.set(agentFile, parseAgentFrontmatter(content));
-    } catch {
-      agents.set(agentFile, { modelRole: null, tools: [] });
-    }
-  }
-
-  const roster = loadRosterFromRegistry(registryPath);
-  const rows = buildCapabilityMatrix({ grants: grantsRaw, agents, roster });
-
-  // Each non-meta grants key produces exactly one row; in the live tree no
-  // roster-only ghost rows are expected (all executor/reviewer agents are in grants).
-  assert(
-    rows.length === nonMetaKeys.length,
-    `row count (${rows.length}) equals non-meta tool-grants keys count (${nonMetaKeys.length})`
-  );
-
-  // All rows have the required structural fields
-  const allValid = rows.every(
-    (r) =>
-      typeof r.agent === 'string' &&
-      typeof r.role === 'string' &&
-      typeof r.toolGrantCount === 'number' &&
-      typeof r.frontmatterToolCount === 'number' &&
-      typeof r.schemaOutput === 'string' &&
-      typeof r.executionOrReviewStatus === 'string' &&
-      Array.isArray(r.driftFlags)
-  );
-  assert(allValid, 'all rows have required structural fields');
-
-  // Each non-meta grants agent appears exactly once in the rows
-  const rowAgents = new Set(rows.map((r) => r.agent));
-  const allGrantsRepresented = nonMetaKeys.every((k) => rowAgents.has(k));
-  assert(allGrantsRepresented, 'every non-meta grants key appears as a row agent');
-
-  // Drift flags are surfaced (not asserted absent)
-  const allFlags = rows.flatMap((r) => r.driftFlags);
-  console.log(`  ℹ  drift flags surfaced in live tree: [${allFlags.join(', ') || 'none'}]`);
-
-  // Rendered markdown covers every agent
-  const md = renderMatrixMarkdown(rows);
-  assert(md.includes('| Agent |'), 'live tree markdown includes table header');
-  const allAgentsInMd = rows.every((r) => md.includes(r.agent));
-  assert(allAgentsInMd, 'every agent appears in rendered live-tree markdown');
+  // Phase 3: governance/tool-grants.json + the 13 root *.agent.md files are
+  // retired. This live smoke test built the capability matrix from the real
+  // tool-grants + on-disk agent files and asserted row-count / structural /
+  // rendering invariants against the retired 13-agent surface. The slim model
+  // has no tool-grants.json and one planner agent — the capability-matrix
+  // surface is delegated to native Copilot, so there is no surviving live tree
+  // to smoke-test. The synthetic buildCapabilityMatrix / renderMatrixMarkdown
+  // tests above guard the parser contract independent of the retired surface.
+  // Retired per the Phase 2 re-anchoring clause (c): explicitly noted as
+  // no-surviving-equivalent, not silently dropped.
+  assert(true, 'live tree smoke test retired (Phase 3 retired tool-grants.json + 13 agents; slim capability matrix delegated to native Copilot — no surviving equivalent; synthetic parser tests above guard the contract)');
 }
 
 // ── Source-scan guard: old markdown-table parser path removed from runtime ─────

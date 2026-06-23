@@ -29,7 +29,6 @@ import { computeStructuralFingerprint } from '../drift-checks.mjs';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCENARIOS_DIR = join(__dirname, '..', 'scenarios');
 const ROOT = join(__dirname, '..', '..');
-const CURSOR_RULES_DIR = join(ROOT, '.cursor', 'rules');
 
 let passed = 0;
 let failed = 0;
@@ -112,24 +111,22 @@ console.log('\n=== Fingerprint Regression Tests ===');
 }
 
 // ─── FP4: Cursor rules content ───────────────────────────────────────────────
+// Phase 3 retirement: FP4 asserted fingerprint invalidation when a
+// .cursor/rules/*.mdc file changed. The root .cursor/ mirror is retired in
+// Phase 3 (Cursor support ships as the plugins/controlflow-cursor/ plugin in
+// Phase 5), so .cursor/rules is no longer a fingerprinted surface. The
+// fingerprint-invalidation mechanics (recursive nested-path coverage) are
+// already covered by FP1 (runtime-policy subdir), FP2 (tutorial-parity subdir),
+// and FP3 (deeply nested runtime-policy/nested-dir). Retired per the Phase 2
+// re-anchoring clause (c): no-surviving-equivalent, not silently dropped.
+// Note: keeping this block active also leaked an empty .cursor/rules/ dir (the
+// temp .mdc was unlinked but the created dir was not), which flipped the
+// validate.mjs Pass 3e/3f .cursor guard from skip to validate — retiring FP4
+// removes that leak too.
 {
-  const tempPath = join(CURSOR_RULES_DIR, '_fingerprint_test_temp.mdc');
-  const initial = computeStructuralFingerprint();
-  let fp4Changed = false;
-  let fp4Restored = false;
-  try {
-    mkdirSync(CURSOR_RULES_DIR, { recursive: true });
-    writeFileSync(tempPath, '---\ndescription: "Fingerprint test fixture."\n---\n\nReferences `.github/copilot-instructions.md`.\n', 'utf8');
-    fp4Changed = computeStructuralFingerprint() !== initial;
-    unlinkSync(tempPath);
-    fp4Restored = computeStructuralFingerprint() === initial;
-  } finally {
-    if (existsSync(tempPath)) { try { unlinkSync(tempPath); } catch { /* best-effort */ } }
-  }
   check(
-    'FP4: temporary Cursor rule .mdc — fingerprint changes on write, restores on delete',
-    fp4Changed && fp4Restored,
-    `changed=${fp4Changed}, restored=${fp4Restored}`
+    'FP4: .cursor/rules fingerprint-invalidation retired (Phase 3 retired root .cursor/; Cursor ships as plugins/controlflow-cursor/ in Phase 5; recursive invalidation mechanics covered by FP1–FP3 — no surviving equivalent)',
+    true
   );
 }
 

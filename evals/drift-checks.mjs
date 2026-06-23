@@ -1914,6 +1914,30 @@ export function validatePluginCorePortability(
     'evals/scenarios/failure-retry-diagnosis.json',
     'evals/scenarios/wave-execution.json',
     'evals/scenarios/orchestrator-retry-backoff.json',
+    // Phase 3: 13 root agent files retired (slim planner at .github/agents/).
+    'Orchestrator.agent.md',
+    'Planner.agent.md',
+    'AssumptionVerifier-subagent.agent.md',
+    'BrowserTester-subagent.agent.md',
+    'CodeMapper-subagent.agent.md',
+    'CodeReviewer-subagent.agent.md',
+    'CoreImplementer-subagent.agent.md',
+    'ExecutabilityVerifier-subagent.agent.md',
+    'PlanAuditor-subagent.agent.md',
+    'PlatformEngineer-subagent.agent.md',
+    'Researcher-subagent.agent.md',
+    'TechnicalWriter-subagent.agent.md',
+    'UIImplementer-subagent.agent.md',
+    // Phase 3: governance knobs retired.
+    'governance/model-routing.json',
+    'governance/tool-grants.json',
+    'governance/agent-grants.json',
+    // Phase 3: orchestration docs retired.
+    'docs/agent-engineering/MODEL-ROUTING.md',
+    'docs/agent-engineering/MODEL-RESOLUTION-RULE.md',
+    'docs/agent-engineering/TOOL-ROUTING.md',
+    'docs/agent-engineering/RELIABILITY-GATES.md',
+    'docs/agent-engineering/OBSERVABILITY.md',
   ]);
 
   const ids = new Set();

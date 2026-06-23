@@ -2,9 +2,18 @@
  * ControlFlow — Skill Discoverability Regression Tests
  *
  * Verifies that representative operator task descriptions containing
- * audit / orchestration / governance / schema-drift keywords resolve to
- * `skills/patterns/orchestration-audit-playbook.md` via the
+ * traceability / coverage / requirements / orphan-RTM keywords resolve to
+ * `skills/patterns/completeness-traceability.md` via the
  * `skills/index.md` Domain Mapping table.
+ *
+ * Phase 3 re-anchor: the original anchor skill
+ * `skills/patterns/orchestration-audit-playbook.md` was retired with the
+ * heavy 13-agent orchestration core (audit/orchestration/governance
+ * discipline now ships as the .github/skills/controlflow-review skill, not a
+ * skill pattern). Re-anchored to `completeness-traceability.md`, the surviving
+ * pattern whose keyword set (requirements/coverage/traceability/orphan/RTM/
+ * scope) is closest to the retired audit/traceability theme — equivalent-or-
+ * stronger per the Phase 2 re-anchoring clause (b), not silently dropped.
  *
  * Parsing and matching are performed offline using only Node stdlib.
  * No external dependencies, no live agents, no network.
@@ -129,7 +138,7 @@ const SKILLS_INDEX_PATH = join(ROOT, 'skills', 'index.md');
 const indexContent = readFileSync(SKILLS_INDEX_PATH, 'utf8');
 const skillIndex = parseSkillIndex(indexContent);
 
-const ORCHESTRATION_AUDIT_SKILL = 'skills/patterns/orchestration-audit-playbook.md';
+const ANCHOR_SKILL = 'skills/patterns/completeness-traceability.md';
 
 // ── Suite: index parsing ──────────────────────────────────────────────────────
 
@@ -137,29 +146,29 @@ console.log('\n=== skill-discoverability: index parsing ===');
 {
   assert(skillIndex.length > 0, 'parsed at least one skill row from skills/index.md');
 
-  const auditRow = skillIndex.find((r) => r.skillFile === ORCHESTRATION_AUDIT_SKILL);
-  assert(auditRow !== undefined, 'orchestration-audit-playbook row is present in index');
+  const anchorRow = skillIndex.find((r) => r.skillFile === ANCHOR_SKILL);
+  assert(anchorRow !== undefined, 'completeness-traceability row is present in index');
 
-  if (auditRow) {
+  if (anchorRow) {
     assert(
-      auditRow.keywords.includes('grants'),
-      'orchestration-audit row contains "grants" keyword'
+      anchorRow.keywords.includes('traceability'),
+      'completeness-traceability row contains "traceability" keyword'
     );
     assert(
-      auditRow.keywords.includes('approval'),
-      'orchestration-audit row contains "approval" keyword'
+      anchorRow.keywords.includes('coverage'),
+      'completeness-traceability row contains "coverage" keyword'
     );
     assert(
-      auditRow.keywords.includes('traceability'),
-      'orchestration-audit row contains "traceability" keyword'
+      anchorRow.keywords.includes('requirements'),
+      'completeness-traceability row contains "requirements" keyword'
     );
     assert(
-      auditRow.keywords.includes('schema'),
-      'orchestration-audit row contains "schema" keyword'
+      anchorRow.keywords.includes('orphan'),
+      'completeness-traceability row contains "orphan" keyword'
     );
     assert(
-      auditRow.keywords.includes('audit'),
-      'orchestration-audit row contains "audit" keyword'
+      anchorRow.keywords.includes('rtm'),
+      'completeness-traceability row contains "rtm" keyword'
     );
   }
 }
@@ -185,17 +194,17 @@ console.log('\n=== skill-discoverability: tokenizer ===');
 console.log('\n=== skill-discoverability: positive fixtures ===');
 
 const POSITIVE_FIXTURES = [
-  'audit the orchestration pipeline',
-  'investigate grants and approval drift',
-  'review schema drift across agents',
-  'audit traceability gaps',
+  'review traceability gaps across phases',
+  'check requirements coverage for the plan',
+  'find orphan requirements in the RTM',
+  'audit traceability and coverage',
 ];
 
 for (const fixture of POSITIVE_FIXTURES) {
   const resolved = resolveSkills(fixture, skillIndex);
   assert(
-    resolved.includes(ORCHESTRATION_AUDIT_SKILL),
-    `"${fixture}" resolves to orchestration-audit-playbook.md`
+    resolved.includes(ANCHOR_SKILL),
+    `"${fixture}" resolves to completeness-traceability.md`
   );
 }
 
@@ -206,8 +215,8 @@ console.log('\n=== skill-discoverability: negative-control fixture ===');
   const fixture = 'refactor a UI button';
   const resolved = resolveSkills(fixture, skillIndex);
   assert(
-    !resolved.includes(ORCHESTRATION_AUDIT_SKILL),
-    `"${fixture}" does NOT resolve to orchestration-audit-playbook.md`
+    !resolved.includes(ANCHOR_SKILL),
+    `"${fixture}" does NOT resolve to completeness-traceability.md`
   );
 }
 
