@@ -1,44 +1,42 @@
 # Chapter 18 — FAQ
 
-Frequently asked questions, grouped by category.
+Frequently asked questions about the slim ControlFlow model, grouped by category.
 
 ---
 
 ## Conceptual Questions (1–10)
 
-**Q1. What is the difference between AssumptionVerifier and PlanAuditor?**
+**Q1. What is the difference between AssumptionVerifier-subagent and PlanAuditor-subagent?**
 
-PlanAuditor reviews **design**: is the architecture correct, are risks covered, is rollback planned? AssumptionVerifier checks **factual accuracy**: are the claims the plan makes actually true? A plan can be architecturally sound but contain false claims about the codebase (e.g., referencing a method that doesn't exist). These are different axes, which is why both reviewers run in parallel on MEDIUM/LARGE tiers.
+`PlanAuditor-subagent` (verify phase 1) reviews **design**: is the architecture sound, are risks covered, is rollback planned, does the artifact conform to the schema? `AssumptionVerifier-subagent` (verify phase 2) checks **factual accuracy**: are the claims the plan makes actually true (do referenced files/symbols exist, are assumptions bounded)? A plan can be architecturally sound but contain false claims about the codebase. These are different axes, which is why both phases run on MEDIUM+ tiers. Both are inline phases of `controlflow-verify` — not dispatched subagents.
 
 ---
 
 **Q2. What is the difference between ABSTAIN and REPLAN_REQUIRED?**
 
-- **ABSTAIN** (from a reviewer or Planner): "I cannot assess with sufficient confidence." Does **not** block the pipeline; logged as uncertainty.
-- **REPLAN_REQUIRED** (from Planner only): "The requirements are contradictory or missing; planning cannot proceed." **Blocks** progress — the user must clarify requirements.
+- **ABSTAIN** (from the Planner): "I cannot assess with sufficient confidence." Does **not** block the pipeline; logged as uncertainty.
+- **REPLAN_REQUIRED** (from the Planner): "The requirements are contradictory or missing; planning cannot proceed." **Blocks** progress — the user must clarify requirements.
 
 ABSTAIN is an epistemic signal. REPLAN_REQUIRED is a hard blocker.
 
 ---
 
-**Q3. Why doesn't the Planner invoke reviewers itself?**
+**Q3. Why doesn't the Planner invoke `controlflow-verify` itself?**
 
-Separation of concerns. Planner is a **planning** agent: it creates plans. Reviewers are **adversarial**. The Orchestrator governs PLAN_REVIEW — it knows when and which reviewers to dispatch based on tier, trigger conditions, and governance configuration. Planner doesn't need to know this logic; it focuses on plan quality.
-
----
-
-**Q4. Why is PLAN_REVIEW not in the `workflow_state` enum?**
-
-`workflow_state` in `orchestrator.gate-event.schema.json` reflects the actual state machine nodes: PLANNING, WAITING_APPROVAL, ACTING, REVIEWING, COMPLETE. PLAN_REVIEW is a **sub-phase** of the pipeline described in the Orchestrator prompt — it is not a distinct machine state; it runs inside ACTING setup. Conflating them would make the schema incorrect.
+Separation of concerns. The Planner is a **planning** agent: it produces the artifact and hands off. `controlflow-verify` is **adversarial**: it tries to refute the plan. The user runs verify as a separate gate so the Planner cannot approve its own work. The Planner does not need to know the tier-gated phase depth; it focuses on plan quality.
 
 ---
 
-**Q5. What is the difference between `failure_classification` and `clarification_request`?**
+**Q4. Why is there no `Orchestrator` agent file in the slim model?**
 
-- **failure_classification** (transient/fixable/needs_replan/escalate): describes the **type of failure** for automated retry routing. Used when something went **wrong**.
-- **clarification_request** (via NEEDS_INPUT): the agent **does not have enough information** to proceed. Not a failure — a question for the user.
+The Orchestrator is **retired** as a shipped agent. The legacy state machine (`PLANNING` / `WAITING_APPROVAL` / `PLAN_REVIEW` / `ACTING` / `REVIEWING` / `COMPLETE`), dispatch, waves, and gates are gone. As of February 2026, Copilot does all of this natively: subagent dispatch + parallelism is GA, `/plan` mode is GA, agentic code review is GA, approvals + custom instructions are GA. Keeping a ControlFlow dispatch state machine on top would duplicate native capabilities — exactly what the slim model forbids. The Planner + native Copilot cover orchestration; the plan → verify → review pipeline is what "orchestration" now means. See `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md`.
 
-They may appear together if a task fails **because** the agent needs more context, but they serve different purposes and take different routing paths.
+---
+
+**Q5. What is the difference between `failure_classification` and mid-execution clarification?**
+
+- **`failure_classification`** (`transient` / `fixable` / `needs_replan` / `escalate` / `model_unavailable`): describes the **type of failure** for routing. Recorded in plan lifecycle sections. Retry routing is native Copilot's job; `needs_replan` re-enters the ControlFlow pipeline via the Planner.
+- **Mid-execution clarification**: native Copilot's ask-questions surface surfaces a question to the user. Not a failure — a question. If the answer changes file scope, user-visible behavior, architecture, or destructive-risk handling, the user re-invokes `@controlflow-planner` for a targeted replan.
 
 ---
 
@@ -46,32 +44,32 @@ They may appear together if a task fails **because** the agent needs more contex
 
 Governance files (`governance/*.json`) are **explicit contracts** checked into the repository. Agent prompts contain **default behavior** and heuristics. When they conflict, governance files win because:
 1. They are versioned and auditable.
-2. They can be updated without editing 13 agent files.
-3. They are a single source of truth for operational policies.
+2. They can be updated without editing every custom agent prompt.
+3. They are a single source of truth for operational policies (tier-gated verify depth, semantic-risk policy, verdict routing).
 
 ---
 
 **Q7. Why are skills Markdown files rather than code?**
 
-Skills provide **guidance and patterns** for an LLM agent — they are part of the prompt context, not executable code. An agent reads a skill file the same way a developer reads a coding standard: it informs decision-making. Making them executable code would require a runtime environment the system intentionally avoids.
+Skills provide **guidance and patterns** for an LLM agent — they are part of the prompt context, not executable code. An agent reads a skill file the same way a developer reads a coding standard: it informs decision-making. Making them executable code would require a runtime environment the slim model intentionally avoids (ControlFlow is a prompt/governance/eval layer over native Copilot, not a runtime).
 
 ---
 
 **Q8. Why ≤3 skills per phase?**
 
-More skills in the context create noise and token overhead. Skills are most effective when they are laser-focused on the specific domain of the current phase. If a phase seems to require >3 skills — it is likely too broad and should be decomposed into smaller phases.
+More skills in the context create noise and token overhead. Skills are most effective when they are laser-focused on the specific domain of the current phase. If a phase seems to require more than three — it is likely too broad and should be decomposed into smaller phases.
 
 ---
 
-**Q9. Why do PlanAuditor and AssumptionVerifier exclude `transient`?**
+**Q9. Why do PlanAuditor-subagent and AssumptionVerifier-subagent exclude `transient`?**
 
-Because their failures are **structural** by nature. If PlanAuditor finds a problem, it found a real issue in the plan — not a timeout. If AssumptionVerifier identifies a mirage, it is a real factual gap — not a network error. Retrying identically (transient logic) would produce the same result. These agents' failures are always `fixable`, `needs_replan`, or `escalate`.
+Because their failures are **structural** by nature. If `PlanAuditor-subagent` finds a problem, it found a real issue in the plan — not a timeout. If `AssumptionVerifier-subagent` identifies a mirage, it is a real factual gap — not a network error. Retrying identically (transient logic) would produce the same result. These phases' failures are always `fixable`, `needs_replan`, or `escalate`.
 
 ---
 
 **Q10. Is "plan arrival = implicit approval"?**
 
-**No.** A plan artifact received via `plan_path` from Planner is a **reviewable input**. It enters the same PLAN_REVIEW trigger evaluation as any other plan. Trigger conditions in `governance/runtime-policy.json` are authoritative; the presence of a `plan_path` handoff does not bypass them.
+**No.** A plan artifact at `plans/<task-slug>-plan.md` is a **reviewable input**. The user must run `/controlflow-verify` (on SMALL+ work) and receive `APPROVED` before implementation begins. The presence of a plan artifact does not bypass the verify gate.
 
 ---
 
@@ -83,30 +81,30 @@ Because their failures are **structural** by nature. If PlanAuditor finds a prob
 cd evals && npm test
 ```
 
-Must be run from the `evals/` directory, **not** the repo root. Runs ~410 offline checks. No LLM calls, no network.
+Must be run from the `evals/` directory, **not** the repo root. Runs offline checks: structural validation, prompt-behavior contracts, drift detection, tutorial parity, skill discoverability, capability matrix, plugin manifest parity, contract-drift, and doc-count consistency. No LLM calls, no network.
 
 ---
 
-**Q12. What should the Orchestrator do if `executor_agent` is missing from a phase?**
+**Q12. What happens if `executor_agent` is missing from a phase?**
 
-Route the plan back through `REPLAN` to Planner and **stop** the implementation batch until the phase is reissued with an explicit `executor_agent`. Inferring silently is forbidden.
+`controlflow-verify` phase 1 (structural audit) flags it as a structural failure → `NEEDS_REVISION`. The plan is sent back to the Planner; the phase must be reissued with an explicit `executor_agent` from the eight-name enum. Inferring silently is forbidden.
 
 ---
 
-**Q13. How does regression tracking work?**
+**Q13. Where does the role taxonomy live?**
 
-At `iteration_index > 1`, the Orchestrator passes reviewers a list of **verified items** from the previous iteration. If a previously verified item now fails → **automatic BLOCKING regression issue**, regardless of severity. This prevents "whack-a-mole" where fixing one issue breaks another.
+The single source of truth is `governance/project-context-registry.json`. A human-readable mirror is in `plans/project-context.md` (the Phase Executor Agents, Review Pipeline Agents, and Agent Role Matrix tables). The Pass 14 drift check (`validateProjectContextRegistryMirror`) verifies them row-for-row. Do not hand-edit the mirror independently of the registry.
 
 ---
 
 **Q14. What happens after `escalate`?**
 
-The Orchestrator transitions to `WAITING_APPROVAL` and presents the accumulated failure evidence to the user. The user makes one of these decisions:
+Native Copilot stops and presents the accumulated failure evidence to the user. The user makes one of these decisions:
 - Cancel the task.
 - Provide clarification and allow a retry.
 - Escalate for human manual intervention.
 
-There are **0 automatic retries** for `escalate`.
+There are **zero automatic retries** for `escalate`.
 
 ---
 
@@ -115,7 +113,7 @@ There are **0 automatic retries** for `escalate`.
 - **Per-task** (`plans/artifacts/<task-slug>/`): task-specific history, revision logs, deliverables. Not reusable across tasks.
 - **Reusable** (`skills/patterns/`, `schemas/`, `governance/`): shared across all tasks. Changes affect all consumers.
 
-NOTES.md is **active-objective state** — not per-task history.
+`NOTES.md` is **active-objective state** — not per-task history.
 
 ---
 
@@ -126,28 +124,25 @@ NOTES.md is **active-objective state** — not per-task history.
 3. **Assumption** — the agent is acting on an unverified premise.
 4. **Dependency** — a prerequisite for the action is not yet met.
 
-Decision: `GO` / `PAUSE` / `ABORT`.
+Decision: `GO` / `PAUSE` / `ABORT`. The pattern lives at `skills/patterns/preflect-core.md`.
 
 ---
 
-**Q17. When does the final review gate activate?**
+**Q17. When does the HIGH-risk override fire?**
 
-Per `governance/runtime-policy.json` → `final_review_gate`, when at least one is true:
-- `enabled_by_default: true`.
-- `complexity_tier` is in `auto_trigger_tiers`.
-- The user explicitly requested a final review.
+When a `risk_review` entry has `applicability: applicable` AND `impact: HIGH` AND `disposition` not `resolved`, the plan is treated as `LARGE` for verify depth regardless of file count — all three verify phases run. The rule is encoded in `governance/runtime-policy.json` → `semantic_risk_policy`.
 
 ---
 
-**Q18. Who owns the fix cycle in the final review?**
+**Q18. Who owns the fix cycle when `controlflow-review` finds scope drift?**
 
-Always the **executor**, never the reviewer (CodeReviewer). The fix executor is the phase with the **highest** `phase_id` whose `files[]` contains the affected file. Maximum 1 fix cycle per file.
+Always the **user or a new plan phase**, never `controlflow-review` itself. `controlflow-review` labels findings (severity, confidence, file, line, user impact, validation method); it does not fix them. If the fix changes file scope, the user re-invokes `@controlflow-planner` for a targeted replan; otherwise native Copilot applies the fix and re-review is at the user's discretion.
 
 ---
 
-**Q19. Why does trace_id use UUID v4?**
+**Q19. Why is there no `governance/model-routing.json` or `governance/tool-grants.json`?**
 
-UUID v4 is randomly generated, collision-resistant, and does not encode time or host information (unlike v1/v7). This makes it safe for log correlation across distributed or concurrent agent sessions without leaking system metadata.
+Both are **retired**. Model selection is delegated to native Copilot (the Auto model picker; pin a model only if a role demands it). Tool access is declared per-agent in `tools:` frontmatter when you recreate a specialized agent under `.github/agents/`; there is no central tool-access grant file to synchronize. The slim model ships no surface duplicating a native Copilot capability. See `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md`.
 
 ---
 
@@ -156,7 +151,9 @@ UUID v4 is randomly generated, collision-resistant, and does not encode time or 
 To enforce a **closed contract**: any unknown field is an error, not silently ignored. This catches:
 - Misnamed fields (typos in field names).
 - Outdated payloads (field removed but still sent).
-- Schema drift (agent emits a field that hasn't been reviewed).
+- Schema drift (an agent emits a field that hasn't been reviewed).
+
+In the slim model, schemas are contract documentation + eval fixture references; the closed-contract rule still anchors the eval suite.
 
 ---
 
@@ -164,30 +161,30 @@ To enforce a **closed contract**: any unknown field is an error, not silently ig
 
 **Q21. What should I do if CI fails?**
 
-1. Run `cd evals && npm test` locally.
+1. Run `cd evals && npm test` locally (delete `evals/.cache/` first — the cache may mask failures after structural edits).
 2. Read the failing pass and error message.
-3. For Pass 4 (P.A.R.T.): check section order in the relevant `*.agent.md`.
-4. For Pass 2 (scenarios): validate the scenario JSON against the schema.
-5. For Pass 4b (companion rules): find the companion rule in `drift-checks.mjs` and check what is missing.
+3. For Pass 15 (doc-count): check the allowlisted doc states a count that mismatches disk truth.
+4. For Pass 7c (tutorial parity): check the heading aliases in `evals/scenarios/tutorial-parity/allowlist.json`.
+5. For Pass 14 (registry mirror): check `governance/project-context-registry.json` vs `plans/project-context.md`.
 6. Fix the issue, re-run, confirm it passes.
 
 ---
 
-**Q22. How do I change the model for a specific task type?**
+**Q22. How do I pin a model for a specific custom agent?**
 
-Edit `governance/model-routing.json`. Update the relevant `task_type_routing` or `tier_routing` entry. Run `cd evals && npm test` to verify the change doesn't break anything. Check if any agent prompts reference the old model name and update them.
+By default, **don't** — omit the `model:` line in the agent file's frontmatter so the Copilot Auto model picker selects. If a role genuinely demands a pinned model, add `model:` to that agent's frontmatter only. There is no central model-routing file to edit. The `Model Routing Role` column in the role taxonomy is a conceptual capability tier, not a routing surface.
 
 ---
 
-**Q23. Can I skip an approval gate?**
+**Q23. Can I skip a verdict gate?**
 
-**No.** Skipping an approval gate is a contract violation equivalent to skipping a gate. The Orchestrator prompt states: "Violating a stopping rule is equivalent to skipping a gate." This is a non-negotiable rule.
+**No.** Skipping the verify gate (implementing before `APPROVED`) or the review gate (shipping before reviewing findings) is a contract violation. The stopping rules are mandatory pauses: after the plan is written, after verify returns a verdict, and after review returns findings.
 
 ---
 
 **Q24. What are the 7 semantic risk categories?**
 
-From `planner.plan.schema.json` → `risk_review.items.properties.category.enum`:
+From `schemas/planner.plan.schema.json` → `risk_review.items.properties.category.enum`:
 1. `data_volume`
 2. `performance`
 3. `concurrency`
@@ -196,17 +193,19 @@ From `planner.plan.schema.json` → `risk_review.items.properties.category.enum`
 6. `dependency`
 7. `operability`
 
+Every non-TRIVIAL plan must include all seven exactly once; use `not_applicable` with justification when a category is irrelevant — never skip a row.
+
 ---
 
-**Q25. What is the process for adding a new agent?**
+**Q25. What is the process for adding a new specialized agent?**
 
-Follow the agent-contribution process in `CONTRIBUTING.md`. In summary:
-1. Create `<Name>.agent.md` (P.A.R.T. order).
-2. Create `schemas/<name>.schema.json`.
-3. Add eval scenarios in `evals/scenarios/<name>/`.
-4. Register in `plans/project-context.md`.
+The slim model ships one agent (`@controlflow-planner`). To add a specialized persona, follow `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md §5`:
+1. Create a new agent file under `.github/agents/` with Copilot agent frontmatter (`name`, `description`, `tools`). No `model:` by default.
+2. In the body, cite the `skills/patterns/` files the persona should load (the former static binding is now Planner-injected).
+3. Write the persona's discipline as prose (abstain when no executable harness is supplied; evidence over assertion; stop-the-line on regression).
+4. The Planner can now assign that role as a phase `executor_agent`. Execution is native Copilot.
 
-Also update `governance/agent-grants.json` and `governance/tool-grants.json` with the new agent's tool profile.
+There is no tool-access grant file or model-routing file to update — those governance surfaces are retired.
 
 ---
 
@@ -216,23 +215,23 @@ Also update `governance/agent-grants.json` and `governance/tool-grants.json` wit
 
 LLMs are powerful but unreliable for long multi-step tasks without structure. Strict process ensures:
 - **Reproducibility** — same input, predictable behavior.
-- **Auditability** — every decision is traceable via gate events.
+- **Auditability** — every plan, verdict, and finding is a written artifact.
 - **Safety** — destructive operations require human approval.
-- **Debuggability** — when something goes wrong, the taxonomy tells you exactly where and why.
+- **Debuggability** — when something goes wrong, the failure taxonomy tells you exactly where and why.
 
-Flexibility is preserved where it matters (Planner idea interview, skill content); structure governs where failures are costly.
+Flexibility is preserved where it matters (Planner Idea Interview, pattern content); structure governs where failures are costly.
 
 ---
 
 **Q27. Why is there no auto-merge or auto-deploy?**
 
-ControlFlow is a **prompt/governance/eval repository**. There is no compiled product and no runtime deployment. Commits affect agent behavior, schemas, and governance — changes that require human review. Auto-merge would bypass the code review and approval gates that are central to the system's safety model.
+ControlFlow is a **prompt/governance/eval layer** over native Copilot. There is no compiled product and no runtime deployment. Commits affect the planner agent, skills, schemas, and governance — changes that require human review. Auto-merge would bypass the verify and review gates that are central to the system's safety model.
 
 ---
 
 **Q28. Can ControlFlow be used outside this repository?**
 
-The patterns (P.A.R.T., failure taxonomy, memory architecture, review pipeline, skill system) are general and can be adapted. However, the governance files, schemas, and eval harness are tightly coupled to the 13 specific agents in this repository. Adapting to a different agent system requires reviewing all cross-references and rewriting the eval harness for the new agent contracts.
+Yes. The slim surface (`.github/agents/`, `.github/skills/`, `.github/copilot-instructions.md`) plus the contracts (`schemas/`, `governance/`, `plans/templates/`, `plans/project-context.md`, `skills/`, `evals/`) is portable. See the Installation section of the root `README.md`. The patterns (plan format, failure taxonomy, memory architecture, verify/review pipeline, skill system) are general and adapt to any Copilot-equipped repo. Because the slim model delegates execution, tool access, and model selection to native Copilot, there is no per-agent runtime to port.
 
 ---
 
@@ -242,4 +241,5 @@ The patterns (P.A.R.T., failure taxonomy, memory architecture, review pipeline, 
 - [Chapter 16 — Exercises](16-exercises.md)
 - [Chapter 17 — Glossary](17-glossary.md)
 - [plans/project-context.md](../../plans/project-context.md)
+- [docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md](../agent-engineering/NATIVE-DELEGATION-BOUNDARY.md)
 - [docs/agent-engineering/](../agent-engineering/)

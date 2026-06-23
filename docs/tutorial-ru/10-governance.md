@@ -2,283 +2,190 @@
 
 ## Зачем эта глава
 
-Понять, **как ControlFlow управляет правами агентов и runtime-параметрами**. После этой главы вы будете знать, какой governance-файл за что отвечает и как менять политики безопасно.
+Понять, **какие governance-файлы регулируют пайплайн** в slim-модели и как менять их безопасно, не ломая систему. Governance тонкий: четыре файла, три policy-блока и никаких tool/model-grant поверхностей.
 
-## Что такое governance в ControlFlow
+## Ключевые понятия
 
-Governance — это **7 JSON-файлов** в `governance/`, фиксирующих:
+- **Governance** — четыре конфиг-файла в `governance/`, задающие политику пайплайна, реестр ролей, canonical-source matrix и rename allowlist.
+- **Три policy-блока** — выжившая runtime-политика: `review_pipeline_by_tier`, `semantic_risk_policy`, `verdict_routing`.
+- **Делегировано нативному Copilot** — доступ к инструментам, выбор модели, subagent governance. Legacy-файл model-selection routing, файл tool-access grants и файл subagent grants retired и больше не в `governance/`.
+- **«Canonical source бьёт prose»** — когда tutorial, промпт агента и governance-файл расходятся, выигрывает governance-файл (или его названный canonical source). Набор eval-проверок на contract-drift утверждает выравнивание.
 
-1. Какие тулзы каждый агент имеет право использовать.
-2. Какие runtime-параметры (retry, тиры, ревью-пайплайн) применяются.
-3. Какие модели маршрутизируются на какие роли.
-4. Какие переименования файлов разрешены и не должны считаться drift-ом.
+## Governance-файлы (тонкая четвёрка)
 
-Это **single source of truth** — если governance говорит «нельзя», агент не может это перешагнуть.
-
-## Карта governance-файлов
-
-| Файл | Назначение | Меняется при |
-| --- | --- | --- |
-| `agent-grants.json` | Канонические права тулз агента | Изменении тулз агента |
-| `tool-grants.json` | Single source для frontmatter `tools:` | Том же |
-| `runtime-policy.json` | Operational параметры Orchestrator-а | Изменении retry/тира/ревью |
-| `model-routing.json` | Логические роли моделей | Изменении модели или роли |
-| `rename-allowlist.json` | Allowlist переименований | Намеренном rename артефакта |
-
-## agent-grants.json и tool-grants.json — две стороны одной медали
-
-**Зачем два файла:**
-
-- `tool-grants.json` — **плоский** список «агент → массив тулз», ровно тот же набор, что и в `tools:` frontmatter каждого `*.agent.md`. Это «зеркало» frontmatter.
-- `agent-grants.json` — **семантическая** организация (read-only / edit / execute / fetch / approval), каноническое представление. Из него выводится `tool-grants.json`.
-
-**Eval-проверка:** drift-checker сверяет `tools:` frontmatter каждого агента с `tool-grants.json`. Расхождение = fail.
-
-**Пример (упрощённо):**
-
-```json
-// agent-grants.json (концептуально)
-{
-  "Researcher-subagent": {
-    "read_only": ["search/codebase", "read/file"],
-    "fetch": ["web/fetch", "web/githubRepo"],
-    "search": ["search/grep", "search/file"]
-  }
-}
-
-// tool-grants.json (плоско)
-{
-  "Researcher-subagent": [
-    "search/codebase", "read/file", "web/fetch",
-    "web/githubRepo", "search/grep", "search/file"
-  ]
-}
-```
-
-## runtime-policy.json — operational knobs
-
-Это **самый важный** файл для понимания поведения Orchestrator-а. Ключевые секции:
-
-### approval_actions
-
-Список действий, требующих явного одобрения пользователя: deletes, drops, force pushes, production deploys и т.д.
-
-### review_pipeline_by_tier
-
-Определяет, какие ревьюеры активны на каждом тире:
-
-| Tier | Активные ревьюеры |
+| Файл | Назначение |
 | --- | --- |
-| TRIVIAL | none |
-| SMALL | `["PlanAuditor"]` |
-| MEDIUM | `["PlanAuditor", "AssumptionVerifier"]` |
-| LARGE | `["PlanAuditor", "AssumptionVerifier", "ExecutabilityVerifier"]` |
+| `runtime-policy.json` | Три выживших policy-блока: tier-gated verify/review-глубина, semantic-risk-политика, verdict routing плюс confidence-пороги |
+| `project-context-registry.json` | Authoritative реестр ролей (восемь ролей исполнителей + три inline verify-роли) и agent role matrix (schema outputs, tool profiles, delegation sources) |
+| `canonical-source-matrix.json` | Canonical-source matrix: какой файл authoritative для какого concern'а |
+| `rename-allowlist.json` | Разрешённые переименования файлов (anti-drift protection) |
 
-Также содержит `code_review` — обязателен на всех тирах.
+Retired (больше не в `governance/`): файл model-selection routing, файл tool-access grants и файл subagent grants. Их concern'ы — model selection, tool access, subagent governance — делегированы нативному Copilot. Slim-каталог `governance/` содержит ровно четыре файла выше.
 
-### max_iterations_by_tier
+## runtime-policy.json — три выживших блока
 
-Бюджет PLAN_REVIEW-итераций:
+Самый важный governance-файл. Skill'и `controlflow-verify` и `controlflow-review` читают его как **authoritative source** для tier-gated глубины пайплайна и семантики verdict'ов. Slim-модель убрала retired-блоки (approval lists, per-tier iteration caps, retry budgets, stagnation detection, plan-review trigger conditions, final-review gate, memory hygiene) — retry budgets, wave execution, compaction, stagnation detection и max-iterations-ручки делегированы нативному Copilot runtime. Memory hygiene живёт в `skills/patterns/repo-memory-hygiene.md` и `evals/validate.mjs` Pass 7, не в `runtime-policy.json`.
 
-| Tier | Max iterations |
+### Блок 1 — `review_pipeline_by_tier`
+
+Какие verify-фазы запускаются для каждого тира (плюс `code_review: true` на всех тирах):
+
+```text
+TRIVIAL: { plan_auditor: false, assumption_verifier: false, executability_verifier: false, code_review: true }
+SMALL:   { plan_auditor: true,  assumption_verifier: false, executability_verifier: false, code_review: true }
+MEDIUM:  { plan_auditor: true,  assumption_verifier: true,  executability_verifier: false, code_review: true }
+LARGE:   { plan_auditor: true,  assumption_verifier: true,  executability_verifier: true,  code_review: true }
+```
+
+`plan_auditor` — verify-фаза 1 (structural audit), `assumption_verifier` — фаза 2 (mirage detection), `executability_verifier` — фаза 3 (executability cold-start). TRIVIAL пропускает все три, но всё равно запускает нативный Copilot code review для изменения.
+
+### Блок 2 — `semantic_risk_policy`
+
+Семь обязательных категорий, которые каждый non-TRIVIAL план должен включить ровно один раз: `data_volume`, `performance`, `concurrency`, `access_control`, `migration_rollback`, `dependency`, `operability`. Если категория не применима, ставьте `not_applicable` с обоснованием — никогда не пропускайте строку. Override-правило: любая неразрешённая `HIGH`-impact applicable-запись форсит `LARGE` (все три verify-фазы) независимо от количества файлов.
+
+Allowed values pinned'ы политикой: `applicability_values` (`applicable`, `not_applicable`, `uncertain`), `impact_values` (`HIGH`, `MEDIUM`, `LOW`, `UNKNOWN`), `disposition_values` (`resolved`, `open_question`, `research_phase_added`, `not_applicable`).
+
+### Блок 3 — `verdict_routing`
+
+Verdict'ы, эмиттируемые `controlflow-verify`, и что каждый значит:
+
+- `APPROVED` — все проверки пройдены, Phase 1 actionable, критерии измеримы. Продолжать к имплементации.
+- `NEEDS_REVISION` — ambiguous Phase 1, нет rollback на destructive change, непроверенные пути или vague критерии. Перечислить каждый finding с точной ссылкой на секцию; повторный аудит после исправления.
+- `REJECTED` — структурный изъян; scope не deliverable как написано. Объяснить blockers; запросить направление у пользователя; не начинать кодинг.
+
+Confidence-пороги:
+- `ready_for_execution_min`: 0.9 (ниже план не `READY_FOR_EXECUTION`)
+- `uncertain_count_cap`: 0.85
+- `high_impact_open_question_cap`: 0.7
+
+## project-context-registry.json — реестр ролей
+
+**Authoritative** source для taxonomy ролей. Enum `executor_agent` в `schemas/planner.plan.schema.json` и mirror-таблицы в `plans/project-context.md` валидируются против этого registry row-for-row drift-проверкой Pass 14 (`validateProjectContextRegistryMirror`). Не правьте mirror-таблицы независимо — сначала обновите registry, затем mirror.
+
+Он определяет:
+- Восемь ролей исполнителей (`CodeMapper-subagent`, `Researcher-subagent`, `CoreImplementer-subagent`, `UIImplementer-subagent`, `PlatformEngineer-subagent`, `TechnicalWriter-subagent`, `BrowserTester-subagent`, `CodeReviewer-subagent`), доступных для назначения `executor_agent`.
+- Три inline verify-роли (`PlanAuditor-subagent`, `AssumptionVerifier-subagent`, `ExecutabilityVerifier-subagent`), выполняемые `controlflow-verify` — строго read-only; не должны появляться как `executor_agent`.
+- Agent role matrix (schema output, tools profile, delegation source) для каждой роли.
+
+Колонка `Model Routing Role` в registry — это **концептуальный capability tier**, который Copilot Auto model picker target'ит, когда Planner описывает роль. В slim-модели нет поверхности model-selection routing.
+
+## canonical-source-matrix.json
+
+Маппит каждый concern к его authoritative файлу, так что когда два файла расходятся, canonical source выигрывает. Ключевые строки:
+
+| Concern | Authoritative файл |
 | --- | --- |
-| TRIVIAL | — (skip) |
-| SMALL | 2 |
-| MEDIUM | 5 |
-| LARGE | 5 |
-
-### retry_budgets
-
-Лимиты retry по failure classification:
-
-```json
-{
-  "transient_max": 3,
-  "fixable_max": 1,
-  "needs_replan_max": 1,
-  "escalate_max": 0,
-  "max_retries_per_phase": 5
-}
-```
-
-### stagnation_detection
-
-```json
-{
-  "min_iteration": 3,
-  "improvement_threshold_pct": 5
-}
-```
-
-После итерации 3, если улучшение < 5% → стагнация.
-
-### plan_review_gate_trigger_conditions
-
-Когда активировать PLAN_REVIEW:
-
-- `min_phases` — минимальное количество фаз для триггера.
-- `confidence_threshold` — порог confidence (например, 0.9).
-- Деструктивные операции в скоупе.
-- HIGH-risk unresolved entries.
-
-### final_review_gate
-
-```json
-{
-  "enabled_by_default": false,
-  "auto_trigger_tiers": ["LARGE"],
-  "max_fix_cycles": 1
-}
-```
-
-### memory_hygiene
-
-Пороговые значения и стандарты качества памяти:
-
-| Ключ | Значение | Назначение |
-| --- | --- | --- |
-| `notes_md_max_lines` | 20 | Максимум строк в NOTES.md (проверяется CI, Pass 7) |
-| `archive_completed_plans_threshold_days` | 14 | Дней до архивации закрытого плана |
-| `archive_eligible_statuses` | `["DONE","SUPERSEDED","DEFERRED"]` | Статусы планов, подлежащих авто-архивации |
-| `repo_memory_dedup_required` | `true` | Гейт: обязательный запуск `repo-memory-hygiene.md` перед любой записью в `/memories/repo/` |
-| `memory_content_types` | `["user","feedback","project","reference"]` | Канонические типы таксономии для repo-memory записей |
-| `session_notes_template_path` | `"plans/templates/session-notes-template.md"` | Путь к шаблону session notes |
-| `stale_memory_freshness_days` | 1 | Порог возраста (в днях), после которого записи о конкретных местах в коде нужно перепроверять |
-
-## model-routing.json — логические роли моделей
-
-Каждый агент в frontmatter имеет:
-
-- `model: GPT-5.4 (copilot)` — литеральная строка модели.
-- `model_role: research-capable` — логическая роль.
-
-`governance/model-routing.json` определяет роли:
-
-```json
-{
-  "research-capable": {
-    "primary": "GPT-5.4 (copilot)",
-    "fallbacks": ["GPT-5.5 (copilot)", "Claude Opus 4.8 (copilot)"],
-    "by_tier": {
-      "TRIVIAL": {
-        "primary": "GPT-5.4 mini (copilot)",
-        "fallbacks": ["GPT-5.4 (copilot)", "Claude Sonnet 4.6 (copilot)"],
-        "cost_tier": "low",
-        "latency_tier": "fast"
-      }
-    }
-  }
-}
-```
-
-**Зачем:** decoupling агентских файлов от хардкоженных моделей. Можно менять модель в одном месте, не трогая 13 агентов.
-
-**Сейчас:** runtime читает `model:` напрямую при внешнем вызове (от пользователя); при внутреннем вызове Orchestrator/Planner используют `governance/model-routing.json` для вычисления нужной модели и передают её явно через параметр `model` внешних вызовов (например, `agent/runSubagent`). Поля `model_role` существуют для логического индексирования, eval-выравнивания и будущей миграции.
-
-**by_tier convention:**
-
-- Полный override на тир → объектное значение (например, `{"TRIVIAL": { "primary": "GPT-5.5 (copilot)", "fallbacks": [...] }}`).
-- Inherit → объект с явным указанием `{"TRIVIAL": { "inherit_from": "default" }}`.
-
-См. [docs/agent-engineering/MODEL-ROUTING.md](../agent-engineering/MODEL-ROUTING.md).
+| Executor roster | `governance/project-context-registry.json` |
+| Review pipeline roster | `governance/project-context-registry.json` |
+| Agent role matrix | `governance/project-context-registry.json` |
+| Complexity tiers | `plans/project-context.md` |
+| Semantic-risk taxonomy | `docs/agent-engineering/RISK-TAXONOMY.md` |
+| Runtime policy | `governance/runtime-policy.json` |
+| Shared evidence discipline | `docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md` |
 
 ## rename-allowlist.json
 
-Drift-чекер замечает, когда файлы появляются/исчезают. Без allowlist каждый намеренный rename ломал бы eval. Allowlist:
+Разрешённые переименования файлов. Предотвращает случайный drift: если изменение пытается переименовать файл не из allowlist'а, drift-проверка падает.
+
+Типичная структура:
 
 ```json
-{
-  "renames": [
-    {"from": "old-name.md", "to": "new-name.md", "reason": "Phase 3 consolidation"}
-  ]
-}
+[{"from": "old-name.md", "to": "new-name.md", "reason": "..."}]
 ```
 
-Также содержит «active artifacts» — список файлов, которые **должны** существовать (защита от случайного удаления).
+После добавления записи запустите `cd evals && npm test`, чтобы убедиться, что drift-проверка принимает новую allowlist-запись.
 
-## Как менять governance безопасно
+## Принцип: canonical source бьёт prose
+
+Tutorial, промпт агента и governance-файл могут разойтись в границе тира или имени роли. Кто выигрывает?
+
+Governance-файл (или его названный canonical source) выигрывает. Промпты агентов и tutorials — это **prose-дефолты**; registry и runtime policy **переопределяют** их. Набор eval-проверок на contract-drift (см. главу 14) утверждает, что выравнивание держится across files.
+
+**Почему это важно:** изменение поведения не требует правки каждого промпта агента. Вы правите `governance/runtime-policy.json` или `governance/project-context-registry.json`, и изменение распространяется на каждого consumer'а автоматически — ценой того, что каждая file-ссылка верифицируется eval-харнессом.
+
+## Безопасный flow governance-изменений
 
 ```mermaid
 flowchart TD
-    Change[Хочу поменять governance] --> Type{Что меняю?}
-    Type -->|Tools агента| ToolFlow
-    Type -->|Retry/тиры/ревью| RuntimeFlow
-    Type -->|Модель/роль| ModelFlow
-    Type -->|Rename файла| RenameFlow
-
-    ToolFlow[1. Обновить agent-grants.json<br/>2. Обновить tool-grants.json<br/>3. Обновить tools: frontmatter агента<br/>4. Обновить Tools секцию агента<br/>5. cd evals && npm test] --> Done
-    RuntimeFlow[1. Обновить runtime-policy.json<br/>2. Сверить с Orchestrator promptом<br/>3. cd evals && npm test] --> Done
-    ModelFlow[1. Обновить model-routing.json<br/>2. Обновить model_role в frontmatter<br/>3. cd evals && npm test] --> Done
-    RenameFlow[1. Добавить запись в rename-allowlist.json<br/>2. Сделать rename<br/>3. cd evals && npm test] --> Done
-
-    Done[✅ Готово]
+    Change[Запланировать изменение] --> Read[Прочитать consumer'ов:\nкакие skill'и/промпты ссылаются на этот файл?]
+    Read --> Impact[Оценить impact:\nкакие поведения изменятся?]
+    Impact --> Update[Отредактировать governance-файл]
+    Update --> Mirror[Обновить mirror-таблицы\nв plans/project-context.md\nесли registry изменился]
+    Mirror --> Eval[cd evals && npm test]
+    Eval -->|passed| Done[Изменение принято]
+    Eval -->|failed| Fix[Исправить проблему]
+    Fix --> Eval
 ```
 
-## Принцип «governance побеждает промпт»
+## Чего больше нет в Governance
 
-Если есть конфликт между **тем, что написано в агентском промпте**, и **тем, что в governance** — **governance побеждает**. Оркестратор должен ориентироваться на runtime-policy при операционных решениях, а не на устаревшую формулировку в промпте.
-
-Из `Orchestrator.agent.md`:
-> «`governance/runtime-policy.json` is the authoritative source for trigger thresholds, tier routing, `max_iterations`, and retry budgets.»
-
-## Где жить какому знанию
-
-| Знание | Место |
+| Retired-поверхность | Куда ушла |
 | --- | --- |
-| Что агенту разрешено делать | `agent-grants.json` / `tool-grants.json` |
-| Сколько раз retry | `runtime-policy.json` → retry_budgets |
-| Какие ревьюеры на каком тире | `runtime-policy.json` → review_pipeline_by_tier |
-| Какая модель для какой роли | `model-routing.json` |
-| Какие переименования допустимы | `rename-allowlist.json` |
-| Поведенческие инварианты агента | `*.agent.md` (P.A.R.T.) |
-| Шаги процесса для пользователя | `docs/agent-engineering/*.md` |
+| Model-selection routing | Выбор модели делегирован нативному Copilot (Auto model picker) |
+| Tool-access grants | Доступ к инструментам делегирован нативному Copilot |
+| Subagent grants | Subagent governance делегирован нативному Copilot |
+| Approval-action list | Human approval — это stopping-правила пайплайна (см. главу 05); отдельного governance-списка нет |
+| Retry budgets / iteration caps / stagnation detection | Retry routing, parallelism и iteration caps делегированы нативному Copilot |
+| Memory-hygiene thresholds | Живут в `evals/validate.mjs` Pass 7 плюс `skills/patterns/repo-memory-hygiene.md` |
 
-## Дополнительные governance-доки
+## Таблица расположения знаний
 
-В `docs/agent-engineering/` (см. [главу 03](03-agent-roster.md) — список):
+| Вопрос | Где искать |
+| --- | --- |
+| Какие verify-фазы запускаются для MEDIUM? | `governance/runtime-policy.json → review_pipeline_by_tier` |
+| Какие семь категорий semantic-risk? | `governance/runtime-policy.json → semantic_risk_policy.categories` |
+| Что значит verdict APPROVED? | `governance/runtime-policy.json → verdict_routing.verdicts.APPROVED` |
+| Какой confidence-порог для READY_FOR_EXECUTION? | `governance/runtime-policy.json → verdict_routing.confidence_thresholds.ready_for_execution_min` |
+| Какие роли могут быть `executor_agent`? | `governance/project-context-registry.json` (восемь ролей исполнителей) |
+| Какие роли **не** должны быть `executor_agent`? | `governance/project-context-registry.json` (три inline verify-роли) |
+| Какой файл canonical для определения тиров? | `governance/canonical-source-matrix.json` → `plans/project-context.md` |
+| Можно ли переименовать файл? | `governance/rename-allowlist.json` |
+| Какую модель должна использовать роль? | Нативный Copilot (Auto model picker). Governance-файла для этого нет. |
+| Какие инструменты может использовать агент? | Frontmatter `tools:` в файле агента; делегировано нативному Copilot. Governance-файла нет. |
 
-- `PART-SPEC.md` — структура агентского файла.
-- `RELIABILITY-GATES.md` — verification gates (build/tests/lint).
-- `CLARIFICATION-POLICY.md` — 5 классов уточнений.
-- `TOOL-ROUTING.md` — local-first и external tool routing.
-- `MODEL-ROUTING.md` — model_role design.
-- `MEMORY-ARCHITECTURE.md` — три слоя памяти.
-- `SCORING-SPEC.md` — quantitative scoring для review.
-- `MIGRATION-CORE-FIRST.md` — backbone pattern.
-- `PROMPT-BEHAVIOR-CONTRACT.md` — поведенческие инварианты.
-- `OBSERVABILITY.md` — trace_id и NDJSON sink.
-- `AGENT-AS-TOOL.md` — спецификация для будущей MCP/native экспозиции.
+## Дополнительные governance-документы
 
-Это **спецификации**, а не код. Они потребляются агентами через `Resources` секцию P.A.R.T.
+Authoritative policy-документы в `docs/agent-engineering/`:
 
-## Типичные ошибки
+| Документ | Содержание |
+| --- | --- |
+| `NATIVE-DELEGATION-BOUNDARY.md` | Каноническая native-vs-ControlFlow delegation boundary (таблица + audit-чеклист) |
+| `RISK-TAXONOMY.md` | Семь категорий semantic-risk |
+| `CLARIFICATION-POLICY.md` | Когда спрашивать пользователя vs записывать bounded assumption |
+| `SCORING-SPEC.md` | Количественная формула scoring |
+| `MEMORY-ARCHITECTURE.md` | Трёхслойная memory-модель |
+| `PROMPT-BEHAVIOR-CONTRACT.md` | Поведенческие инварианты across skills и ролей |
 
-- **Поменять frontmatter `tools:` без `tool-grants.json`**. Drift fail.
-- **Удалить файл без `rename-allowlist.json`**. Drift fail.
-- **Считать промпт побеждает governance**. Нет, governance authoritative.
-- **Менять `model_role` без обновления `model-routing.json`**. Eval упадёт.
-- **Полагаться на runtime-policy «по умолчанию»**. Всегда читайте JSON напрямую.
+## Типичные заблуждения
+
+- **Правка `runtime-policy.json` без запуска eval'ов.** Contract-drift-проверка может сломаться.
+- **Поиск файла model-selection routing или tool-access grants в `governance/`.** Оба retired — model selection и tool access — задача нативного Copilot.
+- **Ручная правка mirror-таблиц в `plans/project-context.md` без обновления `governance/project-context-registry.json` первым.** Registry — single source of truth; mirror валидируется против него.
+- **Трактовка `governance/` как внутренних файлов агентов.** Это публичные контракты, checked into репо.
+- **Попытка переопределить governance промптом агента.** Registry и runtime policy выигрывают.
+- **Ожидание memory-hygiene-блока в `runtime-policy.json`.** Его там нет — memory hygiene живёт в `skills/patterns/repo-memory-hygiene.md` и `evals/validate.mjs` Pass 7.
 
 ## Упражнения
 
-1. **(новичок)** Откройте `governance/runtime-policy.json` и найдите `max_iterations_by_tier`. Какое значение для MEDIUM?
-2. **(новичок)** Откройте `governance/tool-grants.json` и найдите `Orchestrator`. Сколько тулз ему разрешено?
-3. **(средний)** Сравните `governance/agent-grants.json` и `tool-grants.json` для `CoreImplementer-subagent`. Описывают ли они одно и то же содержимое в разных формах?
-4. **(средний)** В `model-routing.json` найдите роль `research-capable`. Какая модель по умолчанию? Какая для TRIVIAL?
-5. **(продвинутый)** Я хочу дать `TechnicalWriter-subagent` доступ к `web/fetch`. Какие файлы и в каком порядке нужно изменить?
+1. **(новичок)** Откройте `governance/runtime-policy.json`. Найдите `review_pipeline_by_tier`. Какие verify-фазы активны для `MEDIUM`?
+2. **(новичок)** Откройте `governance/project-context-registry.json`. Перечислите восемь ролей исполнителей и три inline verify-роли. Подтвердите, что три verify-роли помечены read-only.
+3. **(средний)** Вы хотите добавить новую категорию semantic-risk. Какие файлы должны измениться и в каком порядке, чтобы contract-drift eval остался зелёным?
+4. **(средний)** В `runtime-policy.json → review_pipeline_by_tier` у TRIVIAL-пайплайна все три verify-фазы `false`, но `code_review: true`. Значит ли это, что code review запускается для TRIVIAL? Объясните, где фактически происходит code review.
+5. **(продвинутый)** Назовите каждый файл, который должен ссылаться на `governance/runtime-policy.json` или валидироваться против него. Проверьте ответ против contract-drift eval-сценариев в `evals/`.
 
 ## Контрольные вопросы
 
-1. Перечислите 7 governance-файлов и их назначения.
-2. Что такое `model_role` и зачем он нужен поверх `model:`?
-3. В каком файле живут retry-лимиты?
-4. Кто побеждает при конфликте: промпт агента или governance?
-5. Что произойдёт при rename файла без записи в allowlist?
+1. Назовите четыре governance-файла в slim-модели.
+2. Назовите три выживших policy-блока в `runtime-policy.json`.
+3. Какой файл — authoritative source для taxonomy ролей и какой mirror валидируется против него?
+4. Почему поверхности model-selection, tool-access и subagent-governance retired и куда ушли их concern'ы?
+5. Что значит «canonical source бьёт prose» и какая eval-проверка это enforced?
 
 ## См. также
 
-- [Глава 04 — P.A.R.T.](04-part-spec.md)
-- [Глава 13 — Таксономия сбоев](13-failure-taxonomy.md)
+- [Глава 05 — Пайплайн plan → verify → review](05-orchestration.md)
+- [Глава 07 — Ревью-пайплайн](07-review-pipeline.md)
+- [Глава 08 — Пайплайн исполнения](08-execution-pipeline.md)
 - [Глава 14 — Eval-харнесс](14-evals.md)
 - [governance/](../../governance/)
 - [docs/agent-engineering/](../agent-engineering/)

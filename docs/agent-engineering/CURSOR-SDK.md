@@ -1,8 +1,8 @@
 # Cursor SDK (Optional ControlFlow Validation)
 
-ControlFlow's primary Cursor integration is in-IDE: `.cursor/rules`, `.cursor/skills`, and `.cursor/agents` (see [CURSOR-SUPPORT.md](CURSOR-SUPPORT.md)).
+ControlFlow's primary Cursor integration is the `plugins/controlflow-cursor/` plugin (Project Rules, workflow Skills, agents). See [CURSOR-SUPPORT.md](CURSOR-SUPPORT.md) for the plugin surface. The legacy root `.cursor/` mirror is retired.
 
-The [Cursor SDK](https://cursor.com/docs/sdk/overview) (`@cursor/sdk` / `cursor-sdk`) can run agents programmatically for **CI validation** or scripted plan review — not as a replacement for the full VS Code orchestration runtime.
+The [Cursor SDK](https://cursor.com/docs/sdk/overview) (`@cursor/sdk` / `cursor-sdk`) can run agents programmatically for **CI validation** or scripted plan review — not as a replacement for the in-IDE plugin or the VS Code Copilot runtime.
 
 ## When to use
 
@@ -12,8 +12,8 @@ The [Cursor SDK](https://cursor.com/docs/sdk/overview) (`@cursor/sdk` / `cursor-
 
 ## When not to use
 
-- Replacing in-IDE `Task` delegation for implementer phases (use Agent mode + subagents locally).
-- Expecting `agent/runSubagent` or Copilot `@Planner` semantics.
+- Replacing in-IDE execution for implementer phases (use Cursor Agent mode + the plugin's agents locally).
+- Expecting `agent/runSubagent` or VS Code `@controlflow-planner` semantics. Cursor does not support those VS Code surfaces.
 
 ## Example (TypeScript, validate-only)
 
@@ -23,7 +23,7 @@ import { Agent } from "@cursor/sdk";
 const result = await Agent.prompt(
   [
     "Read plans/my-task-plan.md.",
-    "Follow the controlflow-plan-audit discipline.",
+    "Follow the controlflow-verify structural-audit discipline.",
     "Return APPROVED or NEEDS_REVISION with cited plan sections only.",
     "Do not modify files.",
   ].join("\n"),
@@ -46,7 +46,7 @@ import os
 from cursor_sdk import Agent, AgentOptions, LocalAgentOptions
 
 result = Agent.prompt(
-    "Audit plans/my-task-plan.md using controlflow-plan-audit rules. Read-only.",
+    "Audit plans/my-task-plan.md using controlflow-verify rules. Read-only.",
     AgentOptions(
         api_key=os.environ["CURSOR_API_KEY"],
         model="composer-2.5",
@@ -59,7 +59,7 @@ result = Agent.prompt(
 
 - Store `CURSOR_API_KEY` as a repository secret.
 - Prefer read-only prompts for gates; implementation belongs in IDE workflows.
-- Keep deterministic structural checks in `cd evals && npm test`; use SDK for discretionary narrative audit only when needed.
+- Keep deterministic structural checks in `cd evals && npm test`; use the SDK for discretionary narrative audit only when needed.
 
 ## References
 

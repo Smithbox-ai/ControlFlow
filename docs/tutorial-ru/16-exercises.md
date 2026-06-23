@@ -1,342 +1,248 @@
 # Глава 16 — Упражнения
 
-## Как использовать главу
+## Зачем эта глава
 
-Упражнения сгруппированы по уровням: **🟢 новичок** / **🟡 средний** / **🔴 продвинутый**. Каждое имеет:
-- **Цель** — что должно стать понятно.
-- **Шаги** — что делать.
-- **Подсказка** — где смотреть.
-- **Критерий** — как понять, что сделано.
-
-Большинство упражнений **read-only**: открываете файлы, отвечаете на вопросы. Несколько требуют запуска `cd evals && npm test`.
+Практические задания, закрепляющие ключевые концепции из всех предыдущих глав. Сгруппированы по уровню: 🟢 новичок, 🟡 средний, 🔴 продвинутый. Упражнения отражают тонкую ControlFlow-поверхность: один агент (`@controlflow-planner`), три skill'а (`controlflow-plan` / `controlflow-verify` / `controlflow-review`), а нативный Copilot исполняет фазы.
 
 ---
 
-## 🟢 Упражнение 1 — Карта репо
+## 🟢 Упражнение 1 — Карта тонкой поверхности
 
-**Цель:** ориентироваться в структуре.
+**Цель:** Сориентироваться в поставляемой структуре репозитория.
 
-**Шаги:**
-1. Откройте корень репо.
-2. Выпишите все агентские файлы (паттерн `*.agent.md`).
-3. Откройте `governance/` — выпишите 7 файлов.
-4. Откройте `schemas/` — посчитайте JSON-файлы.
+1. Откройте репозиторий в редакторе.
+2. Перечислите файлы под `.github/agents/` и `.github/skills/`. Подтвердите, что поставляемая поверхность — один агент плюс три skill'а.
+3. Заполните таблицу:
 
-**Подсказка:** [Глава 02](02-architecture-overview.md), [Глава 03](03-agent-roster.md).
+| Категория | Путь | Назначение |
+|----------|------|-----------|
+| Агент Planner'а | `.github/agents/…` | ? |
+| Plan skill | `.github/skills/…` | ? |
+| Verify skill | `.github/skills/…` | ? |
+| Review skill | `.github/skills/…` | ? |
+| Routing stub | `.github/…` | ? |
 
-**Критерий:** 13 агентов, 7 governance, 20 схем.
-
----
-
-## 🟢 Упражнение 2 — P.A.R.T. на одном агенте
-
-**Цель:** убедиться, что P.A.R.T. — обязательный порядок.
-
-**Шаги:**
-1. Откройте `Researcher-subagent.agent.md`.
-2. Найдите 4 заголовка: Prompt → Archive → Resources → Tools.
-3. Проверьте порядок.
-
-**Подсказка:** [Глава 04](04-part-spec.md).
-
-**Критерий:** Порядок строго P → A → R → T.
+4. Откройте `.github/copilot-instructions.md` и найдите таблицу тиров. Какой tier пропускает пайплайн целиком?
 
 ---
 
-## 🟢 Упражнение 3 — Запуск eval
+## 🟢 Упражнение 2 — Чтение агента Planner'а + skill'а
 
-**Цель:** убедиться, что харнесс работает.
+**Цель:** Научиться читать агент Planner'а и skill.
 
-**Шаги:**
-1. `cd evals`.
-2. `npm install` (один раз).
-3. `npm test`.
-4. Прочитать сводку.
+1. Откройте `.github/agents/controlflow-planner.agent.md`.
+2. Найдите поля frontmatter (`description`, `name`, `tools`). Подтвердите, что строки `model:` нет.
+3. Определите секции в теле (например, «Load the planning skill», «Idea Interview», «Write the plan artifact», «Hand off to native Copilot»).
+4. Откройте `.github/skills/controlflow-plan/SKILL.md` и прочитайте, что делает plan skill.
+5. Перечислите `skill_references` (value-add паттерны), которые Planner может инжектить на фазу. Каков максимум на фазу?
 
-**Подсказка:** [Глава 14](14-evals.md).
+---
 
-**Критерий:** Все тесты passed. Знаете время прогона.
+## 🟢 Упражнение 3 — Запуск evals
+
+**Цель:** Запомнить каноническую команду верификации.
+
+1. Откройте терминал.
+2. Выполните `cd evals && npm test`.
+3. Подсчитайте общее количество проверок по всем проходам.
+4. Какой проход запускает больше всего проверок?
+5. По желанию направьте вывод в локальный файл (`cd evals && npm test > out.txt`, он gitignored) — каким был результат?
 
 ---
 
 ## 🟢 Упражнение 4 — NOTES.md
 
-**Цель:** понять, что в нём.
+**Цель:** Понять repo-persistent-память.
 
-**Шаги:**
 1. Откройте `NOTES.md`.
-2. Найдите active objective и current phase.
-3. Сравните с реальным состоянием репо.
-
-**Подсказка:** [Глава 12](12-memory.md).
-
-**Критерий:** Можете сказать, что сейчас «активная цель» проекта.
+2. Какова текущая активная цель?
+3. Есть ли неразрешённые блокеры?
+4. Когда файл последний раз обновлялся (по содержимому)?
+5. Содержит ли файл устаревшие (superseded) записи? Что предлагает делать паттерн memory-hygiene по адресу `skills/patterns/repo-memory-hygiene.md` с ними?
 
 ---
 
-## 🟡 Упражнение 5 — Тиры и ревью-pipeline
+## 🟡 Упражнение 5 — Тиры и пайплайн
 
-**Цель:** понять mapping тира на ревьюеров.
+**Цель:** Применить tier-gated политику.
 
-**Шаги:**
-1. Откройте `governance/runtime-policy.json`.
-2. Найдите `review_pipeline_by_tier`.
-3. Заполните таблицу:
+Для каждого сценария определите: **complexity tier** + **какие verify-фазы запускаются**.
 
-| Tier | Активные ревьюеры | Max iterations |
-|------|-------------------|----------------|
-| TRIVIAL | ? | ? |
-| SMALL | ? | ? |
-| MEDIUM | ? | ? |
-| LARGE | ? | ? |
+| Сценарий | Tier | Verify-фазы |
+|----------|------|-------------|
+| Добавить ключ локализации (1 файл, низкий риск) | ? | ? |
+| Рефакторинг service-класса (4 файла, без HIGH-риска) | ? | ? |
+| Миграция БД (8 файлов, `data_volume: HIGH`, неразрешён) | ? | ? |
+| Добавить админ-панель (10 файлов, `access_control: HIGH`, неразрешён) | ? | ? |
 
-**Подсказка:** [Глава 07](07-review-pipeline.md), [Глава 10](10-governance.md).
-
-**Критерий:** Таблица сходится с governance.
+Подсказка: проверьте `governance/runtime-policy.json` → `review_pipeline_by_tier` и вспомните override-правило HIGH-risk.
 
 ---
 
-## 🟡 Упражнение 6 — Failure routing
+## 🟡 Упражнение 6 — Маршрутизация сбоев
 
-**Цель:** определить классификацию.
+**Цель:** Применить taxonomy сбоев и определить, кто маршрутизирует.
 
-**Шаги:** для каждой ситуации выберите класс (transient / fixable / needs_replan / escalate):
+Для каждого сценария сбоя укажите: **classification** + **кто маршрутизирует** (нативный Copilot или re-invoke `@controlflow-planner`).
 
-| # | Ситуация | Класс |
-|---|----------|-------|
-| 1 | Тест упал по network timeout | ? |
-| 2 | Build fails: typo в имени переменной | ? |
-| 3 | Endpoint требует middleware, которого нет | ? |
-| 4 | Найдена SQL injection | ? |
-| 5 | HTTP 429 от тулзы | ? |
-| 6 | Архитектурная зависимость оказалась циклической | ? |
-| 7 | Бюджет токенов исчерпан | ? |
+| Сценарий | Classification | Маршрутизатор |
+|----------|---------------|--------------|
+| 1. CoreImplementer: TypeScript-компилятор не отвечает (timeout) | ? | ? |
+| 2. UIImplementer: забыл импортировать компонент | ? | ? |
+| 3. Mid-execution: phase 3 зависит от функции, которой нет в кодовой базе | ? | ? |
+| 4. PlatformEngineer: деплой перезапишет production-данные без backup | ? | ? |
+| 5. BrowserTester: Playwright падает (rate limit) | ? | ? |
+| 6. CoreImplementer: всю архитектуру нужно переделать | ? | ? |
+| 7. Researcher: routed/primary модель unreachable | ? | ? |
 
-**Подсказка:** [Глава 13](13-failure-taxonomy.md).
-
-**Критерий:** transient / fixable / needs_replan / escalate / transient / needs_replan / escalate.
+**Ответы:**
+1. `transient` → нативный Copilot retry.
+2. `fixable` → нативный Copilot retry с fix hint.
+3. `needs_replan` → re-invoke `@controlflow-planner` для targeted replan.
+4. `escalate` → нативный Copilot останавливается; требуется user approval.
+5. `transient` → нативный Copilot retry.
+6. `needs_replan` → re-invoke `@controlflow-planner`.
+7. `model_unavailable` → нативный Copilot подменяет модель, затем escalate при исчерпании.
 
 ---
 
-## 🟡 Упражнение 7 — Schema reading
+## 🟡 Упражнение 7 — Чтение схем
 
-**Цель:** прочитать ключевую схему.
+**Цель:** Научиться ориентироваться в JSON-схемах.
 
-**Шаги:**
 1. Откройте `schemas/planner.plan.schema.json`.
-2. Найдите все required-поля верхнего уровня.
-3. Найдите enum для `complexity_tier`.
-4. Найдите enum для `executor_agent` в phases.
-
-**Подсказка:** [Глава 09](09-schemas.md).
-
-**Критерий:** Можете перечислить required-поля и оба enum-а.
+2. Найдите `risk_review.items.properties.category.enum` — перечислите все семь значений.
+3. Найдите `phases.items.properties.executor_agent.enum` — перечислите все восемь имён ролей исполнителей.
+4. Каково минимальное число элементов в `acceptance_criteria`?
+5. Какие три имени verify-ролей **исключены** из enum `executor_agent` и почему?
 
 ---
 
-## 🟡 Упражнение 8 — Skill selection
+## 🟡 Упражнение 8 — Выбор skill-паттерна
 
-**Цель:** научиться выбирать skill-references.
+**Цель:** Потренироваться в Planner-injected выборе паттернов.
 
-**Шаги:** для каждой задачи выберите 1–3 skills из `skills/index.md`:
+Для каждой фазы выберите до трёх паттернов из `skills/index.md`.
 
-| # | Задача | Skills |
-|---|--------|--------|
-| 1 | Добавить пагинацию в /v1/orders (CoreImplementer) | ? |
-| 2 | Сделать форму регистрации accessible (UIImplementer) | ? |
-| 3 | Развернуть pgvector через Helm (PlatformEngineer) | ? |
-| 4 | Написать FAQ-секцию документации (TechnicalWriter) | ? |
-| 5 | Спланировать API-рефакторинг (Planner) | ? |
-
-**Подсказка:** [Глава 11](11-skills.md), Domain Mapping в [skills/index.md](../../skills/index.md).
-
-**Критерий:** Каждый выбор аргументируется доменом.
+| Фаза | Рекомендуемые паттерны |
+|-------|------------------------|
+| «Написать интеграционные тесты для payment API» | ? |
+| «Реализовать export-handler (backend)» | ? |
+| «Написать документацию к новому API (с Mermaid-диаграммами)» | ? |
+| «Деплой сервиса в staging (с rollback)» | ? |
+| «Исследовать альтернативы для Redis-кэширования» | ? |
 
 ---
 
-## 🟡 Упражнение 9 — Memory placement
+## 🟡 Упражнение 9 — Размещение в памяти
 
-**Цель:** определить слой памяти.
+**Цель:** Определить правильный слой памяти для каждого факта.
 
-**Шаги:** куда писать каждый факт?
+Для каждого факта укажите: **слой памяти** + **файл/путь**.
 
-| # | Факт | Слой |
-|---|------|------|
-| 1 | «Сейчас работаем над фазой 4 plan X» | ? |
-| 2 | «Verdict PA для итерации 1: APPROVED» | ? |
-| 3 | «Гипотеза: возможно, использовать SSE вместо WebSocket» | ? |
-| 4 | «Каноническая верификация — `cd evals && npm test`» | ? |
-| 5 | «P.A.R.T. order is mandatory and enforced» | ? |
-
-**Подсказка:** [Глава 12](12-memory.md).
-
-**Критерий:** NOTES.md / task-episodic / session / repo-persistent / repo-persistent.
+| Факт | Слой | Расположение |
+|------|------|--------------|
+| «Команда верификации — `cd evals && npm test`» | ? | ? |
+| «Phase 3 завершена, phase 4 в работе» | ? | ? |
+| «PlanAuditor нашёл 2 BLOCKING-проблемы в итерации 1» | ? | ? |
+| «Пользователь предпочитает flat CSV-формат» | ? | ? |
+| «Slim-модель поставляет одного агента planner'а и три skill'а» | ? | ? |
 
 ---
 
-## 🔴 Упражнение 10 — Спроектировать flow
+## 🔴 Упражнение 10 — Полный трейс пайплайна
 
-**Цель:** end-to-end дизайн.
+**Цель:** Симулировать полный пайплайн plan → verify → review.
 
-**Шаги:**
-1. Задача: «Добавить экспорт /v1/orders в CSV».
-2. Опишите шаги от первого ввода пользователя до commit:
-   - Кто отвечает на input? (Planner или Orchestrator)
-   - Какой `complexity_tier`? Почему?
-   - Какие триггеры PLAN_REVIEW? Какой pipeline?
-   - Какие фазы (≥3, ≤10)?
-   - Какие executor_agent для каждой?
-   - Какие skill_references?
-   - Какие quality_gates?
+**Вход:** Пользователь просит «Генератор отчётов, экспортирующий пользовательскую активность по диапазону дат».
 
-**Подсказка:** [Главы 05–08](05-orchestration.md).
-
-**Критерий:** Согласованный план; sanity-проверка через схему `planner.plan.schema.json`.
+1. Какие clarification-вопросы Planner должен задать в Idea Interview (минимум 3)?
+2. Какие категории `risk_review` применимы, а какие `not_applicable` с обоснованием?
+3. Каким должен быть `complexity_tier`? Срабатывает ли HIGH-risk override?
+4. Перечислите 5–6 фаз с `executor_agent` и однострочной целью.
+5. Какие verify-фазы запускаются и каким inline verify-роли соответствуют?
+6. Какие `skills/patterns/` вы инжектнули бы (≤3) в фазу имплементации?
 
 ---
 
-## 🔴 Упражнение 11 — Adversarial mindset
+## 🔴 Упражнение 11 — Адверсариальный майндсет
 
-**Цель:** мыслить как PlanAuditor.
+**Цель:** Думать как `AssumptionVerifier-subagent` (verify фаза 2).
 
-**Шаги:**
-1. Откройте любой план в `plans/` (например, `subagent-routing-guardrails-plan.md`).
-2. Применить 4-perspective check (Architecture / Security / Risk / Completeness).
-3. Найти ≥1 потенциальную проблему в каждой перспективе.
+**Дан фрагмент плана:**
+```
+Phase 3: "Implement export
+  - Use the existing UserExportService class
+  - Call the method getActivityByDateRange(userId, from, to)
+  - The results are already paginated"
+```
 
-**Подсказка:** [Глава 07](07-review-pipeline.md), `PlanAuditor-subagent.agent.md`.
-
-**Критерий:** ≥4 содержательных findings.
-
----
-
-## 🔴 Упражнение 12 — Mirage hunting
-
-**Цель:** мыслить как AssumptionVerifier.
-
-**Шаги:**
-1. Возьмите тот же план.
-2. Найти ≥3 «assumption-fact confusion» (предположения, выданные за факты без evidence).
-3. Для каждого: указать местоположение и предложить evidence для resolution.
-
-**Подсказка:** `AssumptionVerifier-subagent.agent.md`, 17 mirage patterns.
-
-**Критерий:** ≥3 mirage с evidence.
+1. Перечислите все **предположения** в этом фрагменте.
+2. Какие предположения можно проверить в кодовой базе?
+3. Какие BLOCKING, если ложны?
+4. Сформулируйте mirage для каждого BLOCKING-предположения (используя taxonomy P1–P10 / A11–A17 в `.github/skills/controlflow-verify/references/mirage-patterns.md`).
 
 ---
 
-## 🔴 Упражнение 13 — Cold-start simulation
+## 🔴 Упражнение 12 — Охота на mirages
 
-**Цель:** мыслить как ExecutabilityVerifier.
+**Цель:** Применить taxonomy mirages.
 
-**Шаги:**
-1. Возьмите 3 первые задачи из первой фазы того же плана.
-2. Для каждой проверьте:
-   - Есть ли ссылки на файлы?
-   - Есть ли точные команды (exact strings)?
-   - Все ли термины определены?
-   - Нет ли implicit assumptions о состоянии?
-3. Заполните: PASS / WARN / FAIL для каждой.
+Откройте `.github/skills/controlflow-verify/references/mirage-patterns.md` и прочитайте паттерны presence (P1–P10) и absence (A11–A17).
 
-**Подсказка:** [Глава 07](07-review-pipeline.md), `ExecutabilityVerifier-subagent.agent.md`.
+Для утверждения плана: *"Auth-модуль кэширует токены в Redis с 15-минутным TTL, поэтому rate limiter может на это опираться."*
 
-**Критерий:** 3 task verdicts с обоснованием.
+1. Какие паттерны применимы?
+2. Перечислите все проверяемые факты.
+3. Как бы вы назвали mirage, если Redis-кэширование оказалось фичей в разработке, а не production-кодом?
 
 ---
 
-## 🔴 Упражнение 14 — Code review final mode
+## 🔴 Упражнение 13 — Симуляция cold start
 
-**Цель:** обнаружить scope drift.
+**Цель:** Думать как `ExecutabilityVerifier-subagent` (verify фаза 3).
 
-**Шаги:**
-1. Возьмите завершённый plan (любой в `plans/archive/`).
-2. Симулируйте changed_files как union всех файлов из всех фаз + 1 «лишний».
-3. Постройте `plan_phases_snapshot[]`.
-4. Найдите scope drift.
-5. Определите fix executor по правилу «highest phase_id with файл в `files[]`».
+**Дано Phase 2, Task 1:**
+```
+"Add an endpoint for export:
+  - Use Express.js
+  - Return CSV in the response"
+```
 
-**Подсказка:** [Глава 08](08-execution-pipeline.md), `code-reviewer.verdict.schema.json`.
+Вы — свежий исполнитель, пришедший только с репозиторием и этим описанием плана.
 
-**Критерий:** Корректный fix routing.
-
----
-
-## 🔴 Упражнение 15 — Создать skill
-
-**Цель:** добавить skill корректно.
-
-**Шаги:**
-1. Идея: «sql-injection-prevention.md» pattern.
-2. Создать pattern-файл (3–5 sections, инструктивный стиль).
-3. Зарегистрировать в `skills/index.md` Domain Mapping.
-4. Обновить применимых агентов (CoreImplementer, CodeReviewer, PlanAuditor).
-5. Запустить `cd evals && npm test`.
-
-**Подсказка:** [Глава 11](11-skills.md), [skills/README.md](../../skills/README.md).
-
-**Критерий:** Eval проходит. Skill читается естественно.
+1. Чего не хватает, чтобы вы могли начать сразу без вопросов к пользователю?
+2. Перечислите минимум пять concreteness-пробелов (file path, route, auth, validation, verification-команда, rollback если деструктивно).
+3. Предложите исправленное описание задачи, закрывающее эти пробелы.
 
 ---
 
-## 🔴 Упражнение 16 — Trace correlation
+## 🔴 Упражнение 14 — Воссоздать специализированного агента
 
-**Цель:** понять observability.
+**Цель:** Воссоздать retired-персону как native Copilot custom agent.
 
-**Шаги:**
-1. Прочитать [docs/agent-engineering/OBSERVABILITY.md](../agent-engineering/OBSERVABILITY.md).
-2. Сделать диаграмму: какие поля переходят между gate-event и delegation-protocol для корреляции?
-3. Описать, как восстановить полный flow из NDJSON-лога.
+Согласно `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md §5`:
 
-**Критерий:** Диаграмма содержит trace_id и iteration_index с источниками/потребителями.
-
----
-
-## 🔴 Упражнение 17 — Изменить тир-routing
-
-**Цель:** governance change по правилам.
-
-**Шаги:**
-1. Гипотеза: «MEDIUM тоже должен запускать ExecutabilityVerifier».
-2. Какие файлы поменять?
-3. Какие тесты могут упасть?
-4. Что обновить в Orchestrator-промпте, если что?
-
-**Подсказка:** [Глава 10](10-governance.md), `governance/runtime-policy.json`.
-
-**Критерий:** Список изменений согласован с правилом «governance побеждает промпт».
+1. Выберите retired-персону (например, `BrowserTester-subagent`).
+2. Перечислите файлы `skills/patterns/`, несущие её дисциплину (см. таблицу worked-examples в §5).
+3. Набросайте stub `browser-tester.agent.md` под `.github/agents/`:
+   - Frontmatter: `name`, `description`, `tools` (без строки `model:`).
+   - Тело: процитируйте паттерны в секции `## Resources`; напишите правило abstain («abstain when no executable harness is supplied»).
+4. Как Planner назначил бы этого воссозданного агента как `executor_agent` фазы? Что сделал бы нативный Copilot, когда фаза запускается?
 
 ---
 
-## 🔴 Упражнение 18 — Ответить на сложные вопросы
+## Итог
 
-**Цель:** проверить, готовы ли отвечать другим людям.
-
-**Вопросы:**
-
-1. **«Зачем нужен AssumptionVerifier, если есть PlanAuditor?»** — обоснуйте через разные перспективы.
-2. **«Когда использовать ABSTAIN, а когда REPLAN_REQUIRED?»** — объясните разницу.
-3. **«Почему Planner не вызывает ревьюеров сам?»** — объясните разделение ответственности.
-4. **«Почему PLAN_REVIEW нет в `workflow_state` enum?»** — объясните различие промпт-стадий и schema-states.
-5. **«Чем `failure_classification` отличается от `clarification_request`?»** — объясните разные routing paths.
-
-**Подсказка:** все главы пособия.
-
-**Критерий:** На каждый вопрос — связный ответ ≥3 предложения с цитатами/файлами.
-
----
-
-## Бонус: упражнения «учитель»
-
-Для самопроверки овладения. Выберите 3:
-
-A. Объясните P.A.R.T. человеку, который никогда не работал с агентами.
-B. Объясните разницу между skill и documentation.
-C. Объясните, почему eval-харнесс не вызывает реальные LLM.
-D. Объясните, как Orchestrator выбирает executor для фазы.
-E. Объясните, что такое «backbone pattern» (см. MIGRATION-CORE-FIRST.md).
+| Уровень | Упражнения | Ключевые навыки |
+|---------|-----------|-----------------|
+| 🟢 Новичок | 1–4 | Навигация по тонкой поверхности, чтение planner/skill, запуск харнесса, repo-память |
+| 🟡 Средний | 5–9 | Tier-routing, failure classification, чтение схем, выбор паттернов, слои памяти |
+| 🔴 Продвинутый | 10–14 | Полный трейс пайплайна, адверсариальное мышление, cold-start-анализ, воссоздание специализированного агента |
 
 ## См. также
 
+- [Глава 15 — Разборы кейсов](15-case-studies.md)
 - [Глава 17 — Глоссарий](17-glossary.md)
 - [Глава 18 — FAQ](18-faq.md)
-- [Глава 15 — Кейсы](15-case-studies.md)
+- [docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md](../agent-engineering/NATIVE-DELEGATION-BOUNDARY.md)

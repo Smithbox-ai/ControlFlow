@@ -23,7 +23,7 @@ We adopt a dual-mode hybrid plan editing policy. Plans can use one of two revisi
 1. **In-place update** (`revision_mode: in_place_update`): Minor corrections, phase additions, or small fixes can be edited directly into the active plan.
 2. **New artifact supersession** (`revision_mode: new_artifact_supersession`): Major pivot or unrecoverable structural changes require creating a wholly new plan file. The new plan must define `revision_of` pointing to the path of the original superseded plan.
 
-Plans must include an active revision-log matching their lifecycle. All plan handoffs must be **artifact-first**: Planner authors and saves the plan file without fenced code blocks, then hands off the artifact path to a read-only reviewer (Orchestrator) for PLAN_REVIEW. Orchestrator manages the review loop and rollback handling. Planner replan/update payload metadata must include `trace_id` and `iteration_index`.
+Plans must include an active revision-log matching their lifecycle. All plan handoffs must be **artifact-first**: Planner authors and saves the plan file without fenced code blocks, then hands off the artifact path to a read-only reviewer (`controlflow-verify`) for PLAN_REVIEW. `controlflow-verify` manages the review loop and rollback handling. Planner replan/update payload metadata must include `trace_id` and `iteration_index`.
 
 ## Consequences
 

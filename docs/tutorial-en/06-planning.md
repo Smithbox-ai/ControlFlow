@@ -2,44 +2,51 @@
 
 ## Why this chapter
 
-Walk through **how the Planner turns an idea into a plan**: 10 sequential steps from first user interaction to handoff to the Orchestrator. This is the most "thinking-intensive" part of the system.
+Walk through **how `@controlflow-planner` turns an idea into a plan artifact**: the sequential workflow the `controlflow-plan` skill runs, from first read of the repo to the written artifact in `plans/`. This is the most "thinking-intensive" part of the pipeline, and it is the one place where ControlFlow produces a durable written contract before any code is touched.
+
+The Planner does **not** write code, invoke executors, or run verify/review. It produces the artifact and hands off. Execution is native Copilot's job (see chapter 08); adversarial verification is `controlflow-verify`'s job (see chapter 07).
 
 ## Key Concepts
 
-- **Idea interview** — a structured dialogue with the user when a task is vague.
-- **Clarification gate** — check against 5 clarification classes from [CLARIFICATION-POLICY.md](../agent-engineering/CLARIFICATION-POLICY.md).
-- **Spec capture** — compact spec-before-plan artifact for vague or non-trivial `SMALL+` work.
-- **Semantic risk review** — mandatory assessment across 7 risk categories.
-- **Complexity gate** — classification into 4 tiers (TRIVIAL/SMALL/MEDIUM/LARGE).
-- **Skill selection** — choosing ≤3 skill patterns per phase.
-- **Research brief / code context pack** — bounded discovery artifacts consumed before broad rereads.
-- **Phase task card** — one-screen executor payload with allowed files, validation commands, budgets, and escalation rule.
-- **Living-Document guidance** — treating plan artifacts as restartable, continuously-updated documents.
-- **Handoff** — passing the finished plan to the Orchestrator via `target_agent` and `prompt`.
+- **`@controlflow-planner`** — the sole shipped ControlFlow agent (`.github/agents/controlflow-planner.agent.md`). Runs the `controlflow-plan` skill. Uses the Copilot Auto model picker (no `model:` frontmatter).
+- **`controlflow-plan` skill** — the workflow this chapter describes. Single-sources the plan format from `schemas/planner.plan.schema.json` (the machine-enforced contract) and `plans/templates/plan-document-template.md` (the human document skeleton).
+- **Idea Interview** — a structured dialogue with the user when a task is vague.
+- **Clarification gate** — ask the user directly when an answer changes file scope, user-visible behavior, architecture, or destructive-risk handling; otherwise record a bounded assumption.
+- **Semantic risk review** — mandatory assessment across 7 risk categories (none skipped; `not_applicable` with justification when irrelevant).
+- **Complexity tier** — classification into `TRIVIAL` / `SMALL` / `MEDIUM` / `LARGE` (TRIVIAL skips the pipeline).
+- **`executor_agent`** — required field per phase; exactly one, from the 8-name schema enum. Conceptual role label the Planner assigns; native Copilot executes.
+- **`skill_references`** — up to 3 value-add `skills/patterns/` paths the Planner injects into a phase for discipline.
+- **Plan artifact** — the plan written to `plans/<task-slug>-plan.md`. **Never inlined in chat** — the Planner points to the artifact path.
+- **Terminal outcomes** — `READY_FOR_EXECUTION`, or `ABSTAIN` / `REPLAN_REQUIRED` when evidence is insufficient or premises are invalid.
 
-## Complete Planner Workflow
+## The Planner Workflow
 
 ```mermaid
 flowchart TD
-    Start([Task received]) --> S1[1. Idea Interview\nfor vague tasks]
-    S1 --> S2[2. Clarification Gate\n5 classes]
-    S2 --> S3[3. Semantic Risk Review\n7 categories]
-    S3 --> S4[4. Complexity Gate\nTRIVIAL/SMALL/MEDIUM/LARGE]
-    S4 --> S5[5. Skill Selection\n≤3 per phase]
-    S5 --> S6[6. Research Delegation\nResearcher / CodeMapper]
-    S6 --> S7[7. Design Decisions\n4 dimensions]
-    S7 --> S8[8. Phase Decomposition\n3-10 phases, waves]
-    S8 --> S9[9. Living-Document Setup\nrestartability guidance]
-    S9 --> S10[10. Handoff to Orchestrator]
-    S10 --> End([Plan saved to plans/])
+    Start([Task received]) --> S1[1. Read the repository<br/>before phase decomposition]
+    S1 --> S2[2. Idea Interview<br/>if the request is vague]
+    S2 --> S3[3. Clarification gate<br/>ask user vs bounded assumption]
+    S3 --> S4[4. Assign complexity tier<br/>TRIVIAL / SMALL / MEDIUM / LARGE]
+    S4 --> S5[5. Fill 7 semantic-risk categories]
+    S5 --> S6[6. Map files, tests, commands,<br/>dependencies, change boundaries]
+    S6 --> S7[7. Decompose into 3–10 phases<br/>one executor_agent each]
+    S7 --> S8[8. Select skill_references<br/>≤3 patterns per phase]
+    S8 --> S9[9. Add Mermaid per tier<br/>flowchart TD / sequenceDiagram]
+    S9 --> S10[10. Write artifact to plans/<task-slug>-plan.md]
+    S10 --> End([Point user to artifact path])
 
-    S2 -.->|clarification needed| AskUser[vscode/askQuestions]
-    AskUser -.-> S2
-    S3 -.->|HIGH risk unresolved| ForceLarge[Override → LARGE tier]
-    ForceLarge -.-> S5
+    S5 -.->|HIGH risk unresolved| ForceLarge[Override → LARGE tier]
+    ForceLarge -.-> S4
+    S2 -.->|already precise| S3
 ```
 
-## Step 1. Idea Interview
+The workflow mirrors `.github/skills/controlflow-plan/SKILL.md`. The format itself is **not** restated here — the Planner reads `schemas/planner.plan.schema.json` and `plans/templates/plan-document-template.md` at invoke time and conforms to them.
+
+## Step 1. Read the Repository
+
+Before phase decomposition, the Planner reads the repo and keeps **verified facts** separate from **assumptions** with a bounded scope statement. Planning from chat memory when reading the repo would change scope is a failure mode (see `controlflow-plan` skill, Planning-Specific Failure Checks).
+
+## Step 2. Idea Interview
 
 If the user's request is vague ("improve performance", "let's refactor"), the Planner conducts an interview:
 
@@ -48,196 +55,155 @@ If the user's request is vague ("improve performance", "let's refactor"), the Pl
 - **What are the success criteria?** — how will we know it's done.
 - **What are the constraints?** — performance, time, dependencies.
 
-Skill pattern: [`skills/patterns/idea-to-prompt.md`](../../skills/patterns/idea-to-prompt.md).
+Skill pattern: `skills/patterns/idea-to-prompt.md`. The interview can be **skipped** when the task is already precisely formulated.
 
-**Can be skipped** if the task is already precisely formulated.
+## Step 3. Clarification Gate
 
-## Step 2. Clarification Gate
+The Planner asks the user directly when an answer changes **file scope, user-visible behavior, architecture, or destructive-risk handling**; otherwise it records a bounded assumption. Typical clarification triggers:
 
-From [CLARIFICATION-POLICY.md](../agent-engineering/CLARIFICATION-POLICY.md) — **5 mandatory clarification classes**:
-
-| Class | Example |
-|-------|---------|
-| Scope ambiguity | "Add export" — where? CSV/JSON/PDF? |
+| Trigger | Example |
+|---------|---------|
+| Scope ambiguity | "Add export" — where? CSV / JSON / PDF? |
 | Architecture fork | "Store in Redis or Postgres?" |
 | User preference decision | "Sort by name or by date?" |
 | Destructive risk approval | "Permanently delete old records?" |
 | Repository structure change | "Rename the module?" |
 
-If any class matches → `vscode/askQuestions` with **2–3 options**, each with pros/cons/affected files and a **recommendation**.
+The canonical clarification classes live in `docs/agent-engineering/CLARIFICATION-POLICY.md`. When the Planner asks, it offers 2–3 options, each with pros/cons/affected files and a recommendation.
 
-If the task matches no class — gate passed, proceed.
+## Step 4. Assign Complexity Tier
 
-For vague tasks and non-trivial `SMALL`, `MEDIUM`, or `LARGE` plans, Planner creates a compact spec artifact from [`plans/templates/spec-template.md`](../../plans/templates/spec-template.md) and records `spec_path` in the plan. This is the first-class spec-before-plan checkpoint; TRIVIAL only-when-obvious tasks may skip it.
+The Planner reads the tier definitions and assigns one tier. The tier table must match `README.md`, `.github/copilot-instructions.md`, and `plans/project-context.md` exactly.
 
-## Step 3. Semantic Risk Review
+| Tier | Scope | Plan | Verify (inline phases) | Review |
+|------|-------|------|-------------------------|--------|
+| **TRIVIAL** | 1–2 files, single concern | skip | skip | skip |
+| **SMALL** | 3–5 files, single domain | `controlflow-plan` | phase 1 (structural audit) | `controlflow-review` |
+| **MEDIUM** | 6–14 files, cross-domain | `controlflow-plan` | phases 1–2 (audit + assumption/mirage) | `controlflow-review` |
+| **LARGE** | 15+ files, system-wide | `controlflow-plan` | phases 1–3 (audit + mirage + executability cold-start) | `controlflow-review` |
 
-**Mandatory** for all plan statuses (including `READY_FOR_EXECUTION`). 7 categories:
+**Override rule:** any plan with a `risk_review` entry where `applicability: applicable` AND `impact: HIGH` AND `disposition` not `resolved` forces `LARGE` (all three verify phases) regardless of file count.
+
+## Step 5. Semantic Risk Review
+
+**Mandatory** for all plan statuses (including `READY_FOR_EXECUTION`). All 7 categories, each exactly once:
 
 | Category | What it checks |
 |----------|---------------|
-| `data_volume` | Data sizes, pagination, batch ops, SELECT * |
+| `data_volume` | Data sizes, pagination, batch ops, `SELECT *` |
 | `performance` | Query paths, N+1, indexes, hot path |
-| `concurrency` | Parallel operations, data races |
+| `concurrency` | Parallel operations, data races, shared mutable state |
 | `access_control` | Authorization, permissions, ownership |
 | `migration_rollback` | Schema migrations, data transforms, format changes |
 | `dependency` | External APIs, new packages, versions |
 | `operability` | Deployment, monitoring, infrastructure |
 
-For each category, record:
-- `applicability`: applicable / not_applicable / uncertain
-- `impact`: HIGH / MEDIUM / LOW / UNKNOWN
-- `evidence_source`: file path or query
-- `disposition`: resolved / open_question / research_phase_added / not_applicable
+For each category, record `applicability` (`applicable` / `not_applicable` / `uncertain`), `impact` (`HIGH` / `MEDIUM` / `LOW` / `UNKNOWN`), `evidence_source` (file path or query), and `disposition` (`resolved` / `open_question` / `research_phase_added` / `not_applicable`). Never skip a row — use `not_applicable` with justification. The override in Step 4 fires on an unresolved HIGH-impact applicable entry.
 
-**Override:** if any entry has `applicability: applicable` AND `impact: HIGH` AND `disposition` is not `resolved` → forced LARGE-tier pipeline.
+The category taxonomy is defined in `docs/agent-engineering/RISK-TAXONOMY.md`; the audit-phase focus areas each category maps to are in `plans/project-context.md` (the `controlflow-verify Phase 1 (Audit) Focus Area Mapping` table).
 
-**Even for TRIVIAL** all 7 categories must be present (most as `not_applicable`).
+## Step 6. Map Files, Tests, Commands, Dependencies, Change Boundaries
 
-## Step 4. Complexity Gate
+The Planner maps likely files, tests, commands, dependencies, and change boundaries **before** phase decomposition (not after). This is the input to Phase 9 of the plan artifact (Success Criteria) and to the per-phase `files` arrays.
 
-| Tier | Files | Scope | Pipeline |
-|------|-------|-------|---------|
-| TRIVIAL | ≤2 | Isolated change | Skip PLAN_REVIEW entirely |
-| SMALL | 3–5 | Single domain | PlanAuditor only |
-| MEDIUM | 6–15 | Cross-domain | PlanAuditor + AssumptionVerifier |
-| LARGE | 15+ | Cross-cutting | Full pipeline |
+## Step 7. Decompose into Phases
 
-Step 3 override wins.
+The plan is broken into **3–10 phases**. If more are needed, decompose the task further. Each phase declares exactly one `executor_agent` from the 8-name schema enum — these are **conceptual role labels** the Planner assigns and native Copilot executes inline (see chapter 03), not shipped agent files:
 
-## Step 5. Skill Selection
+- `CodeMapper-subagent` — read-only discovery
+- `Researcher-subagent` — research & evidence
+- `CoreImplementer-subagent` — backend implementation (canonical backbone)
+- `UIImplementer-subagent` — UI implementation
+- `PlatformEngineer-subagent` — infrastructure / CI-CD
+- `TechnicalWriter-subagent` — documentation
+- `BrowserTester-subagent` — E2E browser testing
+- `CodeReviewer-subagent` — post-implementation review
 
-The Planner reads [`skills/index.md`](../../skills/index.md) and selects **≤3 skill patterns** most relevant to the task. Paths are written to `skill_references` in each applicable phase.
+Each phase contains: `phase_id`, `title`, `objective`, `dependencies`, `files` (`{path, action, reason}`), `tests`, `steps` (numbered prose — **no code blocks**), `acceptance_criteria` (at least one measurable observable outcome), `quality_gates` (from the enum `tests_pass` / `lint_clean` / `schema_valid` / `safety_clear` / `human_approved_if_required`), `failure_expectations` (`{scenario, classification, mitigation}`), and `skill_references`.
 
-**Available skill domains** — see [Chapter 11](11-skills.md).
+**Inter-phase contracts** — if phase B depends on phase A, record `{from_phase, to_phase, interface, format}`. The format must be explicit and the downstream phase must know how to validate it.
+
+The three inline verify roles (`PlanAuditor-subagent`, `AssumptionVerifier-subagent`, `ExecutabilityVerifier-subagent`) **must not** appear as `executor_agent` — they are read-only verify phases performed by `controlflow-verify` (see chapter 07).
+
+## Step 8. Select skill_references
+
+The Planner reads `skills/index.md` and selects **up to 3** `skills/patterns/` paths most relevant to the phase. Paths are written to `skill_references` in each applicable phase. Implementation agents read these patterns **before** starting work.
 
 Example selection for "add endpoint with auth":
+
 - `skills/patterns/security-patterns.md` (auth, validation)
 - `skills/patterns/tdd-patterns.md` (tests)
 - `skills/patterns/error-handling-patterns.md` (boundaries)
 
-Implementation agents must read these skills **before** starting work.
+The patterns carry the reusable discipline that retired specialized agents used to embody. See chapter 11 for the pattern domain mapping.
 
-## Step 6. Research Delegation
+## Step 9. Add Mermaid Per Tier
 
-The Planner may delegate only to two research agents:
-- `CodeMapper-subagent` — for codebase structure exploration.
-- `Researcher-subagent` — for evidence-based investigation.
+- `flowchart TD` (DAG of phase dependencies) is required for MEDIUM+ with 3+ phases.
+- `sequenceDiagram` is added for MEDIUM with non-trivial orchestration, and for all LARGE plans.
+- Each diagram ≤30 lines.
 
-Delegation to external agents is **prohibited**.
+## Step 10. Write the Artifact
 
-If the task's context is already available, this step can be skipped.
+The Planner writes the artifact to `plans/<task-slug>-plan.md` using `plans/templates/plan-document-template.md`, conforming to `schemas/planner.plan.schema.json`. The artifact includes the YAML header, the 10 sections in order, and the 5 lifecycle sections (`## Progress`, `## Discoveries`, `## Decision Log`, `## Outcomes`, `## Idempotence & Recovery`) for SMALL+ plans.
 
-When Researcher produces non-trivial findings, Planner records `research_brief_path` and usually `context_packet_path` so executors can read a compact brief before reopening source files. When CodeMapper performs discovery for executor context, Planner records `code_context_pack_path` from the compact code map instead of relying on raw search output.
+The Planner **never inlines the plan in chat** — it points to the artifact path. `controlflow-verify` reads the plan from disk, not from a chat-embedded copy. An in-chat plan is not a plan artifact.
 
-## Step 7. Design Decisions
+## Handoff
 
-**Mandatory** for all plans. 4 dimensions:
+For `READY_FOR_EXECUTION`, the artifact includes a Handoff section pointing execution to `plans/<task-slug>-plan.md` and declaring the review route (`/controlflow-verify`, tier-gated). The `plan_path` is a **reviewable input**, not implicit approval — the user reviews the artifact, then runs `/controlflow-verify`.
 
-| Dimension | Contains |
-|-----------|---------|
-| Architectural Choices | Key architectural decisions and rationale. |
-| Boundary & Integration Points | System boundary changes, new actors, integration points. |
-| Temporal Flow | Execution order, parallel paths, gates, retries. For MEDIUM/LARGE — Mermaid `sequenceDiagram`. |
-| Constraints & Trade-offs | Constraints and accepted trade-offs. |
-
-## Step 8. Phase Decomposition
-
-The plan is broken into **3–10 phases**. If more are needed — decompose the task further.
-
-Each phase contains:
-- `phase_id` (integer ≥1).
-- `title`, `objective`.
-- `wave` (integer ≥1) — for parallelism.
-- `executor_agent` — required field, **enum** of 8 allowed executors.
-- `dependencies` — array of phase_ids.
-- `files` — `{path, action, reason}`.
-- `tests`.
-- `steps` — in prose, **no code blocks**.
-- `acceptance_criteria` — measurable conditions (minimum 1).
-- `quality_gates` — from enum: tests_pass / lint_clean / schema_valid / safety_clear / human_approved_if_required.
-- `failure_expectations` — array of `{scenario, classification, mitigation}`.
-- `skill_references` — paths from step 5.
-- `phase_task_card_path` — optional compact executor task card, required by `resource_profile: small_local` practice.
-
-**Inter-phase contracts** — if phase B depends on phase A, record `{from_phase, to_phase, interface, format}`.
-
-For `resource_profile: small_local`, phases should stay within `governance/runtime-policy.json → resource_profiles.small_local.phase_file_limit` or add a dedicated research/code-context phase first. Executor phases receive a Phase Task Card with allowed files, forbidden areas, validation commands, acceptance checks, max changed files, and an escalation rule.
-
-**Architectural visualization:**
-- 3+ phases → a `flowchart TD` (DAG of dependencies) is required.
-- MEDIUM with non-trivial orchestration → also `sequenceDiagram`.
-- LARGE → always both `sequenceDiagram` and DAG.
-
-## Step 9. Living-Document Setup
-
-The plan artifact receives the standard "Living-Document and Restartability Guidance" section. This establishes the contract that the plan is a continuously updated ledger, safe to restart from its recorded state if the session is interrupted.
-
-## Step 10. Handoff
-
-```yaml
-target_agent: Orchestrator
-prompt: "Plan saved at plans/<task>-plan.md. Please begin PLAN_REVIEW and dispatch Phase 1 when ready."
-```
-
-`plan_path` is passed as a **reviewable input**, not as implicit approval.
+The legacy `target_agent: Orchestrator` handoff is retired — there is no shipped Orchestrator to hand off to. The Planner hands to the artifact; the user runs verify; native Copilot executes (chapter 08).
 
 ## Terminal Outcomes
 
-If the Planner cannot produce a valid plan:
+If the Planner cannot produce a `READY_FOR_EXECUTION` plan:
 
-- **`status: ABSTAIN`** — insufficient evidence; user action needed.
+- **`status: ABSTAIN`** — insufficient evidence; user action needed. Include the terminal-outcome structure from the template.
 - **`status: REPLAN_REQUIRED`** — initial premises turned out to be invalid.
 
-Both have a different file structure (see template in [`plans/templates/plan-document-template.md`](../../plans/templates/plan-document-template.md), Terminal Non-Ready Outcome Artifact section).
+Both have a different file structure (see `plans/templates/plan-document-template.md`, Terminal Non-Ready Outcome Artifact section). When confidence is below 0.9, the plan is not `READY_FOR_EXECUTION`.
 
 ## Schema-Driven Structure
 
-The complete plan structure is defined by `schemas/planner.plan.schema.json`. Required top-level fields:
-
-- `schema_version` (`1.2.0`)
-- `agent` (`Planner`)
-- `status`
-- `task_title`, `summary`
-- `confidence` (0–1; <0.9 triggers escalation)
-- `abstain` `{is_abstaining, reasons}`
-- `phases` (array)
-- `open_questions`
-- `risks`
-- `risk_review` (7 categories)
-- `success_criteria`
-- `complexity_tier`
-- `handoff` `{target_agent, prompt}`
+The complete plan structure is defined by `schemas/planner.plan.schema.json`. Required top-level fields include `schema_version` (`1.2.0`), `agent` (`Planner`), `status`, `task_title`, `summary`, `confidence` (0–1; <0.9 triggers escalation), `abstain` (`{is_abstaining, reasons}`), `phases` (array), `open_questions`, `risks`, `risk_review` (7 categories), `success_criteria`, `complexity_tier`, and `handoff`. The contract-drift eval suite (`evals/`) asserts the plan format, the role taxonomy, and the governance config stay aligned across files (see chapter 14).
 
 ## Common Mistakes
 
-- **Omitting `risk_review` for TRIVIAL.** No — all 7 categories are required, even as `not_applicable`.
-- **Vague `acceptance_criteria`.** Must be a **measurable** condition.
-- **Code blocks in `steps`.** Forbidden — describe in prose.
+- **Inlining the plan in chat.** The Planner writes an artifact to `plans/` and points to the path. The verify skill reads from disk. An in-chat plan is not a plan artifact.
+- **Omitting `risk_review` for TRIVIAL.** All 7 categories are required for non-TRIVIAL plans, even as `not_applicable` with justification. (TRIVIAL skips the pipeline entirely.)
+- **Vague `acceptance_criteria`.** Must be a **measurable observable outcome** — at least one per phase.
+- **Code blocks in `steps`.** Forbidden — describe steps in numbered prose.
 - **Manual testing steps.** Forbidden — all verification must be automatable.
-- **Delegating to reviewers.** The Planner delegates only to Researcher/CodeMapper.
-- **Assigning PlanAuditor as `executor_agent`.** Forbidden by schema; reviewers are read-only.
+- **Assigning a verify role as `executor_agent`.** `PlanAuditor-subagent`, `AssumptionVerifier-subagent`, and `ExecutabilityVerifier-subagent` are read-only verify phases performed by `controlflow-verify`; they must not appear in `executor_agent`.
+- **Decomposing phases before mapping files and tests.** Map first (Step 6), decompose second (Step 7).
+- **Marking `READY_FOR_EXECUTION` without a review route and artifact destination.**
+- **Restating the schema/template inside the artifact.** Conform to them; do not paraphrase the contract from memory.
 
 ## Exercises
 
-1. **(beginner)** Open `Planner.agent.md` and find the 10 workflow steps. Compare with the diagram above.
-2. **(beginner)** Open `schemas/planner.plan.schema.json` and list the 8 allowed values of `executor_agent`.
-3. **(intermediate)** Which workflow step can Planner skip if the task is already precisely stated?
-4. **(intermediate)** Open any plan in `plans/`. Find all 7 semantic risk categories and their `disposition` values.
-5. **(advanced)** Task: "Remove the deprecated endpoint /v1/users". Which clarification trigger classes apply? What complexity tier, and which override might fire?
+1. **(beginner)** Open `.github/skills/controlflow-plan/SKILL.md` and find the workflow. Compare its steps with the diagram above.
+2. **(beginner)** Open `schemas/planner.plan.schema.json` and list the 8 allowed values of `executor_agent`. Confirm they match chapter 03.
+3. **(intermediate)** Which workflow step can the Planner skip if the task is already precisely stated?
+4. **(intermediate)** Open any plan in `plans/`. Find all 7 semantic risk categories and their `disposition` values. Which one would fire the LARGE override if unresolved and HIGH-impact?
+5. **(advanced)** Task: "Remove the deprecated endpoint `/v1/users`". Which clarification triggers apply? What complexity tier, and which override might fire?
 
 ## Review Questions
 
-1. How many steps are in the Planner workflow?
-2. What is the maximum number of skill references per phase?
-3. Under what conditions is a task forced to LARGE tier regardless of file count?
-4. What are the two terminal non-ready outcomes from Planner?
-5. Can the Planner delegate to CoreImplementer?
+1. Name the two single-source-of-truth files the Planner reads at invoke time for the plan format.
+2. What is the maximum number of `skill_references` per phase, and where are they written?
+3. Under what conditions is a task forced to `LARGE` tier regardless of file count?
+4. What are the two terminal non-ready outcomes from the Planner, and when does each fire?
+5. Can the Planner assign `PlanAuditor-subagent` as a phase `executor_agent`? Why or why not?
 
 ## See Also
 
-- [Chapter 05 — Orchestration](05-orchestration.md)
-- [Chapter 07 — Review Pipeline](07-review-pipeline.md)
+- [Chapter 03 — Role Taxonomy](03-agent-roster.md)
+- [Chapter 05 — The plan → verify → review pipeline](05-orchestration.md)
+- [Chapter 07 — Review Pipeline (controlflow-verify)](07-review-pipeline.md)
+- [Chapter 08 — Execution + review over native Copilot](08-execution-pipeline.md)
 - [Chapter 11 — Skills](11-skills.md)
-- [Planner.agent.md](../../Planner.agent.md)
+- [.github/skills/controlflow-plan/SKILL.md](../../.github/skills/controlflow-plan/SKILL.md)
+- [schemas/planner.plan.schema.json](../../schemas/planner.plan.schema.json)
+- [plans/templates/plan-document-template.md](../../plans/templates/plan-document-template.md)
 - [docs/agent-engineering/CLARIFICATION-POLICY.md](../agent-engineering/CLARIFICATION-POLICY.md)
