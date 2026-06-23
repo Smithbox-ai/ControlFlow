@@ -46,9 +46,9 @@ Use `plans/project-context.md` as the stable reference for complexity tiers, sem
 ### Build and Test
 
 ```sh
-cd evals && npm test              # full offline suite: schema + behavior + orchestration + drift
-npm run test:structural           # schema/P.A.R.T structure only (faster)
-npm run test:behavior             # prompt-behavior + orchestration-handoff regressions only
+cd evals && npm test              # full offline suite: structural + behavior + drift + parity + contract-drift
+npm run test:structural           # structural validation only (faster)
+npm run test:behavior             # prompt-behavior + drift regressions only
 ```
 
 Scenarios are in `evals/scenarios/`. Validate against matching schemas in `schemas/`.
@@ -61,7 +61,7 @@ When status is `FAILED`, `NEEDS_INPUT`, `NEEDS_REVISION`, or `REJECTED`, include
 - `fixable` — Small correctable issue (typo, missing import, config value); retry with fix hint.
 - `needs_replan` — Architecture mismatch or missing dependency; delegate to the planner for a targeted replan.
 - `escalate` — Security vulnerability, data integrity risk, or unresolvable blocker; stop and await human approval.
-- `model_unavailable` — the routed/primary model is unavailable or unreachable; substitute per model-routing fallback and retry, then escalate.
+- `model_unavailable` — the routed/primary model is unavailable or unreachable; retry with a native Copilot model substitution, then escalate on exhaustion.
 
 ### Memory Hygiene
 
