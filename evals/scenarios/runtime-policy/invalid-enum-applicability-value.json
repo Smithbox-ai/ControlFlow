@@ -1,5 +1,5 @@
 {
-  "_expected_validation": "fail: verdict_routing.confidence_thresholds.ready_for_execution_min must be number (minimum 0, maximum 1), got string \"0.9\"",
+  "_expected_validation": "fail: semantic_risk_policy.applicability_values contains 'mandatory' which is not in enum [applicable, not_applicable, uncertain]",
 
   "review_pipeline_by_tier": {
     "TRIVIAL": {
@@ -39,7 +39,7 @@
       "dependency",
       "operability"
     ],
-    "applicability_values": ["applicable", "not_applicable", "uncertain"],
+    "applicability_values": ["applicable", "not_applicable", "mandatory"],
     "impact_values": ["HIGH", "MEDIUM", "LOW", "UNKNOWN"],
     "disposition_values": ["resolved", "open_question", "research_phase_added", "not_applicable"],
     "override_rule": "Any unresolved HIGH-impact semantic risk forces LARGE discipline (all three verify phases) regardless of file count."
@@ -53,7 +53,7 @@
       "REJECTED": "Structural flaw; scope not deliverable as authored. Explain blockers; ask the user for direction; do not start coding."
     },
     "confidence_thresholds": {
-      "ready_for_execution_min": "0.9",
+      "ready_for_execution_min": 0.9,
       "uncertain_count_cap": 0.85,
       "high_impact_open_question_cap": 0.7
     }

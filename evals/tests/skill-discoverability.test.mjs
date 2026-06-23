@@ -268,6 +268,49 @@ console.log('\n=== skill-discoverability: ControlFlow-Codex plugin contract ==='
   );
 }
 
+// ── Suite: slim Copilot-first .github/skills/ contract ────────────────────────
+// Phase 2: assert the three canonical skills at .github/skills/controlflow-{plan,
+// verify, review}/ are present on disk with valid YAML frontmatter (name + description)
+// and a non-empty References section. This is the slim Copilot-first surface that
+// replaces the heavy 13-agent model; the contract-drift + behavior tests rely on it.
+console.log('\n=== skill-discoverability: slim .github/skills/ contract ===');
+{
+  const skillRoot = join(ROOT, '.github', 'skills');
+  const expected = [
+    { dir: 'controlflow-plan', name: 'controlflow-plan' },
+    { dir: 'controlflow-verify', name: 'controlflow-verify' },
+    { dir: 'controlflow-review', name: 'controlflow-review' },
+  ];
+  for (const { dir, name } of expected) {
+    const skillPath = join(skillRoot, dir, 'SKILL.md');
+    let content = '';
+    try {
+      content = readFileSync(skillPath, 'utf8');
+    } catch {
+      assert(false, `slim skill present: .github/skills/${dir}/SKILL.md`);
+      continue;
+    }
+    assert(true, `slim skill present: .github/skills/${dir}/SKILL.md`);
+
+    // Frontmatter present with name + description
+    const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+    assert(fmMatch != null, `slim skill ${name}: YAML frontmatter block present`);
+    const fm = fmMatch ? fmMatch[1] : '';
+    assert(
+      new RegExp(`^name:\\s*${name}$`, 'm').test(fm),
+      `slim skill ${name}: frontmatter name matches "${name}"`
+    );
+    assert(
+      /^description:\s*.+/m.test(fm),
+      `slim skill ${name}: frontmatter has non-empty description`
+    );
+    assert(
+      /^## References$/m.test(content),
+      `slim skill ${name}: References section present`
+    );
+  }
+}
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 
 console.log(`\n=== skill-discoverability: ${passed} passed, ${failed} failed ===`);

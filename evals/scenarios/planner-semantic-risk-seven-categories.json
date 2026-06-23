@@ -1,0 +1,31 @@
+{
+  "id": "planner-semantic-risk-seven-categories",
+  "target_skill": "controlflow-plan",
+  "goal": "Every non-TRIVIAL plan includes all 7 semantic-risk categories exactly once; if a category is not applicable, it is set not_applicable with justification — never skipped.",
+  "input": {
+    "tier": "MEDIUM",
+    "task": "Add a new paginated export endpoint to the billing service"
+  },
+  "expected": {
+    "categories": [
+      "data_volume",
+      "performance",
+      "concurrency",
+      "access_control",
+      "migration_rollback",
+      "dependency",
+      "operability"
+    ],
+    "each_category_exactly_once": true,
+    "not_applicable_requires_justification": true,
+    "canonical_source": "governance/runtime-policy.json#semantic_risk_policy.categories",
+    "schema_allOf_const_count": 7,
+    "override_rule": "Any unresolved HIGH-impact semantic risk forces LARGE discipline (all three verify phases) regardless of file count."
+  },
+  "assertions": [
+    "controlflow-plan SKILL.md step 5 requires all seven semantic risk categories.",
+    "schemas/planner.plan.schema.json risk_review.allOf has exactly 7 const category entries.",
+    "governance/runtime-policy.json semantic_risk_policy.categories deep-equals the 7-category canonical array.",
+    "A category marked not_applicable must carry justification; a skipped row fails the contract."
+  ]
+}

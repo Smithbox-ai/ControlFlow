@@ -1,0 +1,23 @@
+{
+  "id": "review-native-pass-delegation",
+  "target_skill": "controlflow-review",
+  "goal": "controlflow-review delegates the mechanical/style pass to native Copilot code review and adds the ControlFlow layer (scope drift, evidence discipline, proactive vulnerability search) without duplicating native review.",
+  "input": {
+    "diff": "a diff requiring both mechanical and behavioral review"
+  },
+  "expected": {
+    "native_review_delegated": true,
+    "native_review_tools": ["native Copilot code review", "security-review"],
+    "controlflow_layer_added": ["plan-vs-implementation scope-drift comparison", "evidence-backed finding discipline", "proactive vulnerability/error search"],
+    "mechanical_pass_not_duplicated": true,
+    "controlflow_keeps_no_agents_beyond_planner": true,
+    "findings_presented_first_ordered_by_severity": true
+  },
+  "assertions": [
+    "controlflow-review SKILL.md states it is a layer over native Copilot review, not a replacement.",
+    "The mechanical/style pass is delegated to native Copilot code review (or security-review).",
+    "ControlFlow adds scope-drift, evidence discipline, and proactive vulnerability/error search.",
+    "The skill must not duplicate native Copilot code review's mechanical pass.",
+    "ControlFlow keeps no agents of its own beyond the planner."
+  ]
+}
