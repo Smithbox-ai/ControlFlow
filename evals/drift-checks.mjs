@@ -1057,7 +1057,7 @@ export function validateTutorialParity(enDir, ruDir, allowlist) {
     try {
       const text = readFileSync(filePath, 'utf8');
       const headings = new Set();
-      for (const line of text.split('\n')) {
+      for (const line of text.split(/\r?\n/)) {
         const m = line.match(/^##\s+(.+)$/);
         if (m) headings.add(m[1].trim());
       }
