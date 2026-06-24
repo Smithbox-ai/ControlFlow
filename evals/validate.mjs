@@ -1023,8 +1023,8 @@ for (const file of scenarioFiles) {
     if (!exp.plan_path_produced) {
       fail(`${file}: planner-reviewed-flow-routing must assert plan_path_produced: true`);
     }
-    if (!exp.orchestrator_review_applies) {
-      fail(`${file}: planner-reviewed-flow-routing must assert orchestrator_review_applies: true`);
+    if (!exp.verify_review_applies) {
+      fail(`${file}: planner-reviewed-flow-routing must assert verify_review_applies: true`);
     }
     if (exp.planner_does_not_own_plan_review !== true) {
       fail(`${file}: planner-reviewed-flow-routing must assert planner_does_not_own_plan_review: true`);

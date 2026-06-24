@@ -1,19 +1,19 @@
 {
   "scenario_id": "planner-reviewed-flow-routing",
   "target_agent": "Planner",
-  "description": "A Planner-authored plan artifact with review-triggering characteristics still enters Orchestrator's PLAN_REVIEW path. Planner persists the artifact and provides a concise handoff; Orchestrator owns the review gate, approvals, todo lifecycle, and execution gating.",
-  "goal": "Verify that Planner persists a saved plan artifact with a plan_path handoff to Orchestrator, and that Orchestrator review applies under normal trigger conditions — preserving the architectural separation of plan authoring (Planner) and plan review/execution (Orchestrator)",
+  "description": "A Planner-authored plan artifact with review-triggering characteristics still enters the controlflow-verify review path. Planner persists the artifact and provides a concise handoff to controlflow-verify; controlflow-verify owns the review gate, and native Copilot owns execution, approvals, and the todo lifecycle.",
+  "goal": "Verify that Planner persists a saved plan artifact with a plan_path handoff to controlflow-verify, and that the verify review applies under normal trigger conditions — preserving the architectural separation of plan authoring (Planner), verification (controlflow-verify), and execution (native Copilot).",
   "input": {
     "revision_mode": "initial_create",
     "query": "Refactor the payment service to extract a shared retry-policy module used by three microservices, with migration steps for each consumer",
-    "context": "This is a multi-phase, cross-service task. After Planner produces the plan artifact, Orchestrator evaluates PLAN_REVIEW triggers before dispatching subagents."
+    "context": "This is a multi-phase, cross-service task. After Planner produces the plan artifact, controlflow-verify runs before native Copilot executes the phases."
   },
   "expected": {
     "risk_review_present": true,
     "complexity_tier_present": true,
     "persisted_artifact": true,
     "plan_path_produced": true,
-    "orchestrator_review_applies": true,
+    "verify_review_applies": true,
     "planner_does_not_own_plan_review": true,
     "handoff_message_present": true,
     "must_not_inline_plan_in_chat": true,
@@ -21,7 +21,7 @@
   },
   "assertions": [
     "Planner keeps semantic-risk taxonomy guidance anchored to plans/project-context.md while preserving the existing risk_review contract.",
-    "Planner handoff stays artifact-first and concise through persisted_artifact semantics; Orchestrator owns PLAN_REVIEW, approvals, and execution gating.",
-    "Orchestrator applies review semantics from governance/runtime-policy.json rather than treating the handoff itself as approval."
+    "Planner handoff stays artifact-first and concise through persisted_artifact semantics; controlflow-verify owns the review gate and native Copilot owns execution.",
+    "controlflow-verify applies review semantics from governance/runtime-policy.json rather than treating the handoff itself as approval."
   ]
 }
