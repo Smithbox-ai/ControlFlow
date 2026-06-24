@@ -2,9 +2,18 @@
  * ControlFlow — Skill Discoverability Regression Tests
  *
  * Verifies that representative operator task descriptions containing
- * audit / orchestration / governance / schema-drift keywords resolve to
- * `skills/patterns/orchestration-audit-playbook.md` via the
+ * traceability / coverage / requirements / orphan-RTM keywords resolve to
+ * `skills/patterns/completeness-traceability.md` via the
  * `skills/index.md` Domain Mapping table.
+ *
+ * Phase 3 re-anchor: the original anchor skill
+ * `skills/patterns/orchestration-audit-playbook.md` was retired with the
+ * heavy 13-agent orchestration core (audit/orchestration/governance
+ * discipline now ships as the .github/skills/controlflow-review skill, not a
+ * skill pattern). Re-anchored to `completeness-traceability.md`, the surviving
+ * pattern whose keyword set (requirements/coverage/traceability/orphan/RTM/
+ * scope) is closest to the retired audit/traceability theme — equivalent-or-
+ * stronger per the Phase 2 re-anchoring clause (b), not silently dropped.
  *
  * Parsing and matching are performed offline using only Node stdlib.
  * No external dependencies, no live agents, no network.
@@ -129,7 +138,7 @@ const SKILLS_INDEX_PATH = join(ROOT, 'skills', 'index.md');
 const indexContent = readFileSync(SKILLS_INDEX_PATH, 'utf8');
 const skillIndex = parseSkillIndex(indexContent);
 
-const ORCHESTRATION_AUDIT_SKILL = 'skills/patterns/orchestration-audit-playbook.md';
+const ANCHOR_SKILL = 'skills/patterns/completeness-traceability.md';
 
 // ── Suite: index parsing ──────────────────────────────────────────────────────
 
@@ -137,29 +146,29 @@ console.log('\n=== skill-discoverability: index parsing ===');
 {
   assert(skillIndex.length > 0, 'parsed at least one skill row from skills/index.md');
 
-  const auditRow = skillIndex.find((r) => r.skillFile === ORCHESTRATION_AUDIT_SKILL);
-  assert(auditRow !== undefined, 'orchestration-audit-playbook row is present in index');
+  const anchorRow = skillIndex.find((r) => r.skillFile === ANCHOR_SKILL);
+  assert(anchorRow !== undefined, 'completeness-traceability row is present in index');
 
-  if (auditRow) {
+  if (anchorRow) {
     assert(
-      auditRow.keywords.includes('grants'),
-      'orchestration-audit row contains "grants" keyword'
+      anchorRow.keywords.includes('traceability'),
+      'completeness-traceability row contains "traceability" keyword'
     );
     assert(
-      auditRow.keywords.includes('approval'),
-      'orchestration-audit row contains "approval" keyword'
+      anchorRow.keywords.includes('coverage'),
+      'completeness-traceability row contains "coverage" keyword'
     );
     assert(
-      auditRow.keywords.includes('traceability'),
-      'orchestration-audit row contains "traceability" keyword'
+      anchorRow.keywords.includes('requirements'),
+      'completeness-traceability row contains "requirements" keyword'
     );
     assert(
-      auditRow.keywords.includes('schema'),
-      'orchestration-audit row contains "schema" keyword'
+      anchorRow.keywords.includes('orphan'),
+      'completeness-traceability row contains "orphan" keyword'
     );
     assert(
-      auditRow.keywords.includes('audit'),
-      'orchestration-audit row contains "audit" keyword'
+      anchorRow.keywords.includes('rtm'),
+      'completeness-traceability row contains "rtm" keyword'
     );
   }
 }
@@ -185,17 +194,17 @@ console.log('\n=== skill-discoverability: tokenizer ===');
 console.log('\n=== skill-discoverability: positive fixtures ===');
 
 const POSITIVE_FIXTURES = [
-  'audit the orchestration pipeline',
-  'investigate grants and approval drift',
-  'review schema drift across agents',
-  'audit traceability gaps',
+  'review traceability gaps across phases',
+  'check requirements coverage for the plan',
+  'find orphan requirements in the RTM',
+  'audit traceability and coverage',
 ];
 
 for (const fixture of POSITIVE_FIXTURES) {
   const resolved = resolveSkills(fixture, skillIndex);
   assert(
-    resolved.includes(ORCHESTRATION_AUDIT_SKILL),
-    `"${fixture}" resolves to orchestration-audit-playbook.md`
+    resolved.includes(ANCHOR_SKILL),
+    `"${fixture}" resolves to completeness-traceability.md`
   );
 }
 
@@ -206,8 +215,8 @@ console.log('\n=== skill-discoverability: negative-control fixture ===');
   const fixture = 'refactor a UI button';
   const resolved = resolveSkills(fixture, skillIndex);
   assert(
-    !resolved.includes(ORCHESTRATION_AUDIT_SKILL),
-    `"${fixture}" does NOT resolve to orchestration-audit-playbook.md`
+    !resolved.includes(ANCHOR_SKILL),
+    `"${fixture}" does NOT resolve to completeness-traceability.md`
   );
 }
 
@@ -226,16 +235,16 @@ console.log('\n=== skill-discoverability: resolver edge cases ===');
   );
 }
 
-// ── Suite: ControlFlow-Codex plugin workflow contract ────────────────────────
+// ── Suite: ControlFlow-Codex plugin workflow contract (slim 3-skill) ─────────
 
 console.log('\n=== skill-discoverability: ControlFlow-Codex plugin contract ===');
 {
-  const codexPlanningSkill = readFileSync(
-    join(ROOT, 'plugins', 'controlflow-shared-source', 'skills', 'controlflow-planning', 'SKILL.md'),
+  const codexPlanSkill = readFileSync(
+    join(ROOT, 'plugins', 'controlflow-shared-source', 'skills', 'controlflow-plan', 'SKILL.md'),
     'utf8'
   );
-  const codexOrchestrationSkill = readFileSync(
-    join(ROOT, 'plugins', 'controlflow-shared-source', 'skills', 'controlflow-orchestration', 'SKILL.md'),
+  const codexVerifySkill = readFileSync(
+    join(ROOT, 'plugins', 'controlflow-shared-source', 'skills', 'controlflow-verify', 'SKILL.md'),
     'utf8'
   );
   const codexReadme = readFileSync(
@@ -244,28 +253,65 @@ console.log('\n=== skill-discoverability: ControlFlow-Codex plugin contract ==='
   );
 
   assert(
-    /Save to `plans\/<task-slug>-plan\.md`/i.test(codexPlanningSkill) &&
-    /references\/plan-template\.md/i.test(codexPlanningSkill),
-    'Codex planning skill saves strict Markdown plans under plans/'
+    /Save to `plans\/<task-slug>-plan\.md`/i.test(codexPlanSkill) &&
+    /schemas\/planner\.plan\.schema\.json/i.test(codexPlanSkill),
+    'Codex plan skill saves plans under plans/ and single-sources the schema'
   );
 
   assert(
-    /multi_agent_v1\.spawn_agent/i.test(codexOrchestrationSkill) &&
-    /explicitly asks|explicitly authorizes/i.test(codexOrchestrationSkill),
-    'Codex orchestration skill documents optional multi_agent_v1.spawn_agent delegation'
+    /zero subagent/i.test(codexVerifySkill) &&
+    /APPROVED/i.test(codexVerifySkill) &&
+    /NEEDS_REVISION|REJECTED/i.test(codexVerifySkill),
+    'Codex verify skill runs inline (zero subagents) with a terminal verdict'
   );
 
   assert(
-    /subagent outputs/i.test(codexOrchestrationSkill) &&
-    /plans\/artifacts\/<task-slug>\//i.test(codexOrchestrationSkill),
-    'Codex orchestration skill stores subagent outputs in plans/artifacts/'
+    /3 skills, 0 subagents/i.test(codexReadme),
+    'Codex README describes the slim 3-skill, 0-subagent model'
   );
+}
 
-  assert(
-    /Subagent/i.test(codexReadme) &&
-    /multi_agent_v1\.spawn_agent/i.test(codexReadme),
-    'Codex README exposes the subagent delegation contract'
-  );
+// ── Suite: slim Copilot-first .github/skills/ contract ────────────────────────
+// Phase 2: assert the three canonical skills at .github/skills/controlflow-{plan,
+// verify, review}/ are present on disk with valid YAML frontmatter (name + description)
+// and a non-empty References section. This is the slim Copilot-first surface that
+// replaces the heavy 13-agent model; the contract-drift + behavior tests rely on it.
+console.log('\n=== skill-discoverability: slim .github/skills/ contract ===');
+{
+  const skillRoot = join(ROOT, '.github', 'skills');
+  const expected = [
+    { dir: 'controlflow-plan', name: 'controlflow-plan' },
+    { dir: 'controlflow-verify', name: 'controlflow-verify' },
+    { dir: 'controlflow-review', name: 'controlflow-review' },
+  ];
+  for (const { dir, name } of expected) {
+    const skillPath = join(skillRoot, dir, 'SKILL.md');
+    let content = '';
+    try {
+      content = readFileSync(skillPath, 'utf8');
+    } catch {
+      assert(false, `slim skill present: .github/skills/${dir}/SKILL.md`);
+      continue;
+    }
+    assert(true, `slim skill present: .github/skills/${dir}/SKILL.md`);
+
+    // Frontmatter present with name + description
+    const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+    assert(fmMatch != null, `slim skill ${name}: YAML frontmatter block present`);
+    const fm = fmMatch ? fmMatch[1] : '';
+    assert(
+      new RegExp(`^name:\\s*${name}$`, 'm').test(fm),
+      `slim skill ${name}: frontmatter name matches "${name}"`
+    );
+    assert(
+      /^description:\s*.+/m.test(fm),
+      `slim skill ${name}: frontmatter has non-empty description`
+    );
+    assert(
+      /^## References$/m.test(content),
+      `slim skill ${name}: References section present`
+    );
+  }
 }
 
 // ── Summary ───────────────────────────────────────────────────────────────────

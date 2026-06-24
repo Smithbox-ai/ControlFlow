@@ -1,0 +1,22 @@
+{
+  "id": "review-scope-drift",
+  "target_skill": "controlflow-review",
+  "goal": "controlflow-review compares the implementation to the plan and flags scope drift: anything implemented but not planned, or planned but not implemented.",
+  "input": {
+    "plan_path": "plans/example-plan.md",
+    "diff": "uncommitted working tree changes"
+  },
+  "expected": {
+    "compares_implementation_to_plan": true,
+    "scope_drift_finding_types": ["planned_but_not_implemented", "implemented_but_not_planned", "missing_phase", "extra_phased_work", "unmet_acceptance_criterion"],
+    "scope_drift_is_review_issue_not_style": true,
+    "does_not_skip_plan_comparison_when_plan_exists": true,
+    "findings_ordered_by_severity": true
+  },
+  "assertions": [
+    "controlflow-review SKILL.md step 1 reads the plan and tracks every phase acceptance criterion and planned file.",
+    "Anything implemented but not planned, or planned but not implemented, is a scope-drift finding.",
+    "The plan comparison must not be skipped when a plan artifact exists.",
+    "Scope drift is a review issue, not a style preference."
+  ]
+}

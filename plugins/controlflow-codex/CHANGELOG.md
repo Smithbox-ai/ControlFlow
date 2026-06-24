@@ -4,6 +4,29 @@
 
 All notable changes to the `controlflow-codex` plugin are documented here. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-06-23
+
+### Changed
+
+- Redesigned the plugin from the heavy 10-skill / multi-agent model to the slim **3-skill / 0-subagent** model that mirrors the canonical `.github/skills/` surface: `controlflow-plan`, `controlflow-verify`, `controlflow-review`.
+- `controlflow-plan` is now schema-sourced: it reads the shared `schemas/planner.plan.schema.json` and `plans/templates/plan-document-template.md` at invoke time instead of carrying a frozen planning body.
+- `controlflow-verify` runs inline adversarial verification (structural audit + assumption/mirage check + executability cold-start) with a terminal APPROVED / NEEDS_REVISION / REJECTED verdict — replacing the previous assumption-verifier and executability-verifier subagents.
+- `controlflow-review` is now a thin layer over native Codex review, adding plan-vs-implementation scope drift, evidence discipline, and proactive vulnerability/error search.
+- Manifest (`plugin.json`) bumped to 1.0.0 with an updated description, keywords, and `defaultPrompt` reflecting the slim, zero-subagent design.
+- README and USAGE rewritten for the slim 3-skill model.
+
+### Removed
+
+- Nine obsolete skills: `controlflow-router`, `controlflow-spec`, `controlflow-strict-workflow`, `controlflow-planning`, `controlflow-plan-audit`, `controlflow-assumption-verifier`, `controlflow-executability-verifier`, `controlflow-orchestration`, `controlflow-memory-hygiene`.
+- Per-skill `agents/openai.yaml` files (the slim model ships 0 subagents).
+- `templates/` (assumption-verifier-report, executability-verifier-report, plan-audit-report templates) — `controlflow-verify` writes a single combined `verify-verdict.md`.
+- `tests/` fixtures and `scripts/validate-strict-artifacts.ps1` (validated the retired heavy-model lifecycle artifacts).
+
+### Notes
+
+- The slim skills are generated from `plugins/controlflow-shared-source/skills/` (which mirrors `.github/skills/`). Codex invokes them with the bare `/controlflow-*` form. No host overlay is required.
+- `model_unavailable`, VS Code model routing, tool grants, the fixed agent roster, session telemetry, compaction, and budgets remain intentional divergences (see `core-portability-matrix.json`).
+
 ## [0.6.0] - 2026-06-04
 
 ### Added

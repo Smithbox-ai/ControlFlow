@@ -1,14 +1,14 @@
 {
   "id": "planner-orchestrator-handoff",
   "target_agent": "Planner",
-  "goal": "Planner persists a plan artifact and hands off to Orchestrator via plan_path — Orchestrator receives it and enters PLAN_REVIEW or skips based on tier",
+  "goal": "Planner persists a plan artifact and hands off to controlflow-verify via plan_path — controlflow-verify runs (or is skipped for TRIVIAL) based on tier",
   "inputs": [
     {
       "label": "medium-plan-handoff",
-      "description": "Planner receives a medium-complexity initial-create request, persists a plan artifact, and hands off to Orchestrator. Orchestrator enters PLAN_REVIEW.",
+      "description": "Planner receives a medium-complexity initial-create request, persists a plan artifact, and hands off to controlflow-verify. controlflow-verify runs its review phases.",
       "input": {
         "query": "Refactor the authentication module to use JWT tokens across 8 files",
-        "context": "Medium complexity: cross-domain refactor touching auth, API, and config files. Planner should produce plan and delegate to Orchestrator."
+        "context": "Medium complexity: cross-domain refactor touching auth, API, and config files. Planner should produce a plan and hand off to controlflow-verify."
       },
       "expected": {
         "risk_review_present": true,
@@ -18,16 +18,16 @@
         "active_plan_path_absent": true,
         "planner_emits_plan_path": true,
         "planner_emits_complexity_tier": "MEDIUM",
-        "orchestrator_receives_plan_path": true,
-        "orchestrator_enters_plan_review": true
+        "verify_receives_plan_path": true,
+        "verify_enters_review": true
       }
     },
     {
       "label": "trivial-plan-handoff",
-      "description": "Planner receives a trivial initial-create request, persists a minimal plan, and hands off to Orchestrator. Orchestrator skips PLAN_REVIEW.",
+      "description": "Planner receives a trivial initial-create request, persists a minimal plan, and hands off. controlflow-verify is skipped (TRIVIAL tier per runtime policy).",
       "input": {
         "query": "Fix the typo in README.md line 42",
-        "context": "Trivial: single file, single concern. Planner should produce plan and delegate to Orchestrator which skips PLAN_REVIEW."
+        "context": "Trivial: single file, single concern. Planner produces a plan; controlflow-verify is skipped per the tier table."
       },
       "expected": {
         "risk_review_present": true,
@@ -37,18 +37,18 @@
         "active_plan_path_absent": true,
         "planner_emits_plan_path": true,
         "planner_emits_complexity_tier": "TRIVIAL",
-        "orchestrator_receives_plan_path": true,
-        "orchestrator_skips_plan_review": true
+        "verify_receives_plan_path": true,
+        "verify_skips_review": true
       }
     }
   ],
   "assertions": [
-    "Planner always persists an artifact and emits plan_path for Orchestrator",
+    "Planner always persists an artifact and emits plan_path for controlflow-verify",
     "Initial create uses revision_mode: initial_create when no active_plan_path exists",
-    "Planner handoff message includes complexity_tier so Orchestrator can route correctly",
+    "Planner handoff message includes complexity_tier so the verify-phase depth can be routed correctly",
     "Planner handoff remains artifact-first and chat stays a concise summary instead of inlining the plan body",
-    "Orchestrator does not treat plan_path handoff as implicit approval — it evaluates PLAN_REVIEW trigger conditions",
-    "TRIVIAL plans skip PLAN_REVIEW per runtime-policy.json; MEDIUM plans enter full PLAN_REVIEW",
+    "controlflow-verify does not treat plan_path handoff as implicit approval — it evaluates the review trigger conditions",
+    "TRIVIAL plans skip controlflow-verify per the tier table; MEDIUM plans run the full verify-phase set",
     "Semantic-risk trigger heuristics remain anchored to plans/project-context.md even when Planner emits only the saved artifact and handoff summary"
   ]
 }

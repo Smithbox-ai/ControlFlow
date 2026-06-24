@@ -6,8 +6,8 @@ Closes #
 
 ## Type of Change
 - [ ] Bug fix
-- [ ] New agent or skill
-- [ ] Agent prompt/contract modification
+- [ ] New skill or agent prompt
+- [ ] Skill/agent prompt or contract modification
 - [ ] Schema change
 - [ ] Governance/policy update
 - [ ] Eval scenario addition
@@ -20,9 +20,8 @@ Closes #
 - [ ] No broken references (F8 integrity)
 
 ## Checklist
-- [ ] P.A.R.T section order maintained (Prompt → Archive → Resources → Tools)
-- [ ] Tool grants updated in `governance/tool-grants.json` if agent tools changed
-- [ ] Agent grants updated in `governance/agent-grants.json` if delegation changed
-- [ ] `plans/project-context.md` updated if agent roster changed
-- [ ] `skills/index.md` updated if skill added/modified
+- [ ] `.github/skills/controlflow-{plan,verify,review}/` frontmatter (name + description) valid if a skill changed
+- [ ] `.github/agents/controlflow-planner.agent.md` updated if the planner changed
+- [ ] `plans/project-context.md` updated if the slim surface changed
+- [ ] `skills/index.md` updated if a pattern was added/modified
 - [ ] CHANGELOG.md updated

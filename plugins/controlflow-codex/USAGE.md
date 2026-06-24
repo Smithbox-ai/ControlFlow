@@ -1,148 +1,55 @@
-# ControlFlow-Codex Usage
+# ControlFlow for Codex - Usage
 
-Короткий справочник по использованию плагина в Codex.
+**Version:** 1.0.0
+
+Короткий справочник по использованию slim-плагина ControlFlow в Codex. Плагин содержит 3
+skill и 0 subagent: plan, verify, review.
+
+## Skills
+
+| Skill | Вызов | Назначение |
+| ----- | ----- | ---------- |
+| `controlflow-plan` | `/controlflow-plan` | Сгенерировать план в общем ControlFlow-формате (schema-sourced, tier-gated) |
+| `controlflow-verify` | `/controlflow-verify` | Inline-проверка плана с adversarial-framing (zero subagents); пишет `plans/artifacts/<task-slug>/verify-verdict.md` |
+| `controlflow-review` | `/controlflow-review` | Evidence-backed review реализации: тонкий слой над нативным Codex review |
 
 ## Рекомендуемый путь
 
-Для нетривиальной задачи используйте единый entry point:
+Для нетривиальной задачи (SMALL и выше):
 
-`Use $controlflow-strict-workflow to run the full ControlFlow-Codex process for this task.`
-
-Он должен вести вас по такому потоку:
-
-`router -> planning -> plan-audit -> assumption-verifier -> executability-verifier -> orchestration -> review`
-
-Для простой правки используйте обычный Codex без плагина: ControlFlow-Codex полезен, когда стоимость плана, review artifacts и gate-процесса окупается снижением риска.
-
-Если требования ещё не сформулированы достаточно чётко для плана, начните со спецификации:
-
-`Use $controlflow-spec to capture a spec artifact before planning this repository change.`
-
-После сохранения spec artifact переходите к `$controlflow-planning`, передав путь к спецификации и будущий `plan_path`.
-
-В зависимости от сложности часть шагов может пропускаться:
-
-- `TRIVIAL`: обычно без полного review pipeline
-- `SMALL`: `plan-audit`
-- `MEDIUM`: `plan-audit` + `assumption-verifier`
-- `LARGE`: `plan-audit` + `assumption-verifier` + `executability-verifier`
-
-## Субагенты в Codex
-
-Плагин не устанавливает фиксированный VS Code-style roster субагентов. Если пользователь явно просит субагентов, делегирование или параллельную агентную работу, а текущий Codex runtime предоставляет `multi_agent_v1.spawn_agent`, `$controlflow-orchestration` может делегировать ограниченные sidecar-задачи.
-
-- `explorer`: точечные read-only вопросы по кодовой базе.
-- `worker`: только непересекающиеся write scopes.
-- Outputs субагентов сохраняйте в `plans/artifacts/<task-slug>/`.
-- Если subagent tooling недоступен или не авторизован явно, выполняйте тот же workflow локально через `$controlflow-*` skills и фиксируйте причину в `## Decision Log`.
-
-## Документационные alias-подсказки
-
-Эти сокращения помогают быстро вспомнить нужный skill, но не являются исполняемыми slash commands.
-
-| Mental shortcut | Skill invocation |
-| --- | --- |
-| `/spec` | `$controlflow-spec` |
-| `/plan` | `$controlflow-planning` |
-| `/review` | `$controlflow-review` |
-| `/ship` | `$controlflow-strict-workflow` |
-
-Эти slash-формы — документационные aliases для удобства чтения, а не исполняемые команды. Реальная поверхность вызова плагина — namespaced skill names вида `$controlflow-*`.
-
-## Готовые запросы
-
-### 0. Спецификация перед планом
-
-`Use $controlflow-spec to write plans/artifacts/my-task/spec.md, then hand it off to $controlflow-planning with plan_path=plans/my-task-plan.md.`
-
-### 1. Полный строгий workflow
-
-`Use $controlflow-strict-workflow to handle this repository task from plan through execution.`
-
-### 2. Только построение строгого плана
-
-`Use $controlflow-planning to write a strict ControlFlow-style plan in plans/ for this task.`
-
-### 3. Аудит готового плана
-
-`Use $controlflow-plan-audit to review plans/my-task-plan.md before implementation.`
-
-### 4. Проверка скрытых допущений в плане
-
-`Use $controlflow-assumption-verifier to find plan mirages in plans/my-task-plan.md.`
-
-### 5. Проверка исполнимости плана
-
-`Use $controlflow-executability-verifier to simulate cold-start execution of plans/my-task-plan.md.`
-
-### 6. Исполнение уже одобренного плана
-
-`Use $controlflow-orchestration to execute plans/my-task-plan.md in phases.`
-
-### 7. Финальный code review
-
-`Use $controlflow-review to review the completed implementation against the approved plan.`
-
-### 8. Поддержание долгой сессии
-
-`Use $controlflow-memory-hygiene to keep notes and repo memory clean during this task.`
-
-## Артефакты
-
-План:
-
-- `plans/<task-slug>-plan.md`
-
-Review artifacts:
-
-- `plans/artifacts/<task-slug>/spec.md`
-- `plans/artifacts/<task-slug>/plan-audit.md`
-- `plans/artifacts/<task-slug>/assumption-verifier.md`
-- `plans/artifacts/<task-slug>/executability-verifier.md`
-
-## Жизненный цикл артефактов
-
-- Пока задача активна, держите план и review artifacts рядом с работой.
-- После успешного завершения перенесите план и артефакты в `plans/archive/` или удалите их, если они были временными.
-- Если план отменён до реализации, удалите черновик и связанные `plans/artifacts/<task-slug>/`.
-- Для длинных задач используйте `$controlflow-memory-hygiene`, чтобы не продвигать временные заметки в постоянную память проекта.
-
-Пример архивации завершённой задачи:
-
-```powershell
-$month = Get-Date -Format "yyyy-MM"
-New-Item -ItemType Directory -Path "plans/archive/$month" -Force | Out-Null
-Move-Item "plans/my-task-plan.md" "plans/archive/$month/"
-Move-Item "plans/artifacts/my-task" "plans/archive/$month/my-task-artifacts"
+```text
+/controlflow-plan      # план -> plans/<task-slug>-plan.md
+/controlflow-verify    # вердикт -> plans/artifacts/<task-slug>/verify-verdict.md
+# ... реализация ...
+/controlflow-review     # review diff'а против плана
 ```
 
-Для одноразовых задач безопаснее удалить временные артефакты сразу после проверки результата.
+Маршрутизация для MEDIUM/LARGE описана в репо `CLAUDE.md`: plan → verify → review.
 
-## Живые планы и секции жизненного цикла
+Для простой правки используйте обычный Codex без плагина: ControlFlow-Codex полезен, когда
+стоимость плана, review-artifacts и gate-процесса окупается снижением риска.
 
-Нетривиальные строгие планы (SMALL / MEDIUM / LARGE) содержат пять обязательных секций жизненного цикла в конце файла. Обновляйте их по ходу работы:
+## Когда использовать
 
-- **Progress** — отмечайте завершённые фазы и текущий статус. Пример запроса:
-  `Update the ## Progress section of plans/my-task-plan.md to reflect Phase 3 completion.`
+- задача `SMALL` или крупнее
+- изменение затрагивает несколько файлов, фаз или границ владения
+- план, review-gates, rollback-заметки или durable-artifacts снизят риск
+- миграции, рефакторы, semantic-risk проверки или execution-handoffs важны
 
-- **Discoveries** — фиксируйте неожиданные находки, ограничения среды, изменения объёма. Пример:
-  `Add to ## Discoveries in plans/my-task-plan.md: found that the schema validator requires -NoProfile.`
+Пропустить плагин и промптить Codex напрямую когда:
 
-- **Decision Log** — записывайте ключевые решения и их обоснование. Пример:
-  `Log in ## Decision Log: chose additive lifecycle validation over strict replacement.`
+- задача тривиальна (один файл, очевидно, низкий риск)
+- прямая правка быстрее создания plan-artifact
+- прототип throwaway-кода
 
-- **Outcomes** — итоговый результат после завершения. Пример:
-  `Fill ## Outcomes in plans/my-task-plan.md with what was achieved and what was deferred.`
+## Установка
 
-- **Idempotence & Recovery** — укажите, какие фазы безопасно перезапускать и как восстановиться после сбоя. Пример:
-  `Document in ## Idempotence & Recovery which phases are safe to re-run after an interrupted execution.`
+```powershell
+powershell -ExecutionPolicy Bypass -File plugins/controlflow-codex/scripts/install-home-local.ps1
+```
 
-Эти секции — ControlFlow-нативная адаптация идей ExecPlan, а не буквальный импорт формата `PLANS.md` от OpenAI. Их порядок, имена и правила валидации определены внутри плагина. Локальный валидатор (`scripts/validate-strict-artifacts.ps1`) проверяет их наличие и точный порядок для строгих Codex-планов.
+## Удаление
 
-## Validator
-
-Рекомендуемая проверка структуры и обязательных review-артефактов по tier:
-
-`powershell -ExecutionPolicy Bypass -File plugins/controlflow-codex/scripts/validate-strict-artifacts.ps1 -RepoRoot <repo-root> -PlanPath plans/<task-slug>-plan.md -StrictReviewByTier`
-
-Совместимые additive switches `-RequirePlanAudit`, `-RequireAssumptionVerifier` и `-RequireExecutabilityVerifier` остаются доступны, когда нужно потребовать конкретный артефакт независимо от tier.
+```powershell
+powershell -ExecutionPolicy Bypass -File plugins/controlflow-codex/scripts/uninstall-home-local.ps1
+```

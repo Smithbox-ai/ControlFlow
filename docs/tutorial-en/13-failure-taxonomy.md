@@ -2,103 +2,94 @@
 
 ## Why this chapter
 
-Understand **how ControlFlow classifies failures** so that errors resolve efficiently: retrying when retrying helps, escalating when escalating is needed, without getting into an infinite loop.
+Understand **how ControlFlow labels failures** so that errors resolve efficiently: retrying when retrying helps, escalating when escalating is needed, re-invoking the Planner when the plan itself is the problem — without getting into an infinite loop.
+
+The headline reframe for readers of the legacy tutorial: the five failure classes still label failures in plan lifecycle sections, but **retry routing, retry budgets, and parallelism are now native Copilot's job, not an Orchestrator dispatch table**. There is no `Orchestrator.agent.md` in the slim model. The Planner or native Copilot retries per class; `needs_replan` is the one class that re-enters the ControlFlow pipeline — it re-invokes `@controlflow-planner` for a targeted replan.
 
 ## Key Concepts
 
-- **failure_classification** — a mandatory field in every subagent output if the status is `FAILED`, `NEEDS_REVISION`, `NEEDS_INPUT`, or `REJECTED`.
-- **Routing** — which action the Orchestrator takes based on the classification.
-- **Retry budget** — a limit on the total number of retries per phase.
-- **NEEDS_INPUT** — a separate routing path from `failure_classification`; goes through user clarification.
+- **`failure_classification`** — a mandatory field in every failure record written to a plan lifecycle section (`## Progress`, `## Discoveries`, `## Idempotence & Recovery`) when status is `FAILED`, `NEEDS_REVISION`, `NEEDS_INPUT`, or `REJECTED`.
+- **Failure class** — one of `transient`, `fixable`, `needs_replan`, `escalate`, `model_unavailable`. Five classes, no others.
+- **Routing** — who acts on the classification. In the slim model, routing is native Copilot's job for four of the five classes; `needs_replan` re-enters the ControlFlow pipeline by re-invoking the Planner.
+- **Re-enter the pipeline** — the single ControlFlow entry point for a failure: `needs_replan` re-invokes `@controlflow-planner` for a targeted replan, then `controlflow-verify` gates the revised plan before execution resumes.
+- **NEEDS_INPUT** — a separate path, independent of `failure_classification`; handled by native Copilot's clarification surface (see chapter 05).
 
-## When failure_classification Is Required
+## When `failure_classification` Is Required
 
-If a subagent status is one of the following, `failure_classification` is **required**:
+If a status is one of the following, `failure_classification` is **required** on the lifecycle record:
 - `FAILED`
 - `NEEDS_REVISION`
 - `NEEDS_INPUT`
 - `REJECTED`
 
-**Exception:** PlanAuditor and AssumptionVerifier **exclude** `transient` — their failures are structural and non-transient by nature.
+**Exception:** the inline verify roles (`PlanAuditor-subagent`, `AssumptionVerifier-subagent`, `ExecutabilityVerifier-subagent`) **exclude `transient`** — their failures are structural and non-transient by nature.
 
-## The 4 Classification Classes
+## The 5 Classification Classes
 
 | Class | Meaning | Example |
 |-------|---------|---------|
-| `transient` | Temporary tool error; retry identically | Network timeout, rate limit (HTTP 429) |
-| `fixable` | Small correctable error; retry with a hint | Missing import, typo in config |
-| `needs_replan` | Architecture mismatch; replan the phase | Dependency doesn't exist, API incompatibility |
-| `escalate` | Security risk or unresolvable blocker; stop | Data loss risk, security vulnerability |
+| `transient` | Temporary tool error; retry with identical scope | Network timeout, rate limit (HTTP 429), flaky test |
+| `fixable` | Small correctable error; retry with a fix hint | Missing import, typo in config |
+| `needs_replan` | Architecture mismatch or missing dependency; delegate to the Planner for a targeted replan | Dependency doesn't exist, API incompatibility |
+| `escalate` | Security risk or unresolvable blocker; stop and await human approval | Data loss risk, security vulnerability |
+| `model_unavailable` | The routed/primary model is unavailable or unreachable; retry with a native Copilot model substitution, then escalate on exhaustion | Provider outage, model deprecation |
+
+The five classes mirror the failure-classification enum in `.github/copilot-instructions.md` and `governance/runtime-policy.json`.
 
 ## Routing Flowchart
 
 ```mermaid
 flowchart TD
-    Fail[Subagent returns failure] --> Class{failure_classification?}
-    Class -->|transient| TR[Retry identical scope\nmax 3x]
-    Class -->|fixable| FX[Retry with hint\nmax 1x]
-    Class -->|needs_replan| NR[Planner: targeted replan\nmax 1x]
-    Class -->|escalate| ES[STOP → WAITING_APPROVAL]
-    TR -->|limit reached| ES
-    FX -->|limit reached| ES
-    NR -->|limit reached| ES
+    Fail[Failure recorded in lifecycle section] --> Class{failure_classification?}
+    Class -->|transient| TR[Native Copilot: retry identical scope]
+    Class -->|fixable| FX[Native Copilot: retry with fix hint]
+    Class -->|needs_replan| NR[Re-invoke "@controlflow-planner" for targeted replan]
+    Class -->|escalate| ES[STOP → await human approval]
+    Class -->|model_unavailable| MU[Native Copilot: retry with model substitution, then escalate on exhaustion]
+    NR --> V["controlflow-verify gates the revised plan"]
+    V -->|APPROVED| Resume[Resume execution]
+    V -->|NEEDS_REVISION/REJECTED| NR
 ```
 
-## Retry Routing Table
+## Routing Table
 
-| Classification | Action | Max Retries |
-|----------------|--------|------------|
-| `transient` | Retry same agent, identical scope | 3 |
-| `fixable` | Retry same agent with `fix_hint` in context | 1 |
-| `needs_replan` | Delegate to Planner: targeted phase replan | 1 |
-| `escalate` | STOP; transition to WAITING_APPROVAL; present to user | 0 |
+| Class | Who routes | Action |
+|----------------|-----------|--------|
+| `transient` | Native Copilot | Retry the same phase with identical scope |
+| `fixable` | Native Copilot | Retry the same phase with a `fix_hint` in context |
+| `needs_replan` | Re-invoke `@controlflow-planner` | Delegate to the Planner for a targeted phase replan; `controlflow-verify` gates the revised plan before execution resumes |
+| `escalate` | Native Copilot stops; user decides | STOP; present the blocker to the user and await human approval |
+| `model_unavailable` | Native Copilot | Retry with a native Copilot model substitution, then escalate on exhaustion |
 
-## Reliability Policy
+Retry budgets, retry-attempt counters, and parallelism are native Copilot's job, not ControlFlow's. ControlFlow only labels the failure; `needs_replan` is the single class that re-enters the ControlFlow pipeline.
 
-Full list of reliability policies from [Orchestrator.agent.md](../../Orchestrator.agent.md):
+## Why Routing Is Native Copilot's Job
 
-1. **Silent Failure Detection:** Empty response, timeout, HTTP 429 → failure, **not** success. Must not silently continue.
+The legacy Orchestrator owned a retry budget table, per-wave throttling, exponential backoff signaling, and a dispatch state machine that routed failures per class. As of February 2026, Copilot does subagent dispatch + parallelism natively (GA default-on), approvals natively, and model selection natively. Keeping a ControlFlow dispatch state machine on top of those would duplicate native capabilities — exactly what the slim model forbids. So the Orchestrator is retired as a shipped agent (see chapter 05); retry routing and parallelism are native Copilot's job.
 
-2. **Per-Phase Retry Budget:** Cumulative limit per phase = **5 retries** across all failure classifications.
-
-3. **Same-Classification Ceiling:** If the same phase fails **3 times** with the same classification → escalate (regardless of individual class budget).
-
-4. **Per-Wave Throttling:** If **≥2 subagents** in one wave return `transient` → reduce parallelism for subsequent waves by 50% (prevent rate-limit cascade).
-
-5. **Exponential Backoff Signaling:** On transient retry, include `retry_attempt` count in the delegation payload so the subagent adjusts call frequency.
+What ControlFlow keeps is the **label** (the five-class taxonomy) and the **single re-entry point** (`needs_replan` re-invokes the Planner, and `controlflow-verify` re-gates the revised plan). Everything else is delegated.
 
 ## Who Returns What
 
-| Agent | Possible classifications |
-|-------|------------------------|
-| CoreImplementer | transient, fixable, needs_replan, escalate |
-| UIImplementer | transient, fixable, needs_replan, escalate |
-| PlatformEngineer | transient, fixable, needs_replan, escalate |
-| TechnicalWriter | transient, fixable, needs_replan, escalate |
-| BrowserTester | transient, fixable, needs_replan, escalate |
-| PlanAuditor | fixable, needs_replan, escalate (NO transient) |
-| AssumptionVerifier | fixable, needs_replan, escalate (NO transient) |
-| ExecutabilityVerifier | fixable, needs_replan, escalate (NO transient) |
-| Planner | needs_replan, escalate |
+| Conceptual role | Possible classifications |
+|-----------------|------------------------|
+| CoreImplementer-subagent | `transient`, `fixable`, `needs_replan`, `escalate`, `model_unavailable` |
+| UIImplementer-subagent | `transient`, `fixable`, `needs_replan`, `escalate`, `model_unavailable` |
+| PlatformEngineer-subagent | `transient`, `fixable`, `needs_replan`, `escalate`, `model_unavailable` |
+| TechnicalWriter-subagent | `transient`, `fixable`, `needs_replan`, `escalate`, `model_unavailable` |
+| BrowserTester-subagent | `transient`, `fixable`, `needs_replan`, `escalate`, `model_unavailable` |
+| PlanAuditor-subagent | `fixable`, `needs_replan`, `escalate` (NO `transient`, NO `model_unavailable`) |
+| AssumptionVerifier-subagent | `fixable`, `needs_replan`, `escalate` (NO `transient`, NO `model_unavailable`) |
+| ExecutabilityVerifier-subagent | `fixable`, `needs_replan`, `escalate` (NO `transient`, NO `model_unavailable`) |
+| `@controlflow-planner` | `needs_replan`, `escalate` |
 
-## NEEDS_INPUT — Separate Routing Path
+These are conceptual roles (see chapter 03), executed inline by native Copilot. The inline verify roles exclude `transient` and `model_unavailable` because their failures are structural — a model outage does not make a plan structurally valid.
 
-`NEEDS_INPUT` is a distinct routing path, **independent of** `failure_classification`.
+## NEEDS_INPUT — Separate Path
 
-When a subagent returns `status: "NEEDS_INPUT"` with `clarification_request`:
+`NEEDS_INPUT` is a distinct routing path, **independent of** `failure_classification`. When a phase returns `status: "NEEDS_INPUT"` with a `clarification_request`, native Copilot surfaces it to the user directly (its native approvals/ask-questions surface) and continues. There is no ControlFlow routing table for NEEDS_INPUT — that was an Orchestrator concept.
 
-```mermaid
-sequenceDiagram
-    participant E as Executor
-    participant O as Orchestrator
-    participant U as User
-
-    E-->>O: NEEDS_INPUT + clarification_request
-    O->>O: Extract clarification_request
-    O->>U: vscode/askQuestions\n(options, pros/cons, recommendation)
-    U-->>O: selection
-    O->>E: retry with selection in context
-```
+If the clarification changes file scope, user-visible behavior, architecture, or destructive-risk handling, the user re-invokes `@controlflow-planner` for a targeted replan rather than resolving it inline (see chapter 05).
 
 The `clarification_request` format (see `schemas/clarification-request.schema.json`):
 - `question`
@@ -108,53 +99,58 @@ The `clarification_request` format (see `schemas/clarification-request.schema.js
 
 ## End-to-End Scenario Walkthrough
 
-**Scenario:** Phase 3 fails.
+**Scenario:** Phase 3 fails during execution.
 
-1. CoreImplementer returns `status: FAILED`, `failure_classification: transient`. → Orchestrator retries (retry 1/3).
-2. Same failure. → Orchestrator retries (retry 2/3).
-3. Same failure again. → 3 identical transient → **escalate ceiling hit**. Transition to WAITING_APPROVAL.
-4. User says "probably a network issue; try again in 5 minutes."
-5. Orchestrator retries after waiting. → CoreImplementer returns `COMPLETE`. Phase proceeds.
+1. Executor returns `status: FAILED`, `failure_classification: transient`. → Native Copilot retries (retry 1).
+2. Same failure. → Native Copilot retries (retry 2).
+3. Same failure again. → Native Copilot's retry budget exhausted; the failure is reclassified or escalated. If the user judges it a network issue, the user instructs native Copilot to retry after waiting.
+4. Executor returns `COMPLETE`. Phase proceeds.
 
-Note: Step 3 fires the **same-classification ceiling** (3×), not the per-phase budget (5). The ceiling is stricter.
+**Scenario:** Phase 3 fails with `needs_replan`.
+
+1. Executor returns `status: FAILED`, `failure_classification: needs_replan`. → The user re-invokes `@controlflow-planner` with the failure record.
+2. Planner reads the existing artifact in `plans/`, updates the affected phases, and re-runs `controlflow-verify`.
+3. `controlflow-verify` returns `APPROVED`. Execution resumes on the revised plan.
 
 ## Output Requirements
 
-When returning `failure_classification`, agents include in the output:
+When recording a `failure_classification` in a plan lifecycle section, include:
 - `failure_classification` (string)
 - `failure_reason` (description for routing)
 - `fix_hint` (for `fixable` — what exactly to fix)
 - `escalation_details` (for `escalate` — why human intervention is needed)
 
-These fields are defined in the respective execution-report schemas.
+These fields are defined in the respective execution-report schemas in `schemas/`.
 
 ## Common Mistakes
 
-- **Treating NEEDS_INPUT as a `failure_classification`.** No — it's a separate path through `vscode/askQuestions`.
+- **Treating NEEDS_INPUT as a `failure_classification`.** No — it's a separate path handled by native Copilot's clarification surface.
 - **Continuing after an empty response.** Silent failure — must be caught, not ignored.
-- **Giving PlanAuditor a `transient` classification.** Forbidden — reviewers exclude `transient` by contract.
-- **Forgetting to pass `retry_attempt`.** The subagent needs this to adjust behavior.
-- **Assuming `needs_replan` repairs the current phase.** It rewrites the phase through Planner — not in place.
+- **Giving an inline verify role a `transient` or `model_unavailable` classification.** Forbidden — verifiers exclude both by contract; their failures are structural.
+- **Expecting ControlFlow to retry, parallelize, or throttle.** Those are native Copilot's job. ControlFlow only labels failures; `needs_replan` re-enters the pipeline.
+- **Assuming `needs_replan` repairs the current phase in place.** It rewrites the affected phases through the Planner and re-runs `controlflow-verify` — not in place.
+- **Looking for the retired Orchestrator retry-budget table.** It is gone. Retry budgets and parallelism are native Copilot's.
 
 ## Exercises
 
-1. **(beginner)** Fill in the table: agent = CoreImplementer, failure = "npm registry unavailable for 30 seconds". Classification?
-2. **(beginner)** Same scenario but: PlanAuditor, "architecture section references a module that doesn't exist". Classification?
-3. **(intermediate)** After 2 transient retries, the phase fails a 3rd time with `fixable`. How many total retries are left in the budget? What does the Orchestrator do?
-4. **(intermediate)** Waves 2 and 3 each contain 3 subagents. Two of wave-2 subagents return `transient`. What does the Orchestrator do with wave 3?
-5. **(advanced)** UIImplementer returns NEEDS_INPUT with `clarification_request.options` containing 3 options. Describe the exact user interaction format. Where is this behavior defined?
+1. **(beginner)** Executor = CoreImplementer-subagent, failure = "npm registry unavailable for 30 seconds". Classification?
+2. **(beginner)** Verify role = PlanAuditor-subagent, failure = "architecture section references a module that doesn't exist". Classification?
+3. **(intermediate)** A phase fails with `model_unavailable`. Who routes it, and what is the action?
+4. **(intermediate)** A phase fails with `needs_replan`. Who routes it, and what is the single ControlFlow entry point that re-enters the pipeline?
+5. **(advanced)** A phase fails with `needs_replan` mid-execution. Trace the exact sequence: who is re-invoked, what artifact is updated, what gate re-runs, what verdict allows execution to resume.
 
 ## Review Questions
 
-1. Name the 4 failure classification classes.
+1. Name the 5 failure classification classes.
 2. When is `failure_classification` required?
-3. Who excludes `transient` and why?
-4. What is the per-phase cumulative retry budget?
-5. What is the difference between NEEDS_INPUT and `needs_replan`?
+3. Who excludes `transient` and `model_unavailable`, and why?
+4. Which failure class re-enters the ControlFlow pipeline, and how?
+5. Why is retry routing native Copilot's job rather than an Orchestrator dispatch table?
 
 ## See Also
 
-- [Chapter 05 — Orchestration](05-orchestration.md)
+- [Chapter 05 — The plan → verify → review pipeline](05-orchestration.md)
 - [Chapter 08 — Execution Pipeline](08-execution-pipeline.md)
 - [docs/agent-engineering/CLARIFICATION-POLICY.md](../agent-engineering/CLARIFICATION-POLICY.md)
 - [schemas/clarification-request.schema.json](../../schemas/clarification-request.schema.json)
+- [.github/copilot-instructions.md](../../.github/copilot-instructions.md)

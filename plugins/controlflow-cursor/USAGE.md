@@ -1,85 +1,44 @@
-# ControlFlow-Cursor Usage
+# ControlFlow for Cursor - Usage
 
-## Recommended entry
+**Version:** 1.0.0
 
-For non-trivial work in Cursor Agent mode:
+Slim ControlFlow plugin for Cursor: 3 skills (`controlflow-plan`, `controlflow-verify`,
+`controlflow-review`) and 1 planner agent. 0 verifier subagents.
 
-```text
-Follow the controlflow-strict-workflow skill for this repository task from plan through execution and final review.
-```
+## Skills
 
-## Tier routing
+| Skill | Cursor invocation | Purpose |
+| --- | --- | --- |
+| `controlflow-plan` | `Follow the controlflow-plan skill for this task.` | Generate a plan in the shared ControlFlow format (schema-sourced, tier-gated) |
+| `controlflow-verify` | `Follow the controlflow-verify skill on this saved plan.` | Inline adversarial verification (zero subagents); writes `plans/artifacts/<task-slug>/verify-verdict.md` |
+| `controlflow-review` | `Follow the controlflow-review skill on the implementation diff.` | Evidence-backed review, layered over native Cursor review |
 
-| Tier | Pre-execution review |
-| ---- | -------------------- |
-| TRIVIAL | Optional |
-| SMALL | Plan audit |
-| MEDIUM | Plan audit + assumption verifier |
-| LARGE | Plan audit + assumption + executability verifier |
-
-## Prompt catalog
-
-### Full strict workflow
+## Recommended flow (SMALL and above)
 
 ```text
-Follow controlflow-strict-workflow. Task: <description>. Save plan to plans/<slug>-plan.md.
+Follow the controlflow-plan skill for this task.        # plan -> plans/<task-slug>-plan.md
+Follow the controlflow-verify skill on this saved plan. # verdict -> plans/artifacts/<task-slug>/verify-verdict.md
+# ... implement ...
+Follow the controlflow-review skill on the diff.         # review against the plan
 ```
 
-### Spec before plan
+Routing for MEDIUM/LARGE tasks lives in the repo `CLAUDE.md`: plan → verify → review.
 
-```text
-Follow controlflow-spec to write plans/artifacts/<slug>/spec.md, then controlflow-planning with plan_path=plans/<slug>-plan.md.
-```
+## Planner agent
 
-### Planning only
+`@controlflow-planner` (in `agents/`) produces a saved, schema-conforming plan artifact and
+hands execution off to the native Cursor agent. Use it when the request is vague enough to
+need an idea interview before planning.
 
-```text
-Follow controlflow-planning to write plans/<slug>-plan.md for: <description>.
-```
+## When to use
 
-### Plan audit (Task)
+- the task is `SMALL` or larger
+- the change spans multiple files, phases, or ownership boundaries
+- planning, review gates, rollback notes, or durable artifacts would reduce risk
 
-```text
-Task(subagent_type="controlflow-plan-auditor", description="Audit plan", prompt="Audit plans/<slug>-plan.md. Tier: MEDIUM. Save findings as structured text for plans/artifacts/<slug>/plan-audit.md. Read templates in plugins/controlflow-cursor/templates/.")
-```
+Skip the plugin and prompt Cursor directly for truly `TRIVIAL` work.
 
-### Plan audit (fallback)
-
-```text
-Follow controlflow-plan-audit for plans/<slug>-plan.md. Write plans/artifacts/<slug>/plan-audit.md.
-```
-
-### Assumption verifier (Task)
-
-```text
-Task(subagent_type="controlflow-assumption-verifier", description="Verify assumptions", prompt="Review plans/<slug>-plan.md for mirages and hidden assumptions. Tier: MEDIUM.")
-```
-
-### Execute approved plan
-
-```text
-Follow controlflow-orchestration for plans/<slug>-plan.md. Delegate implementer phases via Task to controlflow-core-implementer (or matching agent) when available.
-```
-
-### Implementation phase (Task)
-
-```text
-Task(subagent_type="controlflow-core-implementer", description="Implement phase N", prompt="Execute phase N from plans/<slug>-plan.md. Scope: <files>. Run verification: <command>. Return structured completion report.")
-```
-
-### Final review
-
-```text
-Task(subagent_type="controlflow-code-reviewer", description="Review implementation", prompt="Review completed work against plans/<slug>-plan.md. Evidence-backed verdict.")
-```
-
-## Artifact paths
-
-- Plan: `plans/<task-slug>-plan.md`
-- Reviews: `plans/artifacts/<task-slug>/plan-audit.md`, `assumption-verifier.md`, `executability-verifier.md`
-- Lifecycle sections in plan: `## Progress`, `## Discoveries`, `## Decision Log`, `## Outcomes`, `## Idempotence & Recovery`
-
-## Install into a consumer repo
+## Install into another repo
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File plugins/controlflow-cursor/scripts/install-project.ps1 -TargetRepo C:\path\to\app

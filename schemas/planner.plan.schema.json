@@ -89,7 +89,7 @@
               "BrowserTester-subagent",
               "CodeReviewer-subagent"
             ],
-            "description": "Primary subagent Orchestrator must dispatch for this phase. Orchestrator treats this field as authoritative and must not override it with heuristics."
+            "description": "Primary conceptual executor role for this phase. Native Copilot executes the phase inline; this field is authoritative and must not be overridden by heuristics."
           },
           "dependencies": {
             "type": "array",
@@ -175,7 +175,7 @@
       "minimum": 1,
       "maximum": 10,
       "default": 10,
-      "description": "Maximum number of subagents Orchestrator may dispatch in parallel within a single wave."
+      "description": "Maximum number of subagents native Copilot may dispatch in parallel within a single wave."
     },
     "open_questions": {
       "type": "array",
@@ -268,14 +268,14 @@
       "additionalProperties": false,
       "required": ["target_agent", "prompt"],
       "properties": {
-        "target_agent": { "type": "string", "const": "Orchestrator" },
+        "target_agent": { "type": "string", "const": "controlflow-verify" },
         "prompt": { "type": "string" }
       }
     },
     "complexity_tier": {
       "type": "string",
       "enum": ["TRIVIAL", "SMALL", "MEDIUM", "LARGE"],
-      "description": "Task complexity classification. Planner emits this field; Orchestrator applies tier-specific review routing and iteration budgets per governance/runtime-policy.json. Tier definitions and override rules are owned by plans/project-context.md."
+      "description": "Task complexity classification. Planner emits this field; tier-specific verify-phase routing and iteration budgets are applied per governance/runtime-policy.json. Tier definitions and override rules are owned by plans/project-context.md."
     },
     "iteration_budget": {
       "type": "integer",

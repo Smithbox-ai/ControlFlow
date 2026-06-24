@@ -2,16 +2,16 @@
 
 ## Зачем эта глава
 
-Получить ментальную модель всей системы: какие группы агентов существуют, как идут потоки управления, какие подсистемы их связывают. После этой главы вы сможете на собеседовании за 5 минут нарисовать архитектуру ControlFlow на доске.
+Построить ментальную модель всей системы: что ControlFlow поставляет, что он делегирует нативному Copilot, и как пайплайн plan → verify → review связывает эти части вместе. После этой главы вы сможете нарисовать архитектуру ControlFlow на доске за пять минут — и точно показать, где именно в дело вступает нативный Copilot.
 
 ## Ключевые понятия
 
-- **Агент (agent)** — Markdown-файл с YAML-frontmatter, описывающий роль для LLM. Не процесс, не сервис.
-- **Subagent** — агент, который вызывается *из другого агента*, а не пользователем напрямую. Соглашение в имени: `*-subagent.agent.md`.
-- **Оркестратор (Orchestrator)** — единственный «дирижёр». Не реализует сам, а делегирует.
-- **Volнa (wave)** — группа фаз плана, исполняемых параллельно. Wave N+1 ждёт окончания wave N.
-- **Гейт (gate)** — точка контроля, в которой проверяется условие и принимается решение GO/REPLAN/ABSTAIN.
-- **Контракт (schema)** — JSON-схема, которой обязан соответствовать выход агента.
+- **Тонкая поверхность (slim surface)** — весь поставляемый ControlFlow артефактный набор для VS Code Copilot: один агент (`@controlflow-planner`) плюс три skill'а (`controlflow-plan`, `controlflow-verify`, `controlflow-review`) плюс routing stub. Всё остальное делегировано нативному Copilot.
+- **Концептуальная роль (conceptual role)** — помеченная ответственность (например, `CoreImplementer-subagent`, `PlanAuditor-subagent`), которую Planner назначает в фазах плана, а нативный Copilot исполняет inline. _Не_ поставляемый файл агента.
+- **Пайплайн (pipeline)** — plan → verify → review поверх нативного Copilot. Planner производит артефакт; `controlflow-verify` гейтит его до исполнения; нативный Copilot исполняет фазы; `controlflow-review` гейтит результат.
+- **Tier-gated политика** — `TRIVIAL` / `SMALL` / `MEDIUM` / `LARGE` определяют, запускаются ли plan, verify и review вообще и насколько глубоко идёт verify.
+- **Граница делегирования (delegation boundary)** — правило, по которому ControlFlow не поставляет поверхность, дублирующую нативную возможность Copilot. Каноническая запись — `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md`.
+- **Контракт (schema)** — JSON-схема в `schemas/`, документирующая форму выхода роли и anchors eval-фикстуру. В slim-модели схемы — это контрактная документация + ссылки на eval-фикстуры, а не runtime-валидируемые сообщения между агентами.
 
 ## Архитектура верхнего уровня
 
@@ -19,191 +19,160 @@
 flowchart TB
     User([Пользователь])
 
-    subgraph Entry["Точки входа"]
+    subgraph CF["Тонкая поверхность ControlFlow (поставляется)"]
+        direction TB
+        Planner["@controlflow-planner<br/>.github/agents/controlflow-planner.agent.md"]
+        PlanSkill["controlflow-plan<br/>.github/skills/controlflow-plan/"]
+        VerifySkill["controlflow-verify<br/>.github/skills/controlflow-verify/"]
+        ReviewSkill["controlflow-review<br/>.github/skills/controlflow-review/"]
+        Stub["copilot-instructions.md<br/>routing stub"]
+    end
+
+    subgraph Roles["Концептуальные роли (НЕ поставляемые файлы)"]
         direction LR
-        Planner
-        Orch[Orchestrator]
-        Researcher[Researcher-subagent]
-        CM[CodeMapper-subagent]
+        Exec[8 ролей исполнителей]
+        Verify[3 inline-роли verify]
     end
 
-    subgraph Review["Адверсариальное ревью плана"]
+    subgraph Native["Нативный Copilot (предоставляет)"]
         direction LR
-        PA[PlanAuditor-subagent]
-        AV[AssumptionVerifier-subagent]
-        EV[ExecutabilityVerifier-subagent]
+        Dispatch[Subagent dispatch + parallelism]
+        PlanMode[/plan mode]
+        CodeReview[Agentic code review]
+        Models[Model selection + approvals + MCP]
     end
 
-    subgraph Exec["Исполнители"]
-        direction LR
-        Core[CoreImplementer-subagent]
-        UI[UIImplementer-subagent]
-        Plat[PlatformEngineer-subagent]
-        Tech[TechnicalWriter-subagent]
-        BT[BrowserTester-subagent]
-    end
-
-    subgraph PostReview["Пост-ревью"]
-        CR[CodeReviewer-subagent]
-    end
-
-    User -->|расплывчатая задача| Planner
-    User -->|готовый план| Orch
-    User -->|исследование| Researcher
-    User -->|разведка кода| CM
-
-    Planner -->|handoff| Orch
-    Orch --> Review
-    Review --> Orch
-    Orch --> Exec
-    Exec --> CR
-    CR --> Orch
-    Orch -->|approval gate| User
-
-    Planner -.->|context| Researcher
-    Planner -.->|context| CM
-    Orch -.->|context| Researcher
-    Orch -.->|context| CM
+    User -->|prompt| Planner
+    Planner --> PlanSkill
+    PlanSkill -->|артефакт плана в plans/| VerifySkill
+    VerifySkill -->|APPROVED| Native
+    Native -->|исполняет фазы<br/>(роли исполнителей)| ReviewSkill
+    ReviewSkill -->|verdict| User
+    Planner -.->|назначает| Roles
+    Roles -.->|исполняется| Native
+    Stub -.->|маршрутизирует| PlanSkill
+    Stub -.->|маршрутизирует| VerifySkill
+    Stub -.->|маршрутизирует| ReviewSkill
 ```
 
-## Группы агентов и их роли
+## Тонкая поверхность и её роли
 
-ControlFlow содержит **13 агентов**, разделённых на 5 функциональных групп:
+ControlFlow поставляет **один агент и три skill'а** поверх нативного Copilot. **Никаких поставляемых сабагентов нет.**
 
-### 1. Точки входа (Entry points)
+| Поверхность | Путь | Роль |
+|-------------|------|------|
+| Агент `@controlflow-planner` | `.github/agents/controlflow-planner.agent.md` | Единственный поставляемый агент. Запускает plan skill + Idea Interview; передаёт исполнение нативному Copilot. Использует Copilot Auto model picker (без `model:` frontmatter). |
+| skill `controlflow-plan` | `.github/skills/controlflow-plan/` | Производит schema-anchored артефакт плана в `plans/`. Single-source формат берёт из `schemas/planner.plan.schema.json` и `plans/templates/plan-document-template.md`. |
+| skill `controlflow-verify` | `.github/skills/controlflow-verify/` | Inline адверсариальная верификация (ноль сабагентов). Tier-gated фазы: structural audit, mirage detection, executability cold-start. Эмиттит verdict. |
+| skill `controlflow-review` | `.github/skills/controlflow-review/` | Evidence-backed ревью, слой поверх нативного Copilot code review. Добавляет сравнение plan-vs-implementation на scope drift. |
+| Routing stub | `.github/copilot-instructions.md` | Общие политики; связывает plan → verify → review. |
 
-Это агенты, которых пользователь вызывает **напрямую**.
+Метки ролей в планах — восемь ролей исполнителей и три inline-роли verify — это **концептуальные роли**, которые Planner назначает в фазах плана, а нативный Copilot исполняет inline. Это не поставляемые файлы агентов. Полный taxonomy — в главе 03, authoritative mirror-таблицы — в `plans/project-context.md`.
 
-| Агент | Когда вызывать |
-|-------|---------------|
-| **Planner** | Задача расплывчата или требует разбиения. Выходом будет план. |
-| **Orchestrator** | Готовый план или конкретная задача с понятными требованиями. |
-| **Researcher-subagent** | Глубокое исследование вопроса с цитированием источников. |
-| **CodeMapper-subagent** | Быстрая разведка: «где в коде такая-то логика?» |
+### Что предоставляет нативный Copilot (делегировано)
 
-**Researcher** и **CodeMapper** также являются точками входа, хотя по соглашению в имени — subagent. Это исключение: они достаточно автономны, чтобы вызываться напрямую.
+| Нативная возможность | Статус | Делегирование ControlFlow |
+|----------------------|--------|----------------------------|
+| Custom agents (`@-mention`, `.agent.md`) | GA (Feb 2026) | `.agent.md` от ControlFlow уже является агентом Copilot |
+| Subagent dispatch + parallelism | GA (Feb 2026) | Убираем legacy dispatch state machine; нативный Copilot запускает фазы исполнителей |
+| Plan mode (`/plan`) | GA | Layer поверх — сохраняем _формат_ плана CF; используем нативную разведку |
+| Agentic code review | GA (Mar 2026) | Делегируем механический проход; сохраняем слой scope-drift + evidence от CF |
+| Skills library (`.github/skills/`) | GA (portable) | Поставляем ControlFlow как skills |
+| MCP, model selection, approvals, custom instructions | GA | Делегируем |
 
-### 2. Адверсариальное ревью плана (Review)
+### Что ControlFlow оставляет (Copilot не предоставляет нативно)
 
-Эти агенты **только читают** артефакты и **только во время PLAN_REVIEW**. Они никогда не пишут код и никогда не появляются как `executor_agent` в фазах плана.
+1. Schema-enforced формат плана (YAML header, десять секций, семикатегорийный semantic risk, Mermaid по тиру) anchored by `schemas/planner.plan.schema.json`.
+2. Адверсариальная inline верификация (`controlflow-verify`: structural audit, mirage detection, executability cold-start → `APPROVED` / `NEEDS_REVISION` / `REJECTED`).
+3. Tier-gated политика workflow (`TRIVIAL` / `SMALL` / `MEDIUM` / `LARGE` с глубиной verify-фаз).
+4. Plan-vs-implementation scope-drift ревью (`controlflow-review`, слой поверх нативного Copilot code review).
+5. Набор eval-проверок на contract-drift (`evals/`).
 
-| Агент | Что ищет |
-|-------|---------|
-| **PlanAuditor-subagent** | Проблемы архитектуры, безопасности, рисков, отсутствие отката. |
-| **AssumptionVerifier-subagent** | «Миражи» — утверждения в плане, не подтверждённые кодовой базой. 17 паттернов. |
-| **ExecutabilityVerifier-subagent** | Холодный старт первых 3 задач: достаточно ли в них конкретики, чтобы исполнитель не «застрял»? |
+Каноническая запись — `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md` — прочитайте её; цитируйте; не пересказывайте дословно.
 
-### 3. Исполнители (Executors)
-
-Эти агенты **создают и изменяют файлы**. Они вызываются Orchestrator-ом по полю `executor_agent` фазы плана.
-
-| Агент | Домен |
-|-------|------|
-| **CoreImplementer-subagent** | Бэкенд-код, тесты, любая нон-UI имплементация. **Канонический backbone**. |
-| **UIImplementer-subagent** | Фронтенд: компоненты, стили, accessibility, responsive. |
-| **PlatformEngineer-subagent** | CI/CD, контейнеры, инфраструктура, deployment с rollback-ом. |
-| **TechnicalWriter-subagent** | Документация, диаграммы, parity между кодом и доками. |
-| **BrowserTester-subagent** | E2E браузерные тесты, accessibility-аудит. |
-
-### 4. Пост-ревью (Post-review)
-
-| Агент | Когда вызывается |
-|-------|------------------|
-| **CodeReviewer-subagent** | После каждой фазы исполнения; опционально на финальном этапе для LARGE-задач. |
-
-### 5. Дирижёр (Orchestrator)
-
-Единственный, кто видит всю картину и принимает решения о делегировании, ревью, эскалации.
-
-## Ключевые потоки
-
-### Поток 1. От идеи к коду
+## Ключевой поток: Idea → Code
 
 ```mermaid
 sequenceDiagram
-    participant U as User
-    participant P as Planner
-    participant O as Orchestrator
-    participant R as Reviewers
-    participant E as Executor
-    participant CR as CodeReviewer
+    participant U as Пользователь
+    participant P as "@controlflow-planner"
+    participant V as controlflow-verify
+    participant N as Нативный Copilot
+    participant R as controlflow-review
 
     U->>P: расплывчатая идея
-    P->>P: idea interview (если нужно)
-    P->>U: askQuestions при ambiguity
-    P->>P: research → design → planning
-    P->>O: handoff (plan_path)
-    O->>R: PLAN_REVIEW (по тиру)
-    R-->>O: verdicts
-    O->>U: approval gate
-    U-->>O: approved
-    loop по фазам
-        O->>E: delegate phase
-        E-->>O: execution report
-        O->>CR: review phase
-        CR-->>O: verdict
-        O->>U: phase approval
+    P->>P: Idea Interview (если расплывчато)
+    P->>P: читает repo + назначает tier + 7 категорий риска
+    P-->>U: путь артефакта плана (plans/<task-slug>-plan.md)
+    U->>V: /controlflow-verify (tier-gated фазы)
+    V-->>U: APPROVED | NEEDS_REVISION | REJECTED
+    alt APPROVED
+        U->>N: исполнение фаз (роли исполнителей назначает Planner)
+        N-->>U: имплементация
+        U->>R: /controlflow-review (scope-drift + evidence слой)
+        R-->>U: review verdict
+    else NEEDS_REVISION
+        U->>P: правка плана (re-invoke Planner)
+    else REJECTED
+        U->>P: replan с нуля
     end
-    O->>U: completion summary
 ```
 
-### Поток 2. Уточнение в середине процесса
+В пайплайне три гейта, а не state machine: Planner производит артефакт; `controlflow-verify` гейтит его до исполнения; нативный Copilot исполняет; `controlflow-review` гейтит после. Между гейтами нативный Copilot управляет процессом — включая mid-execution clarification и retry routing (см. главу 05).
 
-Когда subagent в исполнении наталкивается на ambiguity, он возвращает `NEEDS_INPUT` с `clarification_request`. Orchestrator показывает варианты пользователю через `vscode/askQuestions`, получает ответ, и **повторяет ту же задачу** с добавленным контекстом. Подробнее — [глава 05](05-orchestration.md).
+## Подсистемы
 
-### Поток 3. Сбой и retry
+| Подсистема | Расположение | Назначение |
+|------------|--------------|------------|
+| **Schemas** | `schemas/*.json` | Двадцать JSON-схем — контрактная документация + ссылки на eval-фикстуры. Anchor формата плана — `schemas/planner.plan.schema.json`. |
+| **Governance** | `governance/*.json` | Четыре файла: `runtime-policy.json`, `project-context-registry.json`, `canonical-source-matrix.json`, `rename-allowlist.json`. Без поверхностей model routing или tool grant. |
+| **Skills** | `.github/skills/controlflow-{plan,verify,review}/` + `skills/patterns/` | Три workflow skill'а (поставляются) и девятнадцать value-add паттернов (Planner-injected, ≤3 на фазу через `skill_references`). |
+| **Memory** | `NOTES.md`, `plans/artifacts/`, `/memories/repo/` | Трёхслойная модель: session / task-episodic / repo-persistent. |
+| **Plans** | `plans/` | Артефакты планов + `plans/project-context.md` (authoritative taxonomy ролей) + `plans/templates/`. |
+| **Eval harness** | `evals/` | Оффлайн-проверки качества всей системы (см. главу 14). |
 
-Каждый сбой получает `failure_classification` (transient / fixable / needs_replan / escalate). Orchestrator маршрутизирует автоматически по таблице из [главы 13](13-failure-taxonomy.md): retry, retry с подсказкой, replan, или эскалация к человеку.
-
-## Подсистемы, связывающие агентов
-
-| Подсистема | Где живёт | Зачем |
-|------------|----------|------|
-| **Schemas** | `schemas/*.json` | Контракты между агентами; основа eval-проверок. |
-| **Governance** | `governance/*.json` | Разрешения на инструменты, политики retry, маршрутизация моделей. |
-| **Skills** | `skills/patterns/*.md` | Переиспользуемые экспертные знания, выбираемые Planner-ом. |
-| **Memory** | `NOTES.md`, `plans/artifacts/`, `/memories/` | Трёхслойная модель: session / task-episodic / repo-persistent. |
-| **Eval harness** | `evals/` | Оффлайн-проверки качества всей системы. |
-
-Каждая из них — отдельная глава пособия (09–14).
+Каждая подсистема рассматривается в отдельной главе (09–14).
 
 ## Принципы архитектуры
 
-1. **Разделение планирования и исполнения**. Planner не пишет код. CoreImplementer не меняет дизайн.
-2. **Адверсариальное ревью до исполнения**. Дешевле найти проблему в плане, чем в коде.
-3. **Контракты вместо доверия**. Каждое сообщение между агентами — JSON со схемой.
-4. **Гейты человеческого одобрения**. На границах фаз и волн пользователь подтверждает продолжение.
-5. **Явная taxonomy сбоев**. Любой сбой классифицируется одним из 4 классов и маршрутизируется детерминированно.
-6. **Fail-loud, abstain-safe**. Если агент не уверен — он возвращает ABSTAIN, а не угадывает.
-7. **Минимум привилегий**. Каждый агент имеет ровно тот набор инструментов, который ему нужен (`governance/agent-grants.json`).
-8. **Структурированный текст**. Агенты не выводят raw JSON в чат — это пустая трата контекста.
+1. **Разделение планирования и исполнения.** Planner производит план и не пишет код. Нативный Copilot исполняет фазы и не меняет дизайн.
+2. **Адверсариальная верификация до исполнения.** `controlflow-verify` пытается опровергнуть план до того, как будет тронут код. Найти проблему в плане дешевле, чем в коде.
+3. **Контракты вместо доверия.** Формат плана anchored by `schemas/planner.plan.schema.json`; формы выходов ролей задокументированы в `schemas/` и проверяются eval-харнессом.
+4. **Гейты человеческого одобрения.** Пользователь подтверждает план до начала исполнения и verdict ревью до публикации изменения.
+5. **Явная taxonomy сбоев.** Каждый сбой, записанный в lifecycle-секции плана, классифицируется одним из пяти классов (`transient`, `fixable`, `needs_replan`, `escalate`, `model_unavailable`). Retry routing и parallelism — задача нативного Copilot.
+6. **Fail-loud, abstain-safe.** Когда evidence недостаточно, Planner возвращает `ABSTAIN`, а не угадывает.
+7. **Least privilege — делегировано.** Доступ к инструментам и выбор модели делегированы нативному Copilot. В slim-модели нет поверхности tool-grants (retired).
+8. **Структурированный текстовый вывод.** Планы и verdict'ы пишутся в артефакты в `plans/` и представляются как структурированный текст — никогда не raw JSON в чат.
+9. **Non-duplication.** ControlFlow не поставляет поверхность, дублирующую нативную возможность Copilot. Граница делегирования аудируется (см. `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md`).
 
-## Типичные ошибки понимания
+## Типичные заблуждения
 
-- **«Subagent — это агент, выполняющий subtask»**. Нет, это просто соглашение об имени; subagent отличается от не-subagent тем, что обычно вызывается из другого агента, а не пользователем.
-- **«PlanAuditor исполняет фазы»**. Нет, это исключительно read-only ревьюер, никогда не появляется в `executor_agent`.
-- **«Orchestrator пишет код»**. Нет, он только дирижирует. Если он начинает писать — это нарушение контракта.
-- **«Можно вызвать любой исполнитель напрямую»**. Технически да, но они спроектированы для вызова из Orchestrator-а с готовым контекстом фазы.
+- **«Имена ролей исполнителей — это поставляемые файлы агентов.»** Нет — `CodeMapper-subagent`, `CoreImplementer-subagent` и остальные семь — это _метки концептуальных ролей_, которые Planner назначает в фазах плана. Нативный Copilot исполняет их inline. Единственный поставляемый файл агента — `.github/agents/controlflow-planner.agent.md`.
+- **«`controlflow-verify` спавнит verifier-сабагентов.»** Нет — три verify-роли (`PlanAuditor-subagent`, `AssumptionVerifier-subagent`, `ExecutabilityVerifier-subagent`) — это фазы verify skill, выполняемые inline в главном контексте. Ноль сабагентов.
+- **«У ControlFlow есть Orchestrator, который диспатчит фазы.»** Orchestrator — _retired_ концептуальная роль дирижёра; он не поставляется. Planner + нативный Copilot покрывают оркестрацию. Legacy state machine, dispatch, waves и gates ушли.
+- **«Можно вызвать роль исполнителя напрямую из ControlFlow.»** Нет поверхности ControlFlow для вызова. Planner назначает роль в фазе плана; затем вы запускаете фазу через нативный Copilot (или воссоздаёте персону как native Copilot custom agent — см. `NATIVE-DELEGATION-BOUNDARY.md §5`).
+- **«Схемы валидируют inter-agent сообщения в runtime.»** В slim-модели схемы — это контрактная документация + ссылки на eval-фикстуры. Формат плана enforced во время планирования skill'ом `controlflow-plan`, conforming to `schemas/planner.plan.schema.json`, а eval-харнесс на contract-drift утверждает, что формат, taxonomy ролей и governance остаются согласованы.
 
 ## Упражнения
 
-1. **(новичок)** Нарисуйте на бумаге диаграмму всех 13 агентов, сгруппированных по 5 категориям. Сверьтесь с диаграммой выше.
-2. **(новичок)** Откройте `plans/project-context.md`, найдите таблицу «Phase Executor Agents». Совпадает ли она с разделом «Исполнители» из этой главы?
-3. **(средний)** Какие три агента **не могут** появиться в поле `executor_agent` фазы плана и почему?
-4. **(средний)** Откройте 3 агентских файла на ваш выбор. Найдите в каждом раздел `Tools → Allowed`. Заметили, что у read-only агентов набор существенно меньше?
-5. **(продвинутый)** Объясните, почему `Researcher-subagent` и `CodeMapper-subagent` могут быть точками входа, хотя в имени у них `subagent`.
+1. **(новичок)** Нарисуйте на бумаге тонкую поверхность (один агент, три skill'а, routing stub) поверх нативного Copilot. Сравните с диаграммой выше.
+2. **(новичок)** Откройте `plans/project-context.md` и найдите таблицу Phase Executor Agents. Подтвердите, что восемь имён ролей исполнителей совпадают с перечисленными в главе 03.
+3. **(средний)** Какие три роли **не могут** появиться в поле `executor_agent` фазы плана и почему? (Подсказка: это inline verify-роли, выполняемые `controlflow-verify`.)
+4. **(средний)** Откройте `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md` §1. Перечислите пять строк «Keep» — то, что Copilot не предоставляет нативно и ControlFlow оставляет.
+5. **(продвинутый)** Объясните своими словами, почему Orchestrator state machine был retired, а не slimmed. Какая нативная возможность Copilot заменила dispatch + waves + gates?
 
 ## Контрольные вопросы
 
-1. Перечислите 5 функциональных групп агентов.
-2. Какой агент является «каноническим backbone» для имплементеров?
-3. Что делает PLAN_REVIEW и кто в нём участвует?
-4. Почему Orchestrator не может одновременно быть исполнителем фазы?
-5. Какая подсистема связывает агентов через формальные контракты?
+1. Назовите поставляемую поверхность ControlFlow для VS Code Copilot (один агент, три skill'а, один stub).
+2. В чём разница между _концептуальной ролью_ и _поставляемым файлом агента_?
+3. Перечислите три гейта пайплайна по порядку.
+4. Какая подсистема anchor'ит формат плана как контракт?
+5. Почему в slim-модели в каталоге governance нет JSON-файла model routing или tool grant?
 
 ## См. также
 
-- [Глава 03 — Реестр агентов](03-agent-roster.md)
-- [Глава 05 — Оркестрация](05-orchestration.md)
+- [Глава 03 — Taxonomy ролей](03-agent-roster.md)
+- [Глава 05 — Пайплайн plan → verify → review](05-orchestration.md)
 - [Глава 07 — Ревью-пайплайн](07-review-pipeline.md)
+- [docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md](../agent-engineering/NATIVE-DELEGATION-BOUNDARY.md)
 - [plans/project-context.md](../../plans/project-context.md)

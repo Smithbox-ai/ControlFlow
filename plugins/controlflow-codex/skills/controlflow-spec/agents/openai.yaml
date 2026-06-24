@@ -1,4 +1,0 @@
-interface:
-  display_name: "ControlFlow Spec"
-  short_description: "Capture requirements before strict planning"
-  default_prompt: "Use $controlflow-spec to capture a spec artifact before planning this repository change."

@@ -1,228 +1,182 @@
-# Chapter 08 — Execution Pipeline
+# Chapter 08 — Execution + review over native Copilot
 
 ## Why this chapter
 
-Understand **what happens after plan approval**: how the Orchestrator invokes executors, what waves are, which quality gates are mandatory, and how the completion gate and optional final review work.
+Understand **what happens after `controlflow-verify` returns `APPROVED`**: native Copilot runs the plan's phases (the executor roles the Planner assigned), and `controlflow-review` gates the result. This chapter covers both halves — execution and the post-execution review — because in the slim model they are both "over native Copilot": native Copilot executes phases; `controlflow-review` layers a thin scope-drift + evidence discipline on top of native Copilot code review.
+
+The headline change: the legacy **Orchestrator-driven wave dispatch is retired**. There is no dispatch state machine, no wave scheduler, no per-phase gate event stream. The plan declares phases with per-phase acceptance criteria; native Copilot executes them; `controlflow-verify` gated before (chapter 07); `controlflow-review` gates after.
 
 ## Key Concepts
 
-- **Phase** — a plan unit with a fixed `executor_agent`.
-- **Wave** — a group of phases executed in parallel.
-- **Quality gate** — a mandatory readiness condition for a phase (tests_pass, lint_clean, schema_valid, safety_clear, human_approved_if_required).
-- **Phase task card** — compact executor handoff with allowed files, forbidden areas, validation commands, acceptance checks, budgets, and escalation rule.
-- **Resource profile** — optional execution profile such as `small_local`, read from `governance/runtime-policy.json`.
-- **Completion gate** — the final task summary.
-- **Final review gate** — optional final CodeReviewer pass for LARGE tasks.
+- **Execution** — native Copilot runs the plan's phases. The `executor_agent` per phase is a **conceptual role label** (chapter 03) native Copilot executes inline; it is not a shipped agent file.
+- **Phase** — a plan unit with a fixed `executor_agent`, concrete files, tests, acceptance criteria, quality gates, and failure expectations.
+- **Quality gates** — the plan's per-phase acceptance criteria plus the two pipeline gates: `controlflow-verify` (pre-execution) and `controlflow-review` (post-execution). The per-phase gate enum is `tests_pass` / `lint_clean` / `schema_valid` / `safety_clear` / `human_approved_if_required`.
+- **`controlflow-review`** — the post-execution gate. A **layer over** native Copilot code review, not a replacement. Adds plan-vs-implementation scope-drift comparison, evidence discipline, and proactive vulnerability/error search.
+- **Scope drift** — anything implemented but not planned, or planned but not implemented, is a review finding.
+- **Failure classification** — one of `transient`, `fixable`, `needs_replan`, `escalate`, `model_unavailable`. Recorded in plan lifecycle sections; retry routing and parallelism are native Copilot's job.
+- **Mid-execution clarification** — native Copilot surfaces ambiguity to the user directly (its native approvals / ask-questions surface). If the ambiguity changes file scope, user-visible behavior, architecture, or destructive-risk handling, re-invoke `@controlflow-planner` for a targeted replan.
+- **Orchestrator (retired)** — the conceptual conductor role. Mentioned here only as history: in the slim model, the Planner + native Copilot cover orchestration. The legacy state machine (`PLANNING` → `WAITING_APPROVAL` → `PLAN_REVIEW` → `ACTING` → `REVIEWING` → `COMPLETE`), dispatch, waves, and batch gates are gone.
 
-## Execution Flow
-
-```mermaid
-flowchart TD
-    Approved[Plan approved] --> Wave1[Wave 1\nparallel: W1 phases]
-    Wave1 -->|all phases done| Wave2[Wave 2]
-    Wave2 -->|all done| WaveN[Wave N]
-    WaveN --> CompletionGate[Completion Gate]
-    CompletionGate -->|LARGE or requested| FinalReview[Optional Final Review]
-    CompletionGate -->|TRIVIAL/SMALL/MEDIUM| Done[Done]
-    FinalReview --> Done
-
-    Wave1 --> CR1[CodeReviewer\nafter each phase]
-    Wave2 --> CR2[CodeReviewer\nafter each phase]
-    WaveN --> CRN[CodeReviewer\nafter each phase]
-```
-
-## Per-Phase Cycle
-
-For each phase the Orchestrator runs:
+## Execution + Review Pipeline
 
 ```mermaid
 sequenceDiagram
-    participant O as Orchestrator
-    participant E as Executor
-    participant CR as CodeReviewer
     participant U as User
+    participant V as controlflow-verify
+    participant N as Native Copilot
+    participant R as controlflow-review
 
-    O->>O: Pre-Phase Gate\n(verify previous phase todo is marked completed)
-    O->>O: PreFlect (4 risk classes)
-    O->>O: Resolve phase.executor_agent
-    O->>O: Build phase_task_card\n(if small_local or card path exists)
-    O->>E: delegate phase
-    E-->>O: execution report
-    O->>O: Verification Build Gate\n(build.state=PASS or independent run)
-    O->>CR: dispatch CodeReviewer
-    CR-->>O: verdict
-    alt validated_blocking_issues empty
-        O->>O: Mark todo as completed
-        O->>U: phase approval gate
-        U-->>O: approved
-    else has blocking issues
-        O->>E: revise (failure classification routing)
+    U->>V: /controlflow-verify (plan approved by Planner)
+    V-->>U: APPROVED
+    U->>N: implement phases (executor_agent roles from plan)
+    Note over N: per-phase: run steps → meet acceptance criteria → quality gates
+    N-->>U: implementation
+    U->>R: /controlflow-review
+    R->>R: read plan; delegate mechanical pass to native code review
+    R-->>U: findings + verdict (scope drift, vulnerabilities, evidence)
+    alt NEEDS_REVISION
+        U->>N: fix per findings (native Copilot)
+    else clean
+        U->>U: ship
+    end
+    alt mid-execution ambiguity changes scope
+        U->>U: re-invoke @controlflow-planner for targeted replan
     end
 ```
 
-When `resource_profile: small_local` is active, Orchestrator applies `resource_profiles.small_local` before dispatch: lower parallelism, require compact context artifacts for `SMALL+`, and send a `phase_task_card` to implementation, documentation, platform, or browser-testing executors. If the card's file or read budget is exceeded, the executor returns `NEEDS_INPUT` or `needs_replan` instead of widening scope silently.
+The pipeline has two gates around execution: verify before, review after. Between gates, native Copilot runs the show.
 
-## Wave-Aware Execution
+## Execution — Native Copilot Runs the Phases
 
-**Rules:**
-1. Phases are grouped by `wave` (ascending).
-2. Within a wave, phases **may** execute in parallel (up to `max_parallel_agents`, default 10, or the active resource profile cap).
-3. Wave N+1 waits for **all** phases of wave N to complete.
-4. If a wave phase fails — failure classification routing decides: retry / replan / escalate.
+On `APPROVED`, the user points native Copilot at the plan artifact. Native Copilot runs the phases:
 
-**Example:**
+- The `executor_agent` per phase is a **conceptual role label** the Planner assigned (`CoreImplementer-subagent`, `UIImplementer-subagent`, `PlatformEngineer-subagent`, `TechnicalWriter-subagent`, `BrowserTester-subagent`, `CodeMapper-subagent`, `Researcher-subagent`, `CodeReviewer-subagent`). Native Copilot executes the phase inline using the role's discipline — the value-add patterns the Planner injected via `skill_references` (≤3 per phase, from `skills/patterns/`).
+- Each phase's `steps` are numbered prose with **no code blocks**. Verification commands must be concrete enough to run as-is (phase 3 of verify checked this).
+- Each phase declares `quality_gates` from the enum — these are the per-phase acceptance signals native Copilot must satisfy before the phase is done.
+- Each phase declares `acceptance_criteria` — at least one measurable observable outcome. These are what `controlflow-review` later compares the diff against.
 
-| Phase | Wave | Dependencies |
-|-------|------|-------------|
-| 1: research backend | 1 | — |
-| 2: research frontend | 1 | — |
-| 3: design API | 2 | 1 |
-| 4: implement endpoint | 3 | 3 |
-| 5: implement UI | 3 | 2, 3 |
-| 6: e2e tests | 4 | 4, 5 |
+Native Copilot owns retry routing, retry budgets, and parallelism. ControlFlow does not ship a dispatch state machine, a wave scheduler, or a retry table — those are retired (the legacy Orchestrator surface). If a phase fails, the failure is classified per the taxonomy below, and native Copilot routes the retry.
 
-Wave 1 — phases 1, 2 in parallel. Wave 3 — phases 4, 5 in parallel. Total: 4 waves for 6 phases.
+### Recreating a Specialized Persona as a Native Copilot Custom Agent
 
-## executor_agent — Required Field
-
-Each phase contains `executor_agent` from an enum (8 values):
-
-- CodeMapper-subagent
-- Researcher-subagent
-- CoreImplementer-subagent
-- UIImplementer-subagent
-- PlatformEngineer-subagent
-- TechnicalWriter-subagent
-- BrowserTester-subagent
-- CodeReviewer-subagent
-
-**Hard rule:** The Orchestrator **must not infer** `executor_agent` heuristically. If the field is missing from a legacy plan → REPLAN via Planner.
+The `executor_agent` names are conceptual labels, not shipped files. If you want a specialized persona back as a shipped agent — e.g. a dedicated `BrowserTester` or `UIImplementer` — recreate it as a **native Copilot custom agent** under `.github/agents/` and have `controlflow-planner` assign it as a phase `executor_agent`. The recipe and worked examples are in `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md §5`. The three verify roles are **not** recreated as agents — they are the inline phases of `controlflow-verify`.
 
 ## Quality Gates
 
-Each phase declares `quality_gates` from an enum:
+"Quality gates" in the slim model means two things together:
+
+1. **The plan's per-phase acceptance criteria + the `quality_gates` enum** — what native Copilot must satisfy to call a phase done. The enum:
 
 | Gate | Meaning |
 |------|---------|
 | `tests_pass` | All tests in the target scope pass. |
-| `lint_clean` | Lint is clean (`read/problems` is empty). |
+| `lint_clean` | Lint is clean. |
 | `schema_valid` | All produced schemas are valid. |
-| `safety_clear` | PreFlect revealed no unresolved risk. |
-| `human_approved_if_required` | If approval is required — it has been obtained. |
+| `safety_clear` | No unresolved safety risk for the phase. |
+| `human_approved_if_required` | If approval is required, it has been obtained. |
 
-**Verification Build Gate (mandatory):** after every phase, the Orchestrator either uses `build.state: PASS` from the execution report or **independently runs the build**. Accepting a completion claim without verification is a contract violation.
+2. **The two pipeline gates** — `controlflow-verify` (pre-execution, chapter 07) and `controlflow-review` (post-execution, this chapter).
 
-## Phase Verification Checklist
+The legacy **Verification Build Gate** — a separate Orchestrator-owned check that re-ran the build after every phase — is retired. Native Copilot verifies per-phase completion itself; `controlflow-review` is the post-execution gate that catches what native review misses.
 
-Before marking a phase as complete, the Orchestrator **must** verify:
+## Review — `controlflow-review` (post-execution, layered over native)
 
-1. ✅ Tests passed — evidence from the subagent report or an independent run.
-2. ✅ Build passed — `build.state: PASS`.
-3. ✅ Lint/problems are clean.
-4. ✅ Review status is `APPROVED` from CodeReviewer.
-5. ✅ Phase todo item is marked completed via `#todos`.
+`/controlflow-review` runs after implementation. It is a **layer over** native Copilot code review, not a replacement. The mechanical / style pass (lint-class issues, formatting, rote pattern checks) belongs to native Copilot code review and `security-review`. ControlFlow adds only what native review does not:
 
-If **any** check fails → Failure Classification Handling → do not mark complete.
+- **Plan comparison** — does the diff match the plan's phases, files, and acceptance criteria? Flag scope drift, missing phases, extra-phased work, and unmet acceptance criteria.
+- **Proactive vulnerability / error search** — trace new data flows to their endpoints; check validation at each boundary; look for error paths the implementation skipped (absence mirages A11–A13); check for missing migrations or rollback (A16); check for missing security boundaries on sensitive operations (A17); where the plan declared failure expectations, confirm the implementation handles them.
+- **Evidence discipline** — label each finding with severity, confidence, file, line, user impact, and validation method. Distinguish **validated blockers** from **hypotheses**; state validation gaps explicitly.
 
-## CodeReviewer and validated_blocking_issues
+Findings are presented first, ordered by severity. If there are none, the skill says so and names residual risks or test gaps. Soft labels (`Nit`, `Optional`, `FYI`) come only **after** blocking findings — they are not severity levels and must not hide a correctness, security, or test-coverage defect.
 
-CodeReviewer is mandatory on **all tiers** (including TRIVIAL).
+### Review Axes
 
-**Key idea:** The Orchestrator blocks continuation **only** on `validated_blocking_issues`, not on raw CRITICAL/MAJOR findings. This is because not every CRITICAL finding is confirmed as applicable in the specific context of the phase.
+Prioritize correctness/functionality, security, data integrity, regression risk, and contract drift **before** style. Maintainability / style comments should support a behavioral risk, not bury one — and the mechanical side of style is native Copilot code review's job.
 
-If `validated_blocking_issues` is empty — the phase proceeds even with unresolved INFO/WARNING items.
+### Change Size Caution
 
-## Failure Classification Handling
+Large reviews lose signal. When a diff is much larger than roughly 100 changed lines or mixes unrelated concerns, `controlflow-review` asks for a split or reviews by file area and risk axis with an explicit confidence limit.
 
-If a subagent returns a failure (see [Chapter 13](13-failure-taxonomy.md)):
+### Review-Specific Failure Checks
 
-| Classification | Action | Limit |
-|----------------|--------|-------|
-| transient | Retry the same task | 3 |
-| fixable | Retry with a hint | 1 |
-| needs_replan | Targeted phase replan via Planner | 1 |
-| escalate | STOP → user | 0 |
+- Do not lead with nits before behavior checks.
+- Do not mark missing tests as `FYI` when the untested behavior can regress.
+- Do not state a blocker without validation evidence or an explicit unconfirmed-risk label.
+- Do not duplicate native Copilot code review's mechanical pass — delegate it.
+- Do not skip the plan comparison when a plan artifact exists.
 
-**Reliability policy:**
-- Cumulative budget per phase = 5 retries.
-- 3 identical failures in a row → escalate (regardless of class).
-- ≥2 transient failures in one wave → 50% parallelism for subsequent waves.
-- Empty response, timeout, HTTP 429 — silent failure, **not** counted as success.
+## Failure Classification During Execution
 
-## Batch Approval
+Every failure recorded in a plan lifecycle section (`## Progress`, `## Discoveries`, `## Idempotence & Recovery`) receives a `failure_classification`:
 
-To avoid approval fatigue: one approval message **per wave**, not per phase.
+| Class | Meaning | Who routes |
+|-------|---------|------------|
+| `transient` | Flaky test, network timeout, temporary tool unavailability; retry with identical scope | Native Copilot |
+| `fixable` | Small correctable issue (typo, missing import, config value); retry with fix hint | Native Copilot |
+| `needs_replan` | Architecture mismatch or missing dependency; delegate to the Planner for a targeted replan | Re-invoke `@controlflow-planner` |
+| `escalate` | Security vulnerability, data integrity risk, unresolvable blocker; stop and await human approval | Native Copilot stops; user decides |
+| `model_unavailable` | The routed/primary model is unavailable or unreachable; retry with a native Copilot model substitution, then escalate on exhaustion | Native Copilot |
 
-Template:
-> "Wave 2: 3 phases, agents: [CoreImplementer, UIImplementer, TechnicalWriter]. Approve all? (y/n/details)"
+Retry routing, retry budgets, and parallelism are native Copilot's job, not ControlFlow's. `needs_replan` is the one class that re-enters the ControlFlow pipeline — it re-invokes the Planner for a targeted replan, then re-runs `controlflow-verify` before execution resumes. See chapter 13 for the full taxonomy.
 
-**Exception:** if the wave contains destructive/production operations — per-phase approval for that wave.
+## Mid-Execution Clarification
 
-## Completion Gate
+Native Copilot handles mid-execution ambiguity. If a phase needs clarification, native Copilot surfaces it to the user directly (its native approvals / ask-questions surface) and continues. There is no `NEEDS_INPUT` routing table — that was an Orchestrator concept.
 
-After all phases:
+If the ambiguity changes **file scope, user-visible behavior, architecture, or destructive-risk handling**, the user re-invokes `@controlflow-planner` for a targeted replan rather than resolving it inline. The Planner reads the existing artifact in `plans/`, updates the affected phases, and re-runs `controlflow-verify` before execution resumes.
 
-1. Cross-phase consistency review.
-2. Verify all phase todo items are marked completed.
-3. If Final Review Gate is active → run it.
-4. Append session-outcome entry to `plans/session-outcomes.md` (using [`plans/templates/session-outcome-template.md`](../../plans/templates/session-outcome-template.md)).
-5. Produce completion summary for the user.
+## Completion
 
-**Order matters:** the session-outcome is written **before** the completion summary, so the user sees the summary after telemetry is flushed.
+After all phases and `controlflow-review` return clean:
 
-## Optional Final Review Gate
+1. Verify all phase acceptance criteria are met (the review already compared the diff to the plan).
+2. Append a session-outcome entry to `plans/session-outcomes.md` using `plans/templates/session-outcome-template.md`.
+3. Produce a completion summary for the user.
 
-Activates per rules in `governance/runtime-policy.json` → `final_review_gate`:
-- `enabled_by_default: true`, or
-- `complexity_tier` is in `auto_trigger_tiers`, or
-- user explicitly requested.
-
-**Workflow:**
-1. Normalize `changed_files[]` — collect from all phase reports (mapped by agent type).
-2. Build `plan_phases_snapshot[]` — `[{phase_id, files[]}]`.
-3. Dispatch CodeReviewer with `review_scope: "final"`.
-4. If `validated_blocking_issues` (CRITICAL/MAJOR) are found:
-   - Resolve fix executor: the phase with the **highest** `phase_id` whose `files[]` contains the affected file.
-   - Dispatch that executor with targeted fix scope.
-   - Re-run CodeReviewer (final mode) — max `max_fix_cycles` = 1.
-   - If still blocked → escalate to user.
-   - **CodeReviewer NEVER owns the fix cycle.**
-5. If clean → advisory log to `plans/artifacts/<task>/final_review.md`, continue.
+The session-outcome is written **before** the completion summary, so the user sees the summary after telemetry is flushed.
 
 ## Commit Conventions
 
-- Prefix from enum: `fix`, `feat`, `chore`, `test`, `refactor`.
+- Prefix from the enum: `fix`, `feat`, `chore`, `test`, `refactor`.
 - **Do not** mention plan names or phase numbers in commit messages.
+
+## Why the Orchestrator-Driven Wave Dispatch Was Retired
+
+A brief history, since the question is common. The legacy Orchestrator owned a lifecycle, emitted gate events, dispatched phases in waves, ran a per-phase CodeReviewer, and routed failures per a retry budget. As of February 2026, Copilot does all of this natively: subagent dispatch + parallelism is GA default-on, `/plan` mode is GA, agentic code review is GA, and approvals + custom instructions are GA.
+
+Keeping a ControlFlow dispatch state machine on top of those would duplicate native capabilities — exactly what the slim model forbids (see `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md`). So the Orchestrator is retired as a shipped agent. What ControlFlow keeps is what Copilot does not provide natively: the plan _format_, the adversarial _verify_ gate, the tier-gated _policy_, and the scope-drift _review_ layer. Execution itself — running phases, retrying, parallelizing — is native Copilot's job.
 
 ## Common Mistakes
 
-- **Accepting a completion claim without verification.** Forbidden — always check the build.
-- **Skipping CodeReviewer on TRIVIAL.** Mandatory on all tiers.
-- **Inferring `executor_agent`.** Forbidden — REPLAN via Planner.
-- **Marking a phase complete before updating the todo.** The Pre-Phase Gate will break on the next phase.
-- **Running phases from different waves in parallel.** Forbidden: wave N+1 waits for wave N.
-- **Giving CodeReviewer the fix.** Forbidden — fix cycles always belong to executors.
+- **Looking for the Orchestrator or the wave scheduler.** Both are retired. The plan declares phases; native Copilot executes them.
+- **Treating `controlflow-review` as a replacement for native Copilot code review.** It is a **layer over** it. Run native code review (or `security-review`) first for the mechanical pass; `controlflow-review` consumes and augments its output.
+- **Skipping `controlflow-review` on SMALL tasks.** SMALL runs review (see the tier table) — only TRIVIAL skips the pipeline.
+- **Skipping the plan comparison.** When a plan artifact exists at `plans/<task-slug>-plan.md`, the plan comparison is mandatory — scope drift is a review issue, not a style preference.
+- **Leading with nits before behavior checks.** Soft labels (`Nit`, `Optional`, `FYI`) come only after blocking findings.
+- **Expecting ControlFlow to retry, parallelize, or route failures.** Those are native Copilot's job. ControlFlow only labels failures (`needs_replan` re-enters the pipeline; the rest are native Copilot's to handle).
+- **Inferring `executor_agent` heuristically at execution time.** The Planner declares `executor_agent` per phase in the artifact; native Copilot reads it. If the field is missing from a legacy plan, re-invoke the Planner rather than guessing.
 
 ## Exercises
 
-1. **(beginner)** A plan with 5 phases: phases 1, 2 in wave 1; phase 3 in wave 2; phases 4, 5 in wave 3. How many approval prompts does the Orchestrator show in batch mode?
-2. **(beginner)** Open `schemas/planner.plan.schema.json` and find the `quality_gates` enum. List all values.
-3. **(intermediate)** What should the Orchestrator do if the phase report does not contain `build.state`?
-4. **(intermediate)** A MEDIUM-tier plan has completed. Will the final review gate activate? What must you check to answer?
-5. **(advanced)** Final review found a CRITICAL issue in `src/api/users.ts`. The file was created in phase 3 and modified in phase 5. Who does the Orchestrator delegate the fix to?
+1. **(beginner)** Open `.github/skills/controlflow-review/SKILL.md` and list the three things ControlFlow adds over native Copilot code review.
+2. **(beginner)** Open `schemas/planner.plan.schema.json` and find the `quality_gates` enum. List all five values.
+3. **(intermediate)** A phase fails with `needs_replan`. Who routes it, and what is the single ControlFlow entry point that re-enters the pipeline? What must re-run before execution resumes?
+4. **(intermediate)** A MEDIUM-tier plan has completed implementation. Which gate runs next, and what three things does it add over native Copilot code review?
+5. **(advanced)** The diff touches a file not listed in any plan phase's `files` array, and skips a migration the plan's `migration_rollback` risk row flagged. Which two `controlflow-review` findings fire, and which absence mirages (A11–A17) do they correspond to?
 
 ## Review Questions
 
-1. What does "wave 2 waits for wave 1" mean?
-2. Why must the Orchestrator not infer `executor_agent`?
-3. What are `validated_blocking_issues` and why do they matter?
-4. What 5 items are in the Phase Verification Checklist?
-5. When does CodeReviewer own a fix cycle? (hint: never)
+1. What does "execution is native Copilot's job" mean, and which retired ControlFlow surface does it replace?
+2. What are "quality gates" in the slim model (two senses)?
+3. Name the three things `controlflow-review` adds over native Copilot code review.
+4. Which failure class re-enters the ControlFlow pipeline, and how?
+5. Why was the Orchestrator-driven wave dispatch retired rather than slimmed?
 
 ## See Also
 
-- [Chapter 05 — Orchestration](05-orchestration.md)
-- [Chapter 07 — Review Pipeline](07-review-pipeline.md)
+- [Chapter 05 — The plan → verify → review pipeline](05-orchestration.md)
+- [Chapter 06 — Planning](06-planning.md)
+- [Chapter 07 — Review Pipeline (controlflow-verify)](07-review-pipeline.md)
 - [Chapter 13 — Failure Taxonomy](13-failure-taxonomy.md)
-- [Orchestrator.agent.md](../../Orchestrator.agent.md)
-- [governance/runtime-policy.json](../../governance/runtime-policy.json)
+- [.github/skills/controlflow-review/SKILL.md](../../.github/skills/controlflow-review/SKILL.md)
+- [docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md](../agent-engineering/NATIVE-DELEGATION-BOUNDARY.md)

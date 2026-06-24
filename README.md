@@ -1,11 +1,14 @@
-﻿# ControlFlow
+# ControlFlow
 
 [![CI](https://github.com/Smithbox-ai/ControlFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/Smithbox-ai/ControlFlow/actions/workflows/ci.yml)
-![Agents](https://img.shields.io/badge/agents-13-blue)
+![Surface](https://img.shields.io/badge/surface-1%20agent%20%C2%B7%203%20skills-blue)
+![Delegation](https://img.shields.io/badge/native%20delegation-zero%20duplication-brightgreen)
 ![Eval](https://img.shields.io/badge/eval-offline-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-A multi-agent orchestration system for VS Code Copilot, plus maintained Codex, Claude, and Cursor plugins. ControlFlow coordinates 13 specialized agents under deterministic **P.A.R.T contracts** (Prompt → Archive → Resources → Tools), structured text outputs, and layered reliability gates.
+A thin, non-duplicating layer over GitHub Copilot's native agent capabilities. ControlFlow ships **one agent** (`@controlflow-planner`) and **three skills** (`controlflow-plan`, `controlflow-verify`, `controlflow-review`) over native Copilot, and keeps only what Copilot does not provide natively: the schema-enforced plan format, adversarial verification, the 7-category semantic-risk taxonomy, plan-vs-implementation scope-drift review, and the contract-drift eval suite.
+
+The canonical native-vs-ControlFlow delegation boundary lives in [docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md](docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md).
 
 ---
 
@@ -15,31 +18,15 @@ A multi-agent orchestration system for VS Code Copilot, plus maintained Codex, C
   - [Contents](#contents)
   - [Why ControlFlow?](#why-controlflow)
   - [Quick Start](#quick-start)
-  - [When to Use Which Agent](#when-to-use-which-agent)
+  - [The Slim Surface](#the-slim-surface)
   - [Pipeline by Complexity](#pipeline-by-complexity)
-  - [Orchestration State Machine](#orchestration-state-machine)
-  - [Failure Routing](#failure-routing)
-  - [Agent Architecture](#agent-architecture)
-    - [Interaction diagram](#interaction-diagram)
-    - [Primary Agents](#primary-agents)
-    - [Specialized Subagents](#specialized-subagents)
   - [Evaluation Suite](#evaluation-suite)
   - [Project Structure](#project-structure)
   - [Documentation](#documentation)
   - [Installation](#installation)
-    - [Adding Custom Agents](#adding-custom-agents)
-  - [ControlFlow for Codex (Plugin)](#controlflow-for-codex-plugin)
-    - [Included Skills](#included-skills)
   - [ControlFlow for Claude Code (Plugin)](#controlflow-for-claude-code-plugin)
-    - [Installing the Plugin](#installing-the-plugin)
-    - [Skills](#skills)
-    - [Intentional Differences from VS Code](#intentional-differences-from-vs-code)
-  - [ControlFlow for Cursor](#controlflow-for-cursor)
-  - [ControlFlow for Codex Usage and Validation](#controlflow-for-codex-usage-and-validation)
-    - [Plugin Installation](#plugin-installation)
-    - [Usage](#usage)
-    - [Validating Codex Strict-Plan Artifacts](#validating-codex-strict-plan-artifacts)
-    - [Intentional Differences from the VS Code Version](#intentional-differences-from-the-vs-code-version)
+  - [ControlFlow for Codex (Plugin)](#controlflow-for-codex-plugin)
+  - [ControlFlow for Cursor (Plugin)](#controlflow-for-cursor-plugin)
   - [License](#license)
   - [Acknowledgments](#acknowledgments)
 
@@ -47,206 +34,87 @@ A multi-agent orchestration system for VS Code Copilot, plus maintained Codex, C
 
 ## Why ControlFlow?
 
-| | Single Agent | ControlFlow (13 agents) |
+Copilot now does planning, subagent dispatch, code review, skills, model selection, and approvals natively (see the [boundary doc](docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md)). ControlFlow does not duplicate any of that. It adds the five disciplines Copilot does not have:
+
+| | Copilot native | ControlFlow adds |
 | --- | --- | --- |
-| **Planning** | Agent guesses architecture on-the-fly | Planner runs structured idea interview, produces phased plan with Mermaid diagrams |
-| **Quality gates** | None | PlanAuditor + AssumptionVerifier + ExecutabilityVerifier audit before implementation |
-| **Execution** | Sequential, monolithic | Wave-based parallel execution with inter-phase contracts |
-| **Failures** | Silent or catastrophic | Classified (`transient`/`fixable`/`needs_replan`/`escalate`, plus `model_unavailable`) with bounded retry routing |
-| **Scope drift** | Common | [LLM Behavior Guidelines](skills/patterns/llm-behavior-guidelines.md) enforce surgical changes |
-| **Verification** | Manual | Offline eval suite + CodeReviewer gates every phase |
+| **Planning** | `/plan` discovery + Alignment + Design | Schema-enforced plan *format* (YAML header, 10 sections, 7-category semantic risk, Mermaid per tier) written to `plans/` |
+| **Verification** | None | Adversarial `controlflow-verify` (structural audit, mirage detection, executability cold-start) → `APPROVED` / `NEEDS_REVISION` / `REJECTED` |
+| **Review** | Agentic code review | `controlflow-review` layers plan-vs-implementation scope-drift + evidence discipline + proactive vulnerability search over native review |
+| **Workflow policy** | None | Tier-gated pipeline (`TRIVIAL` / `SMALL` / `MEDIUM` / `LARGE`) with verify-phase depth |
+| **Drift control** | None | Offline contract-drift eval suite asserts the plan format, the role taxonomy, and the governance config stay aligned across files |
+
+Execution, tool access, model selection, retries, and parallelism are delegated to native Copilot. ControlFlow keeps no shipped subagents and no dispatch state machine.
 
 ---
 
 ## Quick Start
 
+The slim surface lives at `.github/` — Copilot reads `agents/`, `skills/`, and `copilot-instructions.md` natively from there.
+
 ```bash
 # 1. Clone
 git clone https://github.com/Smithbox-ai/ControlFlow.git
 
-# 2. Copy to your VS Code prompts directory (or symlink)
-#    Windows: %APPDATA%\Code\User\prompts
-#    macOS:   ~/Library/Application Support/Code/User/prompts
-#    Linux:   ~/.config/Code/User/prompts
+# 2. Open the repo in VS Code → open Copilot Chat → switch to Agent mode
+#    → open the agents dropdown → select "controlflow-planner"
 
-# 3. Enable in VS Code settings:
-#    { "chat.customAgentInSubagent.enabled": true,
-#      "github.copilot.chat.responsesApiReasoningEffort": "high" }
+# 3. Prompt it. Example:
+#    @controlflow-planner Add a hello-world function
+#    (Selecting from the dropdown is the GA-confirmed invocation path.
+#     @controlflow-planner via @-mention also works if it surfaces in your setup.)
 
-# 4. Reload VS Code → type @Planner in Copilot Chat
+# 4. The Planner writes a schema-conforming plan to plans/<task-slug>-plan.md
+#    and points you to the artifact path (it never inlines the plan in chat).
 
 # 5. Verify evals
 cd evals && npm install && npm test
 ```
 
-> **First task?** Type `@Planner "Add OAuth login with Google"` — the system handles the rest.
+> **First task?** In Copilot Chat Agent mode, select `controlflow-planner` from the agents dropdown and prompt `Add OAuth login with Google` — the Planner runs an Idea Interview if the request is vague, then writes the plan artifact.
 >
 > **Quick project status?** Run `cd evals && npm run health` for an offline, read-only operator report (git status by surface, NOTES.md state, plans by status, latest session outcome, artifact coverage).
 
+For SMALL+ work, run `/controlflow-verify` on the plan before implementing, then `/controlflow-review` after implementation.
+
 ---
 
-## When to Use Which Agent
+## The Slim Surface
 
-| Scenario | Agent | What happens |
-| ---------- | ------- | -------------- |
-| Abstract idea or vague goal | `@Planner` | Idea interview → phased plan → Mermaid diagram |
-| Detailed task, clear requirements | `@Orchestrator` | Dispatches subagents → verification gates → phase-by-phase execution |
-| Research question | `@Researcher` | Evidence-based investigation with confidence scores |
-| Quick codebase exploration | `@CodeMapper` | Read-only discovery — files, dependencies, entry points |
+| Surface | Path | Role |
+| --- | --- | --- |
+| `@controlflow-planner` agent | `.github/agents/controlflow-planner.agent.md` | The sole shipped agent. Runs the plan skill + Idea Interview; hands execution to native Copilot. Uses the Copilot Auto model picker (no `model:` frontmatter). |
+| `controlflow-plan` skill | `.github/skills/controlflow-plan/SKILL.md` + `references/` | Produces a schema-anchored plan artifact in `plans/`. Single-sources the format from `schemas/planner.plan.schema.json` + `plans/templates/plan-document-template.md`. |
+| `controlflow-verify` skill | `.github/skills/controlflow-verify/SKILL.md` + `references/` | Inline adversarial verification (zero subagents). Tier-gated phases: structural audit, mirage detection, executability cold-start. Emits a verdict. |
+| `controlflow-review` skill | `.github/skills/controlflow-review/SKILL.md` + `references/` | Evidence-backed review layered over native Copilot code review. Adds plan-vs-implementation scope-drift comparison. |
+| Routing stub | `.github/copilot-instructions.md` | Shared policies; ties plan → verify → review together. |
 
-**Typical workflow:** `@Planner` authors a plan → you approve → `@Orchestrator` executes it with full subagent coordination, review gates, and approvals.
+The role labels in plans (`CodeMapper-subagent`, `Researcher-subagent`, `CoreImplementer-subagent`, `UIImplementer-subagent`, `PlatformEngineer-subagent`, `TechnicalWriter-subagent`, `BrowserTester-subagent`, `CodeReviewer-subagent`) and the three inline verify roles (`PlanAuditor`, `AssumptionVerifier`, `ExecutabilityVerifier`) are **conceptual roles** the Planner assigns in plan phases and native Copilot executes inline — they are not shipped agent files. See `plans/project-context.md` for the full role taxonomy, and [NATIVE-DELEGATION-BOUNDARY.md §5](docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md) for how to recreate a specialized persona as a native Copilot custom agent if you want one back.
+
+There is no `governance/model-routing.json`, `governance/tool-grants.json`, or `governance/agent-grants.json` — model selection, tool access, and subagent governance are delegated to native Copilot.
 
 ---
 
 ## Pipeline by Complexity
 
-| Tier | Scope | Review Agents | Max Iterations |
-| ------ | ------- | --------------- | ---------------- |
-| **TRIVIAL** | 1–2 files, single concern | None (CodeReviewer still runs per-phase) | — |
-| **SMALL** | 3–5 files, single domain | PlanAuditor | 2 |
-| **MEDIUM** | 6–15 files, cross-domain | PlanAuditor + AssumptionVerifier | 5 |
-| **LARGE** | 15+ files, system-wide | PlanAuditor + AssumptionVerifier + ExecutabilityVerifier | 5 |
+| Tier | Scope | Plan | Verify (inline phases) | Review |
+| --- | --- | --- | --- | --- |
+| **TRIVIAL** | 1–2 files, single concern | skip | skip | skip |
+| **SMALL** | 3–5 files, single domain | `controlflow-plan` | phase 1 (structural audit) | `controlflow-review` |
+| **MEDIUM** | 6–14 files, cross-domain | `controlflow-plan` | phases 1–2 (audit + assumption/mirage) | `controlflow-review` |
+| **LARGE** | 15+ files, system-wide | `controlflow-plan` | phases 1–3 (audit + mirage + executability cold-start) | `controlflow-review` |
 
-Any plan with an unresolved `HIGH`-impact `risk_review` entry forces the full pipeline regardless of tier.
+Any plan with an unresolved `HIGH`-impact semantic-risk entry forces `LARGE` regardless of file count. Do not begin implementation on SMALL+ work until `controlflow-verify` returns `APPROVED`.
 
-CodeReviewer still runs after each implementation, testing, documentation, or platform phase. Ordinary multi-phase waves use one user approval per wave; destructive/high-risk phases and phases that are `FAILED` or `BLOCKED` require per-phase approval. Todo completion remains per-phase.
-
----
-
-## Orchestration State Machine
-
-```mermaid
-stateDiagram-v2
-    [*] --> PLANNING
-    PLANNING --> WAITING_APPROVAL: plan ready
-    WAITING_APPROVAL --> PLAN_REVIEW: user approved
-    PLAN_REVIEW --> ACTING: audit passed
-    PLAN_REVIEW --> PLANNING: needs revision
-    WAITING_APPROVAL --> ACTING: trivial plan (skip review)
-    ACTING --> REVIEWING: phase complete
-    REVIEWING --> WAITING_APPROVAL: review / approval point
-    WAITING_APPROVAL --> ACTING: next wave or phase approved
-    WAITING_APPROVAL --> COMPLETE: all phases done
-    COMPLETE --> [*]
-```
-
-> Simplified — REJECTED transition, HIGH_RISK_APPROVAL_GATE, required PLAN_REVIEW ABSTAIN handling, and final review paths omitted for clarity. See `Orchestrator.agent.md` for the full state machine.
-
----
-
-## Failure Routing
-
-| Classification | Action | Max Retries |
-| ---------------- | -------- | ------------- |
-| `transient` | Retry same agent | 3 |
-| `fixable` | Retry with fix hint | 1 |
-| `needs_replan` | Delegate to Planner | 1 |
-| `escalate` | Stop — present to user | 0 |
-| `model_unavailable` | Retry same agent with model-substitution semantics, then escalate on exhaustion | `retry_budgets.model_unavailable_max` |
-
-When any retry budget is exhausted the phase escalates to the user with accumulated failure evidence.
-
-PlanAuditor and AssumptionVerifier intentionally exclude `transient` and may use `model_unavailable` when their assigned model is unreachable. ExecutabilityVerifier can use all five failure classifications.
-
----
-
-## Agent Architecture
-
-### Interaction diagram
-
-```mermaid
-graph TB
-    User((User))
-
-    subgraph Orchestration
-        Orchestrator[Orchestrator<br/><i>conductor & gate controller</i>]
-        Planner[Planner<br/><i>structured planning</i>]
-    end
-
-    subgraph "Adversarial Review"
-        PlanAuditor[PlanAuditor<br/><i>plan audit</i>]
-        AssumptionVerifier[AssumptionVerifier<br/><i>mirage detection</i>]
-        ExecutabilityVerifier[ExecutabilityVerifier<br/><i>executability check</i>]
-    end
-
-    subgraph Research
-        Researcher[Researcher<br/><i>evidence-first research</i>]
-        CodeMapper[CodeMapper<br/><i>codebase discovery</i>]
-    end
-
-    subgraph Implementation
-        CoreImplementer[CoreImplementer<br/><i>backend implementation</i>]
-        UIImplementer[UIImplementer<br/><i>frontend implementation</i>]
-        PlatformEngineer[PlatformEngineer<br/><i>CI/CD & infrastructure</i>]
-    end
-
-    subgraph Verification
-        CodeReviewer[CodeReviewer<br/><i>code review & safety</i>]
-        BrowserTester[BrowserTester<br/><i>scripted E2E & accessibility</i>]
-    end
-
-    subgraph Documentation
-        TechnicalWriter[TechnicalWriter<br/><i>docs & diagrams</i>]
-    end
-
-    User -->|idea / vague goal| Planner
-    User -->|detailed task| Orchestrator
-    User -->|research question| Researcher
-    User -->|codebase question| CodeMapper
-    Planner -->|structured plan| Orchestrator
-    Orchestrator -->|dispatch| Research
-    Orchestrator -->|dispatch| Implementation
-    Orchestrator -->|dispatch| Verification
-    Orchestrator -->|dispatch| Documentation
-    Orchestrator -->|audit| PlanAuditor
-    Orchestrator -->|audit| AssumptionVerifier
-    Orchestrator -->|audit| ExecutabilityVerifier
-
-    style Orchestrator fill:#4A90D9,color:#fff
-    style Planner fill:#7B68EE,color:#fff
-    style PlanAuditor fill:#E74C3C,color:#fff
-    style AssumptionVerifier fill:#E74C3C,color:#fff
-    style ExecutabilityVerifier fill:#E74C3C,color:#fff
-    style Researcher fill:#2ECC71,color:#fff
-    style CodeMapper fill:#2ECC71,color:#fff
-    style CoreImplementer fill:#F39C12,color:#fff
-    style UIImplementer fill:#F39C12,color:#fff
-    style PlatformEngineer fill:#F39C12,color:#fff
-    style CodeReviewer fill:#1ABC9C,color:#fff
-    style BrowserTester fill:#1ABC9C,color:#fff
-    style TechnicalWriter fill:#9B59B6,color:#fff
-```
-
-### Primary Agents
-
-| Agent | File | Role |
-| ------- | ------ | ------ |
-| **Orchestrator** | `Orchestrator.agent.md` | Conductor, gate controller, delegation |
-| **Planner** | `Planner.agent.md` | Structured planning, idea interviews |
-
-### Specialized Subagents
-
-| Agent | File | Role |
-| ------- | ------ | ------ |
-| **Researcher** | `Researcher-subagent.agent.md` | Evidence-first research |
-| **CodeMapper** | `CodeMapper-subagent.agent.md` | Read-only codebase discovery |
-| **CodeReviewer** | `CodeReviewer-subagent.agent.md` | Code review and safety gates |
-| **PlanAuditor** | `PlanAuditor-subagent.agent.md` | Adversarial plan audit |
-| **AssumptionVerifier** | `AssumptionVerifier-subagent.agent.md` | Assumption-fact confusion detection |
-| **ExecutabilityVerifier** | `ExecutabilityVerifier-subagent.agent.md` | Cold-start plan executability simulation |
-| **CoreImplementer** | `CoreImplementer-subagent.agent.md` | Backend implementation |
-| **UIImplementer** | `UIImplementer-subagent.agent.md` | Frontend implementation |
-| **PlatformEngineer** | `PlatformEngineer-subagent.agent.md` | CI/CD, containers, infrastructure |
-| **TechnicalWriter** | `TechnicalWriter-subagent.agent.md` | Documentation, diagrams, code-doc parity |
-| **BrowserTester** | `BrowserTester-subagent.agent.md` | Runs provided E2E/accessibility scripts or harnesses; abstains when no executable harness is supplied |
-
-VS Code Copilot's **Auto** picker is the default model selection for every agent: Auto agents omit the `model:` frontmatter line and Copilot chooses the runtime model. Deterministic/pinned selection is the opt-in override for four control-plane agents (Orchestrator, Planner, PlanAuditor, AssumptionVerifier) listed in `governance/model-routing.json` `pinned_agents`, which carry a literal `model:` line. For internal orchestrated dispatch (via `agent/runSubagent`), **ControlFlow resolves `governance/model-routing.json` at call time**; in auto mode the outer `model` is intentionally omitted so Copilot auto-selects the subagent model, while deterministic mode passes the pinned model explicitly — see [docs/agent-engineering/MODEL-ROUTING.md](docs/agent-engineering/MODEL-ROUTING.md).
+Failure classifications (`transient`, `fixable`, `needs_replan`, `escalate`, `model_unavailable`) are recorded in plan lifecycle sections; retry routing and parallelism are native Copilot's job, not ControlFlow's.
 
 ---
 
 ## Evaluation Suite
 
-`cd evals && npm test` is the canonical offline suite. It runs structural validation plus prompt-behavior, orchestration-handoff, drift, NOTES.md, archive-script, and fingerprint regression checks. No live agents, no network.
+`cd evals && npm test` is the canonical offline suite. No live agents, no network. It runs structural validation plus prompt-behavior-contract, drift-detection (including the `plans/project-context.md` ↔ `governance/project-context-registry.json` mirror and the `CLAUDE.md` ↔ plan-contract drift), NOTES.md hygiene, archive-script, fingerprint, skill-discoverability, capability-matrix, plugin-manifest-parity, and `CLAUDE.md` contract-drift checks.
+
+The cache at `evals/.cache/` may mask failures after structural edits — delete it (`rm -rf evals/.cache`) before trusting a green run.
 
 See [`evals/README.md`](evals/README.md) for pass descriptions and how to add scenarios.
 
@@ -255,92 +123,60 @@ See [`evals/README.md`](evals/README.md) for pass descriptions and how to add sc
 ## Project Structure
 
 ```text
-├── Orchestrator.agent.md          # Conductor agent
-├── Planner.agent.md               # Planning agent
-├── *-subagent.agent.md            # 11 specialized subagents
-├── .github/
-│   └── copilot-instructions.md    # Shared agent policy (loaded by all agents)
-├── schemas/                       # JSON Schema contracts
-├── docs/
-│   ├── agent-engineering/         # Governance policies and reliability gates
-│   ├── tutorial-en/               # Full English-language tutorial (19 chapters)
-│   └── tutorial-ru/               # Full Russian-language tutorial (19 chapters)
-├── governance/                    # Operational knobs and tool grants
-├── skills/                        # Reusable domain pattern library (20 patterns)
-├── evals/                         # Offline validation suite
-│   └── scenarios/                 # Eval scenario fixtures
-├── plans/                         # Plan artifacts and templates
-├── plugins/
-│   ├── controlflow-codex/         # Codex CLI plugin (10 portable skills)
-│   └── controlflow-claude-code/   # Claude Code plugin (three skills, no plugin agents, standalone)
-└── NOTES.md                       # Active objective state (repo-persistent)
+.github/
+├── agents/
+│   └── controlflow-planner.agent.md   # the sole shipped agent
+├── skills/
+│   ├── controlflow-plan/              # plan skill + references
+│   ├── controlflow-verify/            # verify skill + references
+│   └── controlflow-review/            # review skill + references
+└── copilot-instructions.md            # shared routing stub
+schemas/                               # JSON Schema contracts (planner.plan.schema.json is the immutable plan format)
+governance/                            # Slimmed: runtime-policy.json, project-context-registry.json, canonical-source-matrix.json, rename-allowlist.json
+plans/
+├── project-context.md                 # slim roster + tiers + conventions (mirrors the registry)
+└── templates/                         # plan + session-notes templates
+skills/
+├── patterns/                          # value-add domain patterns (19)
+└── index.md                           # pattern domain mapping
+docs/
+├── agent-engineering/                 # governance docs + NATIVE-DELEGATION-BOUNDARY.md
+├── tutorial-en/                        # English tutorial
+└── tutorial-ru/                       # Russian tutorial
+evals/                                 # offline validation suite
+│   └── scenarios/                     # eval scenario fixtures
+plugins/
+├── controlflow-claude-code/          # Claude Code plugin (three skills, no plugin agents, standalone)
+├── controlflow-codex/                # Codex CLI plugin (host adaptation)
+└── controlflow-cursor/               # Cursor plugin (host adaptation)
+NOTES.md                               # active objective state (repo-persistent)
 ```
 
 ---
 
 ## Documentation
 
-- **[docs/tutorial-en/](docs/tutorial-en/README.md)** — full English tutorial: architecture, agents, orchestration, planning, review pipeline, schemas, governance, skills, memory, failure taxonomy, evals, case studies, exercises, glossary, FAQ.
+- **[docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md](docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md)** — the canonical native-vs-ControlFlow delegation boundary (table + audit checklist + specialized-agent recreation guide).
+- **[docs/tutorial-en/](docs/tutorial-en/README.md)** — full English tutorial: architecture, the slim surface, planning, verify, review pipeline, schemas, governance, skills, memory, failure taxonomy, evals, case studies, exercises, glossary, FAQ.
 - **[docs/tutorial-ru/](docs/tutorial-ru/README.md)** — то же на русском языке.
 - **[docs/agent-engineering/](docs/agent-engineering/README.md)** — authoritative governance specs; see its README for the full, current index.
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** — how to add agents, schemas, eval scenarios.
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** — how to add skills, edit the planner agent, edit governance, and contribute to plugins.
 - **[CHANGELOG.md](CHANGELOG.md)** — version history.
 
 ---
 
 ## Installation
 
-> **VS Code prompts directory:**
->
-> - **Windows:** `%APPDATA%\Code\User\prompts`
-> - **macOS:** `~/Library/Application Support/Code/User/prompts`
-> - **Linux:** `~/.config/Code/User/prompts`
+The slim surface lives at `.github/` and Copilot reads it natively from a repo opened in VS Code. To use ControlFlow in **another** repository, copy the slim surface + its contracts:
 
-1. Clone this repository.
-2. Copy the entire repo contents into the prompts directory (or symlink the repo there).
-3. Enable custom agents in VS Code settings:
+1. Copy `.github/agents/`, `.github/skills/`, `.github/copilot-instructions.md` into your repo's `.github/`.
+2. Copy `schemas/`, `governance/`, `plans/templates/`, `plans/project-context.md`, `skills/`, and `evals/` if you want the contract-drift gate and pattern library.
+3. Open your repo in VS Code → Copilot Chat → Agent mode → select `controlflow-planner` from the agents dropdown.
+4. Verify evals: `cd evals && npm install && npm test`.
 
-   ```json
-   {
-     "chat.customAgentInSubagent.enabled": true,
-     "github.copilot.chat.responsesApiReasoningEffort": "high"
-   }
-   ```
+For Cursor or Codex hosts, use the host plugins below instead of copying `.github/`.
 
-4. Reload VS Code.
-5. Verify: type `@Planner` in Copilot Chat — the agent should appear in suggestions.
-6. Run evals: `cd evals && npm install && npm test`
-
-Without `.github/copilot-instructions.md` agents will not have access to shared failure classification, conventions, and governance references.
-
-### Adding Custom Agents
-
-Create a new `.agent.md` file following the P.A.R.T structure (Prompt → Archive → Resources → Tools). See [CONTRIBUTING.md](CONTRIBUTING.md) for the process documented there.
-
----
-
-## ControlFlow for Codex (Plugin)
-
-A portable adaptation of ControlFlow for [OpenAI Codex CLI](https://github.com/openai/codex), located in [`plugins/controlflow-codex/`](plugins/controlflow-codex/).
-
-The plugin brings the core ControlFlow disciplines — phased planning, pre-execution plan review, assumption verification, orchestration, evidence-backed code review, and memory hygiene — into Codex without depending on VS Code-specific tool contracts, fixed agent rosters, or `@Agent` syntax.
-
-Version `0.6.0` adds machine-checked selective parity through `plugins/controlflow-shared-source/core-portability-matrix.json`: portable workflow invariants are adopted or adapted, while model routing, tool grants, the fixed roster, session telemetry, compaction, budgets, and `model_unavailable` remain explicit divergences.
-
-### Included Skills
-
-| Skill | Analogous ControlFlow Role |
-| ----- | -------------------------- |
-| `$controlflow-router` | Entry-point dispatcher |
-| `$controlflow-spec` | Spec-before-plan capture |
-| `$controlflow-strict-workflow` | Orchestrator (full workflow entry point) |
-| `$controlflow-planning` | Planner — writes `plans/<task-slug>-plan.md` |
-| `$controlflow-plan-audit` | PlanAuditor |
-| `$controlflow-assumption-verifier` | AssumptionVerifier |
-| `$controlflow-executability-verifier` | ExecutabilityVerifier |
-| `$controlflow-orchestration` | Orchestrator (execution-only path) |
-| `$controlflow-review` | CodeReviewer |
-| `$controlflow-memory-hygiene` | Memory hygiene |
+Without `.github/copilot-instructions.md` the skills lose the shared routing stub (failure classification, conventions, governance references) — keep it.
 
 ---
 
@@ -348,7 +184,7 @@ Version `0.6.0` adds machine-checked selective parity through `plugins/controlfl
 
 A lightweight, standalone adaptation of ControlFlow for [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code), located in [`plugins/controlflow-claude-code/`](plugins/controlflow-claude-code/).
 
-Version `0.2.0` is **three skills, zero plugin agents** — it produces high-quality plans in the shared ControlFlow plan format, verifies them inline with adversarial framing, and reviews code as a thin layer over Claude Code's native toolset. It does not duplicate or shadow native `/code-review`, `Explore`, `Plan`, or the `code-reviewer` subagent. The plugin is hand-maintained and intentionally **not** generated by the shared-source plugin generator (Codex and Cursor remain generator-managed).
+Version `1.0.0` is **three skills, zero plugin agents** — it produces high-quality plans in the shared ControlFlow plan format, verifies them inline with adversarial framing, and reviews code as a thin layer over the host's native toolset (VS Code Copilot Chat primary; Claude Code, Codex, and Cursor mirrors shipped as plugins). It does not duplicate or shadow native `/code-review`, `Explore`, `Plan`, or the `code-reviewer` subagent. The Claude Code plugin is hand-maintained and intentionally **not** generated by the shared-source plugin generator; the Codex and Cursor plugins are regenerated from `.github/skills/` via `plugins/controlflow-shared-source/`.
 
 ### Installing the Plugin
 
@@ -386,116 +222,24 @@ cd plugins/controlflow-claude-code && claude plugin validate .
 | Skill | Purpose |
 | ----- | ------- |
 | `/controlflow-claude-code:controlflow-plan` | Generate a plan in the shared ControlFlow format → `plans/<task-slug>-plan.md` |
-| `/controlflow-claude-code:controlflow-verify` | Inline adversarial pre-execution verification (zero subagents) → APPROVED / NEEDS_REVISION / REJECTED |
+| `/controlflow-claude-code:controlflow-verify` | Inline adversarial pre-execution verification (zero subagents) → `APPROVED` / `NEEDS_REVISION` / `REJECTED` |
 | `/controlflow-claude-code:controlflow-review` | Evidence-backed review layered over native `/code-review`, with plan-vs-implementation scope-drift comparison |
 
-Typical flow: `controlflow-plan` → `controlflow-verify` (must return APPROVED) → implement → `controlflow-review`.
-
-### Intentional Differences from VS Code
-
-- **Three skills, zero plugin agents:** Planning, verification, and review are skills that run inline in the main context. There are no plugin subagents — verification is adversarial-by-construction instead of relying on isolated verifier contexts.
-- **Native toolset coexistence:** ControlFlow does not override Claude Code native tools. Use native `/code-review`, `security-review`, `Explore`, `Plan`, and the `code-reviewer` subagent directly when they fit; ControlFlow adds plan-format discipline, adversarial verification, and evidence-backed review on top.
-- **Tier-gated workflow:** `TRIVIAL` → skip; `SMALL` → plan + verify phase 1 + review; `MEDIUM` → plan + verify phases 1–2 + review; `LARGE` → plan + verify phases 1–3 + review. Any unresolved HIGH-impact semantic risk forces LARGE.
+Typical flow: `controlflow-plan` → `controlflow-verify` (must return `APPROVED`) → implement → `controlflow-review`.
 
 See [`plugins/controlflow-claude-code/README.md`](plugins/controlflow-claude-code/README.md) and [`plugins/controlflow-claude-code/USAGE.md`](plugins/controlflow-claude-code/USAGE.md) for full documentation.
 
-## ControlFlow for Cursor
+---
 
-ControlFlow ships a **Cursor plugin** (level 3 integration): Project Rules, workflow Skills, and 11 project Subagents — approximating the VS Code 13-agent system without `agent/runSubagent`.
+## ControlFlow for Codex (Plugin)
 
-| Surface | Location | Purpose |
-| ------- | -------- | ------- |
-| Project Rules | [`.cursor/rules/`](.cursor/rules/) | Conventions, orchestration discipline, eval gate |
-| Skills | [`.cursor/skills/`](.cursor/skills/) | Planner/Orchestrator workflow (`controlflow-strict-workflow`, planning, orchestration, review) |
-| Subagents | [`.cursor/agents/`](.cursor/agents/) | Isolated audit, research, implementer roles |
-| Plugin package | [`plugins/controlflow-cursor/`](plugins/controlflow-cursor/) | Install into other repositories |
+A portable adaptation of ControlFlow for [OpenAI Codex CLI](https://github.com/openai/codex), located in [`plugins/controlflow-codex/`](plugins/controlflow-codex/). The Codex plugin is a host adaptation generated from the shared source; it is being aligned to the slim canonical `.github/` surface. See [`plugins/controlflow-codex/README.md`](plugins/controlflow-codex/README.md) and [`plugins/controlflow-codex/USAGE.md`](plugins/controlflow-codex/USAGE.md) for the current skill catalog, installation, and the strict-plan artifact validator.
 
-### Quick start (this repo)
+---
 
-Open the project in Cursor (Agent mode). No extra install required.
+## ControlFlow for Cursor (Plugin)
 
-```text
-Follow the controlflow-strict-workflow skill. Task: <your goal>. Save the plan to plans/<task-slug>-plan.md.
-```
-
-### Install into another repository
-
-```powershell
-powershell -ExecutionPolicy Bypass -File plugins/controlflow-cursor/scripts/install-project.ps1 -TargetRepo C:\path\to\your-app
-```
-
-### What Cursor does and does not do
-
-- **Does:** Tiered plan → review → phased execution → review; artifacts under `plans/`; delegation via `Task` when available.
-- **Does not:** `@Planner` / `@Orchestrator`, VS Code `runSubagent`, or deterministic model-routing enforcement.
-
-See [docs/agent-engineering/CURSOR-SUPPORT.md](docs/agent-engineering/CURSOR-SUPPORT.md) and [plugins/controlflow-cursor/USAGE.md](plugins/controlflow-cursor/USAGE.md).
-
-## ControlFlow for Codex Usage and Validation
-
-### Plugin Installation
-
-From the repository root:
-
-```powershell
-# Windows — installs to ~/plugins/controlflow-codex/ and registers in ~/.agents/plugins/marketplace.json
-powershell -ExecutionPolicy Bypass -File plugins/controlflow-codex/scripts/install-home-local.ps1
-
-# Re-install (replace existing)
-powershell -ExecutionPolicy Bypass -File plugins/controlflow-codex/scripts/install-home-local.ps1 -Force
-```
-
-After installation, the plugin is available in Codex as `$controlflow-*` skills.
-
-### Usage
-
-Recommended entry point for any non-trivial task:
-
-```text
-Use $controlflow-strict-workflow to handle this repository task from plan through execution.
-```
-
-For individual steps:
-
-```text
-# Write a strict plan artifact
-Use $controlflow-planning to write a plan in plans/ for this task.
-
-# Audit an existing plan before coding
-Use $controlflow-plan-audit to review plans/my-task-plan.md.
-
-# Check for hidden assumptions
-Use $controlflow-assumption-verifier to find mirages in plans/my-task-plan.md.
-
-# Execute an approved plan in phases
-Use $controlflow-orchestration to execute plans/my-task-plan.md.
-
-# Review completed implementation
-Use $controlflow-review to review the completed implementation.
-```
-
-See [`plugins/controlflow-codex/USAGE.md`](plugins/controlflow-codex/USAGE.md) for the full prompt catalog and [`plugins/controlflow-codex/README.md`](plugins/controlflow-codex/README.md) for detailed documentation.
-
-### Validating Codex Strict-Plan Artifacts
-
-```powershell
-powershell -ExecutionPolicy Bypass -File plugins/controlflow-codex/scripts/validate-strict-artifacts.ps1 `
-  -RepoRoot . `
-  -PlanPath plans/my-task-plan.md `
-  -StrictReviewByTier
-```
-
-The `validate-strict-artifacts.ps1` script validates **Codex strict-plan artifacts only**. Do not use it for core VS Code plans. It enforces the mandatory lifecycle sections (`## Progress`, `## Discoveries`, `## Decision Log`, `## Outcomes`, `## Idempotence & Recovery`) in exact order. `-StrictReviewByTier` derives required review artifacts from tier and applicable unresolved `HIGH` risk; the existing `-Require*` switches remain additive compatibility controls.
-
-### Intentional Differences from the VS Code Version
-
-- Symphony daemon/runtime, Linear workflow, and Gem Team multi-plugin packaging were NOT imported.
-
-- No `@Agent` syntax or fixed subagent roster.
-- No `agent/runSubagent` dispatch or `governance/model-routing.json` — model selection is Codex's responsibility.
-- No VS Code-specific tool surfaces (`vscode/askQuestions`, `read/problems`, etc.).
-- Plan artifact structure (`plans/<task-slug>-plan.md`) and review artifact paths (`plans/artifacts/<task-slug>/`) are identical to the main project.
-- Skills use `update_plan` and local shell inspection rather than schema-driven chat payloads.
+ControlFlow ships a **Cursor plugin** (Project Rules, workflow Skills, and agents) at [`plugins/controlflow-cursor/`](plugins/controlflow-cursor/). Cursor does not support `@controlflow-planner` or VS Code `runSubagent`; the Cursor plugin approximates the slim flow with Cursor's native surfaces. See [`plugins/controlflow-cursor/README.md`](plugins/controlflow-cursor/README.md) and the install script for the current surface and quick start.
 
 ---
 

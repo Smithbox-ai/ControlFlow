@@ -23,4 +23,5 @@ Mark these as inference, not as verified facts.
 
 ## Rule
 
-If you cannot point to the file, line, command output, or a precise reasoning path, downgrade the finding or omit it.
+If you cannot point to the file, line, command output, or a precise reasoning path,
+downgrade the finding or omit it.

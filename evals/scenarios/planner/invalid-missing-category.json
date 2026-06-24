@@ -73,7 +73,7 @@
   "success_criteria": ["Endpoint returns JWT on valid credentials"],
   "complexity_tier": "SMALL",
   "handoff": {
-    "target_agent": "Orchestrator",
-    "prompt": "Execute phases as planned."
+    "target_agent": "controlflow-verify",
+    "prompt": "Review this plan before execution."
   }
 }

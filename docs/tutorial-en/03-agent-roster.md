@@ -1,276 +1,226 @@
-# Chapter 03 — Agent Roster
+# Chapter 03 — Role Taxonomy
 
 ## Why this chapter
 
-Provide a **card for each of the 13 agents**: role, inputs, outputs, typical scenarios, output schema, and key constraints. After this chapter you will be able to say immediately, for any task: "this needs such-and-such agent, because…".
+Provide a **card for each conceptual role** in the ControlFlow pipeline: what it does, when the Planner assigns it, and how native Copilot executes it. After this chapter you will be able to say, for any task: "the Planner will assign this role, because…" — and you will understand that none of these roles is a shipped agent file.
+
+This is a _taxonomy_, not a roster of shipped agents. The slim model ships one agent (`@controlflow-planner`) and three skills. The names below are conceptual labels the Planner writes into the `executor_agent` field of a plan phase, or the labels `controlflow-verify` uses for its three inline phases. Execution is native Copilot's job.
 
 ## Summary Table
 
-| # | Agent | Group | Output Schema | Tools | Invoked By |
-|---|-------|-------|--------------|-------|------------|
-| 1 | Orchestrator | Conductor | `orchestrator.gate-event.schema.json` | Coordination | User |
-| 2 | Planner | Planning | `planner.plan.schema.json` | Read+search+ask | User |
-| 3 | CodeMapper-subagent | Discovery | `code-mapper.discovery.schema.json` | Read-only (5) | All entry points |
-| 4 | Researcher-subagent | Research | `researcher.research-findings.schema.json` | Read+fetch (6) | Orchestrator, Planner |
-| 5 | PlanAuditor-subagent | Plan Review | `plan-auditor.plan-audit.schema.json` | Read-only (7) | Orchestrator |
-| 6 | AssumptionVerifier-subagent | Plan Review | `assumption-verifier.plan-audit.schema.json` | Read-only (6) | Orchestrator |
-| 7 | ExecutabilityVerifier-subagent | Plan Review | `executability-verifier.execution-report.schema.json` | Read-only (5) | Orchestrator |
-| 8 | CoreImplementer-subagent | Execution | `core-implementer.execution-report.schema.json` | Full impl (11) | Orchestrator |
-| 9 | UIImplementer-subagent | Execution | `ui-implementer.execution-report.schema.json` | Full impl (10) | Orchestrator |
-| 10 | PlatformEngineer-subagent | Execution | `platform-engineer.execution-report.schema.json` | Full impl (10) | Orchestrator |
-| 11 | TechnicalWriter-subagent | Execution | `technical-writer.execution-report.schema.json` | Edit+search (6) | Orchestrator |
-| 12 | BrowserTester-subagent | Execution | `browser-tester.execution-report.schema.json` | Search+edit (6) | Orchestrator |
-| 13 | CodeReviewer-subagent | Post-Review | `code-reviewer.verdict.schema.json` | Search+run (6) | Orchestrator |
+### Phase Executor Roles (8) — the `executor_agent` enum
 
----
+The `executor_agent` field in a plan phase must use one of these exact names. The enum is enforced by `schemas/planner.plan.schema.json` and mirrored in `plans/project-context.md` and `governance/project-context-registry.json`.
 
-## Agent Cards
+| # | Role | What it does | Model Routing Role (conceptual) |
+|---|------|--------------|---------------------------------|
+| 1 | `CodeMapper-subagent` | Read-only codebase exploration, file mapping | `fast-readonly` |
+| 2 | `Researcher-subagent` | Research & evidence with citations | `research-capable` |
+| 3 | `CoreImplementer-subagent` | Backend implementation — code, tests, refactoring. Canonical backbone. | `capable-implementer` |
+| 4 | `UIImplementer-subagent` | UI implementation — components, styling, accessibility | `ui-implementer` |
+| 5 | `PlatformEngineer-subagent` | Infrastructure — CI/CD, containers, deployment | `capable-implementer` |
+| 6 | `TechnicalWriter-subagent` | Documentation, diagrams, code–doc parity | `documentation` |
+| 7 | `BrowserTester-subagent` | E2E browser tests, accessibility audits | `browser-testing` |
+| 8 | `CodeReviewer-subagent` | Post-implementation review (the review-role persona; `controlflow-review` layers this over native code review) | `capable-reviewer` |
 
-### 1. Orchestrator
+### Inline Verify Roles (3) — performed by `controlflow-verify`, never `executor_agent`
 
-**File:** [Orchestrator.agent.md](../../Orchestrator.agent.md)
-**Group:** Conductor
-**When to invoke:** When you have a concrete task with clear requirements or a ready plan from Planner.
+These three names label the three phases of the `controlflow-verify` skill. They are strictly read-only and **must not** appear as `executor_agent` values in plan phases.
 
-**What it does:**
-- Manages the lifecycle `PLANNING → WAITING_APPROVAL → PLAN_REVIEW → ACTING → REVIEWING → COMPLETE`.
-- Delegates phases to executor agents via the `executor_agent` field.
-- Conducts the PLAN_REVIEW pipeline (PlanAuditor, AssumptionVerifier, ExecutabilityVerifier).
-- Routes failures via the taxonomy (transient/fixable/needs_replan/escalate).
-- Escalates to the user via approval gates at phase and wave boundaries.
+| # | Role | Verify phase | What it looks for | Model Routing Role (conceptual) |
+|---|------|-------------|--------------------|---------------------------------|
+| 9 | `PlanAuditor-subagent` | Phase 1 — structural audit | Schema/template conformance; architecture, security, rollback, dependency conflicts | `capable-reviewer` |
+| 10 | `AssumptionVerifier-subagent` | Phase 2 — mirage detection | Plan claims not supported by the codebase (the mirage taxonomy P1–P10, A11–A17) | `capable-reviewer` |
+| 11 | `ExecutabilityVerifier-subagent` | Phase 3 — executability cold-start | Can a fresh executor start Phase 1 from the plan alone, without asking the user? | `review-readonly` |
 
-**What it does NOT do:**
-- Does not write code directly (when a suitable executor is available).
-- Does not skip gates for speed.
-- Does not delegate to agents outside `plans/project-context.md`.
+### Non-Executor Roles (2)
 
-**Typical output:** Structured text with Status / Decision / Confidence / Requires Human Approval / Reason / Next Action. Contract: `orchestrator.gate-event.schema.json`.
+| Role | Status | Notes |
+|------|--------|-------|
+| `Orchestrator` | **Retired** — conceptual conductor only | Mentioned historically. No shipped agent in the slim model. The Planner + native Copilot cover orchestration. The legacy state machine, dispatch, waves, and gates are gone. |
+| `Planner` | Shipped as `@controlflow-planner` | The sole shipped entry point. Produces plans; assigns `executor_agent` per phase; hands execution to native Copilot. |
 
----
+**Single source of truth:** the tables above mirror `governance/project-context-registry.json` and `plans/project-context.md`. The Pass 14 drift check (`validateProjectContextRegistryMirror`) verifies them row-for-row. Do not hand-edit these tables independently of the registry.
 
-### 2. Planner
+## Role Cards — Phase Executors
 
-**File:** [Planner.agent.md](../../Planner.agent.md)
-**Group:** Planning
-**When to invoke:** The task is vague, a plan is needed, or decomposition is required.
+For each role: what it does, when the Planner assigns it, and the fact of execution being native Copilot.
 
-**What it does:**
-- Runs an **idea interview** for vague tasks.
-- Applies a **clarification gate** (5 classes).
-- Performs a **semantic risk review** (7 categories).
-- Classifies by **complexity tier** (TRIVIAL/SMALL/MEDIUM/LARGE).
-- Selects ≤3 **skills** per phase.
-- Delegates **research** (Researcher, CodeMapper) when needed.
-- Produces **design** and **phase decomposition** (3–10 phases).
-- Hands off the plan to Orchestrator.
+### 1. CodeMapper-subagent
 
-**What it does NOT do:** does not write code, does not invoke executors, does not invoke reviewers.
+**Role:** Read-only discovery. "Where is the logic for X?", "Who uses function Y?", "Which files belong to subsystem Z?"
 
-**Typical output:** plan conforming to `planner.plan.schema.json`, saved to `plans/<task>-plan.md`.
+**When the Planner assigns it:** A phase needs codebase exploration before implementation can be planned concretely. Often the first phase of a MEDIUM/LARGE plan.
 
----
+**Execution:** Native Copilot runs the phase inline (read + search tools). The role's discipline lives in `skills/patterns/completeness-traceability.md` and `skills/patterns/code-simplification.md`; the Planner may inject ≤3 patterns via `skill_references`.
 
-### 3. CodeMapper-subagent
+**Output shape (contract doc):** `schemas/code-mapper.discovery.schema.json` — file list with types and annotations.
 
-**File:** [CodeMapper-subagent.agent.md](../../CodeMapper-subagent.agent.md)
-**Group:** Discovery
-**When to invoke:** "Where is the logic for X?", "Who uses function Y?", "Which files belong to subsystem Z?"
+### 2. Researcher-subagent
 
-**What it does:** Read-only exploration of the repository structure, returning a list of relevant files, usages, and dependencies.
+**Role:** Research & evidence. "How does X work in library Y?", "What approaches exist for Z?" Distinct from CodeMapper: CodeMapper finds files; Researcher explains with cited evidence.
 
-**Tools (5):** read and search only.
+**When the Planner assigns it:** A phase needs external research or evidence-grounded explanation the codebase alone cannot answer.
 
-**Typical output:** `code-mapper.discovery.schema.json` — file list with types and annotations.
+**Execution:** Native Copilot (read + fetch). Discipline in `skills/patterns/source-grounding.md` and `skills/patterns/completeness-traceability.md`.
 
----
+**Output shape:** `schemas/researcher.research-findings.schema.json` — structured findings with citations.
 
-### 4. Researcher-subagent
+### 3. CoreImplementer-subagent
 
-**File:** [Researcher-subagent.agent.md](../../Researcher-subagent.agent.md)
-**Group:** Research
-**When to invoke:** A deep, evidence-based answer is needed. For example: "How does X work in library Y?", "What approaches exist for Z?"
+**Role:** Backend implementation — code, tests, refactoring. The **canonical backbone** for executors. UIImplementer and PlatformEngineer extend its rhythm with domain-specific gates (see `docs/agent-engineering/MIGRATION-CORE-FIRST.md`).
 
-**Difference from CodeMapper:** CodeMapper = "find files". Researcher = "understand and explain with cited evidence".
+**Working rhythm (inherited):** read applicable patterns → PreFlect (4 risk classes, `skills/patterns/preflect-core.md`) → domain work test-first → gate verification (tests/build/lint) → structured report.
 
-**Tools (6):** read + fetch (access to external URLs).
+**When the Planner assigns it:** Any backend / non-UI implementation. The default executor.
 
-**Typical output:** `researcher.research-findings.schema.json` — structured findings with citations.
+**Execution:** Native Copilot (full implementation toolset). Discipline in `skills/patterns/tdd-patterns.md`, `skills/patterns/debugging-discipline.md`, `skills/patterns/error-handling-patterns.md`.
 
----
+**Output shape:** `schemas/core-implementer.execution-report.schema.json` — changes / tests / build / lint / DoD evidence.
 
-### 5. PlanAuditor-subagent
+### 4. UIImplementer-subagent
 
-**File:** [PlanAuditor-subagent.agent.md](../../PlanAuditor-subagent.agent.md)
-**Group:** Plan Review
-**When to invoke:** Orchestrator only, during PLAN_REVIEW only.
+**Role:** Frontend — components, styles, accessibility, responsive design.
 
-**What it looks for:**
-- Architecture problems (module inconsistencies, boundary violations).
-- Security vulnerabilities.
-- Missing rollback for destructive operations.
-- Dependency conflicts between phases.
-- Scope coverage gaps.
+**What it adds on top of the backbone:** accessibility (a11y) gate, responsive gate, design-system gate.
 
-**What it does NOT do:** does not write code, does not appear as `executor_agent`. Failure classification excludes `transient`.
+**When the Planner assigns it:** Any UI-facing change.
 
-**Typical output:** `plan-auditor.plan-audit.schema.json` with status `APPROVED` / `NEEDS_REVISION` / `REJECTED` / `ABSTAIN`.
+**Execution:** Native Copilot (full implementation toolset). Discipline in `skills/patterns/tdd-patterns.md`, `skills/patterns/code-simplification.md`, `skills/patterns/error-handling-patterns.md`.
 
----
+**Output shape:** `schemas/ui-implementer.execution-report.schema.json` — `ui_changes`, accessibility/responsive report.
 
-### 6. AssumptionVerifier-subagent
+### 5. PlatformEngineer-subagent
 
-**File:** [AssumptionVerifier-subagent.agent.md](../../AssumptionVerifier-subagent.agent.md)
-**Group:** Plan Review
-**When to invoke:** Orchestrator on MEDIUM and LARGE tiers.
-
-**What it looks for:** "**Mirages**" — plan claims not supported by the codebase. Uses **17 detection patterns** (e.g., "references a non-existent file", "function allegedly returns X but actually returns Y", "uses a deprecated API").
-
-**Why it supplements PlanAuditor:** PlanAuditor reviews design; AssumptionVerifier reviews factual accuracy of plan claims. These are different axes of validation.
-
-**Typical output:** `assumption-verifier.plan-audit.schema.json` with mirage list and `severity` (BLOCKING / WARNING / INFO).
-
----
-
-### 7. ExecutabilityVerifier-subagent
-
-**File:** [ExecutabilityVerifier-subagent.agent.md](../../ExecutabilityVerifier-subagent.agent.md)
-**Group:** Plan Review
-**When to invoke:** Orchestrator on LARGE tier (or with HIGH-risk override).
-
-**What it looks for:** Simulates a **cold start** on the first 3 plan tasks. Can an executor, seeing only these tasks and the repository, start work without additional questions?
-
-**What it checks:**
-- Are file paths concrete?
-- Are input/output contracts specified?
-- Are verification commands given (how to confirm the phase is done)?
-
-**Typical output:** `executability-verifier.execution-report.schema.json` with status `PASS` / `WARN` / `FAIL`.
-
----
-
-### 8. CoreImplementer-subagent
-
-**File:** [CoreImplementer-subagent.agent.md](../../CoreImplementer-subagent.agent.md)
-**Group:** Execution
-**When to invoke:** Any backend / non-UI implementation — code, tests, refactoring.
-
-**Special status:** This is the **canonical backbone** for all executors. UIImplementer and PlatformEngineer inherit its working rhythm and extend it with domain-specific gates. See [docs/agent-engineering/MIGRATION-CORE-FIRST.md](../agent-engineering/MIGRATION-CORE-FIRST.md).
-
-**Working rhythm:**
-1. Read applicable standards and skill patterns.
-2. PreFlect (4 risk classes).
-3. Domain work (test-first).
-4. Gate verification (tests/build/lint).
-5. Structured report.
-
-**Tools (11):** full implementation set including `replace_string_in_file`, `create_file`, `runInTerminal`, etc.
-
-**Typical output:** `core-implementer.execution-report.schema.json` with changes / tests / build / lint / DoD evidence.
-
----
-
-### 9. UIImplementer-subagent
-
-**File:** [UIImplementer-subagent.agent.md](../../UIImplementer-subagent.agent.md)
-**Group:** Execution
-**When to invoke:** Frontend tasks — components, styles, accessibility, responsive design.
-
-**What it adds on top of the backbone:** accessibility gate (a11y), responsive gate, design-system gate.
-
-**Typical output:** `ui-implementer.execution-report.schema.json` with `ui_changes`, accessibility/responsive report.
-
----
-
-### 10. PlatformEngineer-subagent
-
-**File:** [PlatformEngineer-subagent.agent.md](../../PlatformEngineer-subagent.agent.md)
-**Group:** Execution
-**When to invoke:** CI/CD, containers, deployments, infrastructure changes.
+**Role:** Infrastructure — CI/CD, containers, deployments.
 
 **What it adds on top of the backbone:** approval gate (deployment requires explicit approval), idempotency gate, rollback plan, health checks, environment preconditions.
 
-**Typical output:** `platform-engineer.execution-report.schema.json` with approvals, health checks, rollback plan.
+**When the Planner assigns it:** Infrastructure or deployment changes.
 
----
+**Execution:** Native Copilot (full implementation toolset). Discipline in `skills/patterns/error-handling-patterns.md`, `skills/patterns/debugging-discipline.md`, `skills/patterns/integration-validator.md`.
 
-### 11. TechnicalWriter-subagent
+**Output shape:** `schemas/platform-engineer.execution-report.schema.json` — approvals, health checks, rollback plan.
 
-**File:** [TechnicalWriter-subagent.agent.md](../../TechnicalWriter-subagent.agent.md)
-**Group:** Execution
-**When to invoke:** Documentation, diagrams, code ↔ docs synchronization.
+### 6. TechnicalWriter-subagent
 
-**Tools (6):** edit + search.
+**Role:** Documentation, diagrams, code ↔ docs synchronization.
 
-**Typical output:** `technical-writer.execution-report.schema.json` with docs_created, docs_updated, parity check, diagrams.
+**When the Planner assigns it:** A phase produces user-visible docs, diagrams, or requires code–doc parity work.
 
----
+**Execution:** Native Copilot (edit + search). Discipline in `skills/patterns/completeness-traceability.md` and `skills/patterns/llm-behavior-guidelines.md`.
 
-### 12. BrowserTester-subagent
+**Output shape:** `schemas/technical-writer.execution-report.schema.json` — `docs_created`, `docs_updated`, parity check, diagrams.
 
-**File:** [BrowserTester-subagent.agent.md](../../BrowserTester-subagent.agent.md)
-**Group:** Execution
-**When to invoke:** E2E browser tests, UI accessibility audit.
+### 7. BrowserTester-subagent
 
-**Gate:** Health-first — verify the application starts before running scenarios.
+**Role:** E2E browser tests, UI accessibility audit.
 
-**Typical output:** `browser-tester.execution-report.schema.json` with scenarios, console/network failures, accessibility findings.
+**Gate (health-first):** verify the application starts before running scenarios.
 
----
+**When the Planner assigns it:** A phase needs E2E browser coverage or an accessibility audit.
 
-### 13. CodeReviewer-subagent
+**Execution:** Native Copilot (search + edit evidence). Discipline in `skills/patterns/tdd-patterns.md`, `skills/patterns/debugging-discipline.md`, `skills/patterns/error-handling-patterns.md`.
 
-**File:** [CodeReviewer-subagent.agent.md](../../CodeReviewer-subagent.agent.md)
-**Group:** Post-Review
-**When to invoke:** **Mandatory** after every execution phase. Optionally at the final gate for LARGE tasks (`final_review_gate`).
+**Output shape:** `schemas/browser-tester.execution-report.schema.json` — scenarios, console/network failures, accessibility findings.
 
-**What it checks:**
-- Correctness of the implementation relative to the phase scope.
-- Security.
-- Code quality.
-- Quality gate compliance (tests_pass, lint_clean, schema_valid, safety_clear).
-- Absence of scope drift (especially in final mode).
+### 8. CodeReviewer-subagent
 
-**Key mechanism:** `validated_blocking_issues` — the Orchestrator blocks continuation **only** on these, not on raw CRITICAL/MAJOR findings.
+**Role:** Post-implementation review. The review-role persona.
 
-**What it does NOT do:** never owns a fix cycle. If blocking issues are found, the fix is delegated to the appropriate executor.
+**When the Planner assigns it:** Optionally at the final gate for LARGE tasks. In the slim model, `controlflow-review` already layers review over native Copilot code review, so a dedicated review _phase_ is optional — recreate a dedicated review persona only if you want one (see `NATIVE-DELEGATION-BOUNDARY.md §5`).
 
-**Typical output:** `code-reviewer.verdict.schema.json` with status `APPROVED` / `NEEDS_REVISION` / `REJECTED`.
+**What it checks:** correctness vs phase scope, security, code quality, quality-gate compliance (`tests_pass`, `lint_clean`, `schema_valid`, `safety_clear`), scope drift.
+
+**Execution:** Native Copilot (search + run). Discipline in `skills/patterns/security-review-discipline.md`, `skills/patterns/decision-challenge.md`, `skills/patterns/llm-behavior-guidelines.md`.
+
+**Output shape:** `schemas/code-reviewer.verdict.schema.json` — `APPROVED` / `NEEDS_REVISION` / `REJECTED`.
+
+## Role Cards — Inline Verify Roles
+
+These are not assigned via `executor_agent`. They are the three phases of `controlflow-verify`, performed inline in the main context (zero subagents).
+
+### 9. PlanAuditor-subagent — verify phase 1 (structural audit)
+
+Confirm the artifact conforms to `schemas/planner.plan.schema.json` and `plans/templates/plan-document-template.md`:
+
+- YAML header present; `Status`, `Agent: Planner`, `Schema Version: 1.2.0`, numeric `Confidence`.
+- All 10 sections present in order; 5 lifecycle sections present and ordered for SMALL+.
+- Section 7 has exactly seven risk categories, each once.
+- Every phase declares one `executor_agent` from the schema enum; quality gates use only the five standard values.
+- Acceptance criteria include at least one measurable observable outcome per phase.
+- LARGE tier includes `flowchart TD` + `sequenceDiagram`; each ≤30 lines.
+
+Structural failure → `NEEDS_REVISION` immediately. Failure classification excludes `transient`.
+
+### 10. AssumptionVerifier-subagent — verify phase 2 (mirage detection)
+
+Try to refute the plan's factual claims. Every referenced file/path/symbol must be real (open or grep for it). Every assumption must be bounded. No "should be safe" hand-waving on concurrency or shared mutable state. The full mirage taxonomy is in `.github/skills/controlflow-verify/references/mirage-patterns.md` (presence mirages P1–P10, absence mirages A11–A17).
+
+Why it supplements PlanAuditor: PlanAuditor reviews _design_; AssumptionVerifier reviews _factual accuracy of plan claims_. Different axes of validation.
+
+### 11. ExecutabilityVerifier-subagent — verify phase 3 (executability cold-start)
+
+Simulate a fresh executor starting Phase 1 with only the plan in hand:
+
+- Can Phase 1 execute without asking the user a question? If yes → fine; if no → flag the ambiguity as a Phase 1 blocker.
+- Are verification commands concrete enough to run as-is?
+- Does each destructive or migration-heavy phase have rollback/recovery guidance? HIGH blast radius → require `human_approved_if_required`; MEDIUM → `safety_clear`.
+- Is the inter-phase contract deliverable format explicit?
+
+Tier gating: SMALL → phase 1 only; MEDIUM → phases 1–2; LARGE → phases 1–3. Any unresolved HIGH-impact semantic risk forces all three phases regardless of tier.
+
+## Recreating a Specialized Agent as a Native Copilot Custom Agent
+
+The refactor retires the legacy specialized `*.agent.md` files. Their _personas_ are not lost — the value-add patterns they embodied remain in `skills/patterns/`. If you want a specialized persona back as a shipped agent, recreate it as a **native Copilot custom agent** (a new file under `.github/agents/`) and have `controlflow-planner` assign it as a phase `executor_agent`. The Planner treats any agent file under `.github/agents/` as a valid conceptual executor role.
+
+**Recipe (summary):**
+
+1. Create a new agent file under `.github/agents/` with Copilot agent frontmatter (`name`, `description`, `tools`). Do **not** add `model:` — let the Copilot Auto picker choose, or pin a model only if the role demands it.
+2. In the prompt body, cite the `skills/patterns/` files the persona should load (the former static binding).
+3. Write the persona's discipline as prose (abstain when no executable harness is supplied; evidence over assertion; stop-the-line on regression). The pattern files carry the reusable discipline; the agent file carries the persona.
+4. The Planner can now assign that role as a phase `executor_agent`. Execution is native Copilot.
+
+See `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md §5` for the full recipe and worked examples (BrowserTester, UIImplementer, PlatformEngineer, Researcher, CodeMapper, TechnicalWriter, CodeReviewer). The three verify roles are **not** recreated as agents — they are the inline phases of `controlflow-verify`, the non-native value-add.
 
 ## Principle of Single Responsibility
 
-Each agent has a **narrow** area of responsibility. This is intentional:
+Each role has a **narrow** area of responsibility. This is intentional:
 
 - Narrow context → fewer hallucinations.
-- Clear boundary → easier to write the prompt and validate output.
-- Composition → complex workflows built from simple blocks.
-- Security → each agent has the minimum required tools.
+- Clear boundary → easier for the Planner to assign and for native Copilot to execute.
+- Composition → complex workflows built from simple plan phases.
+- Security → tool access is delegated to native Copilot, scoped per the agent's `tools:` frontmatter when recreated as a custom agent.
 
 ## Common Mistakes
 
-- **Using CoreImplementer for a UI task.** Use UIImplementer — it has a11y/responsive gates.
-- **Using CodeMapper when understanding is needed.** Use Researcher — it produces evidence-based explanations.
-- **Assigning PlanAuditor as `executor_agent`.** Forbidden by schema; it is a read-only reviewer.
-- **Invoking an executor directly without Orchestrator.** Technically possible, but without gates and review the result is risky.
+- **Using CoreImplementer for a UI task.** Use `UIImplementer-subagent` — it adds a11y/responsive gates.
+- **Using CodeMapper when understanding is needed.** Use `Researcher-subagent` — it produces evidence-based explanations.
+- **Assigning a verify role as `executor_agent`.** Forbidden. `PlanAuditor-subagent`, `AssumptionVerifier-subagent`, and `ExecutabilityVerifier-subagent` are read-only verify phases performed by `controlflow-verify`.
+- **Treating the role names as shipped agent files.** They are conceptual labels. The only shipped agent is `@controlflow-planner`. If you want a persona as a shipped agent, recreate it under `.github/agents/` (see above).
+- **Looking for the legacy `*-subagent.agent.md` files.** They are retired (deleted). The discipline lives in `skills/patterns/`.
 
 ## Exercises
 
-1. **(beginner)** Match each task to an agent: `(a)` "Find all uses of API X", `(b)` "Add CSV export", `(c)` "Check plan for mirages", `(d)` "Write docs for a new endpoint", `(e)` "Deploy to staging".
-2. **(beginner)** Open `governance/tool-grants.json` and compare the tools available to Researcher and CoreImplementer. What is the fundamental difference?
-3. **(intermediate)** Which 3 agents **can never** appear in `executor_agent`? Why?
-4. **(intermediate)** How does PlanAuditor differ from AssumptionVerifier in what each reviews?
-5. **(advanced)** Read [docs/agent-engineering/MIGRATION-CORE-FIRST.md](../agent-engineering/MIGRATION-CORE-FIRST.md). What gates does UIImplementer add on top of the CoreImplementer backbone?
+1. **(beginner)** Match each task to a role: `(a)` "Find all uses of API X", `(b)` "Add CSV export", `(c)` "Check plan for mirages", `(d)` "Write docs for a new endpoint", `(e)` "Deploy to staging".
+2. **(beginner)** Open `plans/project-context.md` and the Phase Executor Agents table. Confirm all eight names match the table in this chapter.
+3. **(intermediate)** Which three roles **can never** appear in `executor_agent`? Why?
+4. **(intermediate)** How does `PlanAuditor-subagent` differ from `AssumptionVerifier-subagent` in what each reviews? (Design axis vs factual-accuracy axis.)
+5. **(advanced)** Pick a retired persona (e.g. BrowserTester). Which `skills/patterns/` files carry its discipline? Draft the frontmatter for recreating it as a native Copilot custom agent under `.github/agents/`.
 
 ## Review Questions
 
-1. How many agents are in the system and how many of them are executors?
-2. Who is the single "conductor"?
-3. Which agent uses "17 mirage detection patterns"?
-4. What are `validated_blocking_issues` and why do they matter?
-5. Who can be invoked as an entry point besides Orchestrator and Planner?
+1. How many conceptual executor roles are in the `executor_agent` enum, and how many inline verify roles are there?
+2. Which role is the "canonical backbone" for executors?
+3. Which role uses the mirage taxonomy, and which verify phase does it correspond to?
+4. What does it mean that a role is a _conceptual label_, not a shipped agent file?
+5. Where do you look for the discipline a retired specialized agent used to carry?
 
 ## See Also
 
 - [Chapter 02 — Architecture Overview](02-architecture-overview.md)
-- [Chapter 04 — P.A.R.T. Specification](04-part-spec.md)
-- [Chapter 09 — Schemas](09-schemas.md)
+- [Chapter 04 — Agent prompt structure (guidance)](04-part-spec.md)
+- [Chapter 07 — Review Pipeline](07-review-pipeline.md)
+- [Chapter 09 — Schemas (Contracts)](09-schemas.md)
 - [plans/project-context.md](../../plans/project-context.md)
+- [docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md](../agent-engineering/NATIVE-DELEGATION-BOUNDARY.md)

@@ -1,17 +1,5 @@
 {
-  "_expected_validation": "fail: notes_md_max_lines must be number (integer), got string \"20\"",
-
-  "approval_required_actions": [
-    "destructive_file_delete",
-    "bulk_contract_rewrite",
-    "git_force_push",
-    "git_reset_hard",
-    "drop_table",
-    "rm_rf",
-    "amend_published_commit",
-    "merge_to_protected_branch",
-    "push_to_shared_infrastructure"
-  ],
+  "_expected_validation": "fail: verdict_routing.confidence_thresholds.ready_for_execution_min must be number (minimum 0, maximum 1), got string \"0.9\"",
 
   "review_pipeline_by_tier": {
     "TRIVIAL": {
@@ -40,84 +28,34 @@
     }
   },
 
-  "max_iterations_by_tier": {
-    "TRIVIAL": 2,
-    "SMALL": 2,
-    "MEDIUM": 5,
-    "LARGE": 5
+  "semantic_risk_policy": {
+    "_comment": "Every non-TRIVIAL plan MUST include all 7 categories exactly once.",
+    "categories": [
+      "data_volume",
+      "performance",
+      "concurrency",
+      "access_control",
+      "migration_rollback",
+      "dependency",
+      "operability"
+    ],
+    "applicability_values": ["applicable", "not_applicable", "uncertain"],
+    "impact_values": ["HIGH", "MEDIUM", "LOW", "UNKNOWN"],
+    "disposition_values": ["resolved", "open_question", "research_phase_added", "not_applicable"],
+    "override_rule": "Any unresolved HIGH-impact semantic risk forces LARGE discipline (all three verify phases) regardless of file count."
   },
 
-  "retry_budgets": {
-    "max_retries_per_phase": 5,
-    "transient_max": 3,
-    "fixable_max": 1,
-    "needs_replan_max": 1,
-    "escalate_max": 0,
-    "per_wave_transient_reduction_threshold": 2,
-    "per_wave_parallelism_reduction_factor": 0.5
-  },
-
-  "stagnation_detection": {
-    "same_phase_failure_escalation_threshold": 3,
-    "same_classification_repeat_escalation": true
-  },
-
-  "session_telemetry": {
-    "template": "plans/templates/session-outcome-template.md",
-    "log_file": "plans/session-outcomes.md",
-    "write_timing": "before_completion_summary",
-    "archive_threshold_entries": 50
-  },
-
-  "tool_output_policy": {
-    "spill_directory_template": ".cache/tool-output/<task-slug>/",
-    "task_slug_pattern": "^[a-zA-Z0-9_-]+$",
-    "purge_timing": "completion_gate_only",
-    "max_total_mb": null
-  },
-
-  "plan_review_gate_trigger_conditions": {
-    "min_phases": 3,
-    "confidence_threshold": 0.9,
-    "high_risk_scope_triggers_review": true,
-    "applicable_high_impact_risk_triggers_review": true
-  },
-
-  "batch_approval": {
-    "approval_per": "wave",
-    "exception_destructive_phases": "per_phase"
-  },
-
-  "budget_defaults": {
-    "enabled": false,
-    "token_cap": null,
-    "wall_clock_s": null,
-    "cost_usd": null,
-    "enable_reflection": false,
-    "notes": "Orthogonal to retry_budgets. Reaching a budget cap classifies as 'escalate', not a failed attempt."
-  },
-
-  "final_review_gate": {
-    "enabled_by_default": false,
-    "auto_trigger_tiers": ["LARGE"],
-    "allow_user_trigger": true,
-    "max_fix_cycles": 1
-  },
-
-  "memory_hygiene": {
-    "_comment": "Memory cleanup enforcement thresholds.",
-    "notes_md_max_lines": "20",
-    "archive_completed_plans_threshold_days": 14,
-    "archive_eligible_statuses": ["DONE", "SUPERSEDED", "DEFERRED"],
-    "repo_memory_dedup_required": true,
-    "memory_content_types": ["user", "feedback", "project", "reference"],
-    "session_notes_template_path": "plans/templates/session-notes-template.md",
-    "stale_memory_freshness_days": 1
-  },
-
-  "compaction": {
-    "max_consecutive_failures": 3,
-    "circuit_breaker_action": "escalate",
-    "_comment": "autoCompact circuit breaker"
+  "verdict_routing": {
+    "_comment": "Verdict emitted by controlflow-verify. Routing determines the next action.",
+    "verdicts": {
+      "APPROVED": "All checks pass, Phase 1 actionable, criteria measurable. Proceed to implementation.",
+      "NEEDS_REVISION": "Ambiguous Phase 1, no rollback on destructive change, unverified paths, or vague criteria. List each finding with the exact section reference; re-audit after fix.",
+      "REJECTED": "Structural flaw; scope not deliverable as authored. Explain blockers; ask the user for direction; do not start coding."
+    },
+    "confidence_thresholds": {
+      "ready_for_execution_min": "0.9",
+      "uncertain_count_cap": 0.85,
+      "high_impact_open_question_cap": 0.7
+    }
   }
 }

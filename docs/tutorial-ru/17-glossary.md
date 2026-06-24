@@ -1,200 +1,252 @@
 # Глава 17 — Глоссарий
 
-> Алфавитный справочник терминов. В скобках — оригинальный английский термин. После определения — ссылки на главы, где термин подробно разбирается.
+Алфавитный справочник всех ключевых терминов slim-модели ControlFlow. Каждая запись содержит определение и ссылки на главы. Retired-концепции помечены как исторические.
 
 ---
 
-**ABSTAIN** — Терминальный статус Planner-а, когда после уточнений и discovery остаются неразрешимые блокеры. Не failure, а сигнал «не могу безопасно дать план». Ср. с `REPLAN_REQUIRED`. → [Глава 06](06-planning.md).
+## A
 
-**Acceptance criteria** — Критерии приёмки фазы. Минимум 1 на фазу, обязательное поле в `planner.plan.schema.json`. Должны быть проверяемы автоматически. → [Глава 06](06-planning.md), [Глава 08](08-execution-pipeline.md).
+**ABSTAIN** — Статус выхода Planner'а: «не могу оценить с достаточной уверенностью». Не блокирует пайплайн; записывается как uncertainty. → Гл.06, Гл.07
 
-**ACTING** — Состояние Orchestrator-а во время исполнения фазы. Один из 5 узлов state machine. → [Глава 05](05-orchestration.md).
+**Acceptance criteria** — Измеримое условие, которое должно быть истинным, чтобы фаза считалась завершённой. Минимум одно измеримое observable outcome на фазу. → Гл.06, Гл.08, `schemas/planner.plan.schema.json`
 
-**Agent** — Файл `<Name>.agent.md` в корне репо с структурой P.A.R.T. описывающий поведенческий контракт LLM-агента. → [Глава 03](03-agent-roster.md), [Глава 04](04-part-spec.md).
+**Agent (custom Copilot agent)** — Markdown-файл под `.github/agents/` с Copilot agent frontmatter (`name`, `description`, `tools`), который Copilot показывает в dropdown агентов. Slim-модель поставляет ровно один: `@controlflow-planner`. → Гл.04
 
-**Agent grants** — Канонические права тулз агента в `governance/agent-grants.json`, организованные семантически (read-only / fetch / etc.). → [Глава 10](10-governance.md).
+**`@controlflow-planner`** — Единственный поставляемый агент ControlFlow, по пути `.github/agents/controlflow-planner.agent.md`. Производит schema-anchored планы; передаёт исполнение нативному Copilot. Использует Copilot Auto model picker (без `model:` frontmatter). → Гл.01, Гл.03, Гл.06
 
-**AssumptionVerifier-subagent** — Adversarial-ревьюер плана, ищет mirages (assumption-fact confusion) по 17 паттернам. → [Глава 03](03-agent-roster.md), [Глава 07](07-review-pipeline.md).
+**Agent grants** — **Retired.** Legacy-файл `governance/agent-grants.json` больше не существует; subagent-governance делегирована нативному Copilot. → Гл.10
 
-**Backbone pattern** — Pattern из `MIGRATION-CORE-FIRST.md`: сначала строим shared backbone, потом расходимся по специализациям. → [Глава 10](10-governance.md).
+**AssumptionVerifier-subagent** — Метка inline verify-роли для `controlflow-verify` фазы 2 (mirage detection). Проверяет, что утверждения плана поддерживаются кодовой базой (taxonomy mirages P1–P10, A11–A17). Выполняется inline — никогда не `executor_agent`. → Гл.07, `schemas/assumption-verifier.plan-audit.schema.json`
 
-**Batch approval** — Стратегия Orchestrator-а: одно одобрение на волну, не на каждую фазу. Исключение — destructive операции. → [Глава 05](05-orchestration.md), [Глава 08](08-execution-pipeline.md).
+---
 
-**Behavior contract** — `docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md`. Поведенческие инварианты, дополняющие P.A.R.T.-структурные. → [Глава 04](04-part-spec.md), [Глава 14](14-evals.md).
+## B
 
-**BrowserTester-subagent** — Агент, прогоняющий E2E браузер-тесты с health-first гейтом. → [Глава 03](03-agent-roster.md).
+**Backbone pattern** — См. `docs/agent-engineering/MIGRATION-CORE-FIRST.md`. Общий ритм имплементации, который несёт `CoreImplementer-subagent`; расширяется UIImplementer и PlatformEngineer с domain-specific гейтами. → Гл.03
 
-**Budget tracking** — Skill-pattern (`budget-tracking.md`). Учёт токен/wall-clock. → [Глава 11](11-skills.md).
+**Behavior contract** — `docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md`. Поведенческие инварианты (evidence over assertion, abstain on no harness, stop-the-line on regression). → Гл.04
 
-**Clarification policy** — `docs/agent-engineering/CLARIFICATION-POLICY.md`. 5 классов уточнений: scope ambiguity, architecture fork, user preference, destructive-risk approval, repository structure change. → [Глава 06](06-planning.md).
+**BrowserTester-subagent** — Концептуальная роль исполнителя для E2E browser-тестов и UI/accessibility-аудитов. Не поставляемый агент; воссоздайте как native Copilot custom agent согласно `NATIVE-DELEGATION-BOUNDARY.md §5`, если хотите вернуть персону. → Гл.03, `schemas/browser-tester.execution-report.schema.json`
 
-**Clarification request** — Schema (`clarification-request.schema.json`). Payload при `NEEDS_INPUT`. → [Глава 09](09-schemas.md).
+---
 
-**CodeMapper-subagent** — Read-only исследователь репо, выдаёт `discovery` отчёт. → [Глава 03](03-agent-roster.md).
+## C
 
-**CodeReviewer-subagent** — Пост-implementation ревьюер. Phase mode и Final mode. Никогда не fix-ит. → [Глава 03](03-agent-roster.md), [Глава 08](08-execution-pipeline.md).
+**`controlflow-plan`** — Plan skill по пути `.github/skills/controlflow-plan/`. Производит schema-anchored артефакт плана в `plans/`; single-source формат берёт из `schemas/planner.plan.schema.json` и `plans/templates/plan-document-template.md`. → Гл.06
 
-**Cold-start** — Принцип ExecutabilityVerifier: «представь, что только сейчас увидел задачу — могу ли её выполнить?». → [Глава 07](07-review-pipeline.md), [Глава 15](15-case-studies.md).
+**`controlflow-review`** — Review skill по пути `.github/skills/controlflow-review/`. Evidence-backed ревью, слой поверх нативного Copilot code review; добавляет сравнение plan-vs-implementation на scope drift и проактивный поиск уязвимостей/ошибок. → Гл.08
 
-**COMPLETE** — Финальное состояние Orchestrator-а. → [Глава 05](05-orchestration.md).
+**`controlflow-verify`** — Verify skill по пути `.github/skills/controlflow-verify/`. Inline адверсариальная верификация (ноль сабагентов); tier-gated фазы (structural audit, mirage detection, executability cold-start); эмиттит `APPROVED` / `NEEDS_REVISION` / `REJECTED`. → Гл.07
 
-**Completion gate** — Финальная проверка после всех фаз: cross-phase consistency + опциональный final review. → [Глава 05](05-orchestration.md), [Глава 08](08-execution-pipeline.md).
+**CodeMapper-subagent** — Концептуальная роль исполнителя для read-only codebase exploration. Возвращает discovery-отчёт. Не поставляемый агент. → Гл.03, `schemas/code-mapper.discovery.schema.json`
 
-**Complexity tier** — Один из 4: TRIVIAL, SMALL, MEDIUM, LARGE. Определяет ревью-pipeline и iteration cap. → [Глава 06](06-planning.md), [Глава 07](07-review-pipeline.md).
+**CodeReviewer-subagent** — Концептуальная роль исполнителя для post-implementation review. В slim-модели `controlflow-review` уже наслаивает ревью поверх нативного Copilot code review; воссоздавайте эту персону, только если хотите dedicated review-агент (см. `NATIVE-DELEGATION-BOUNDARY.md §5`). → Гл.03, Гл.08, `schemas/code-reviewer.verdict.schema.json`
 
-**Confidence** — Числовое значение 0–1 в выходах Planner и Orchestrator. Ниже порога → ABSTAIN. → [Глава 05](05-orchestration.md), [Глава 06](06-planning.md).
+**Cold start** — Состояние, в котором свежий исполнитель приходит на фазу только с репозиторием и описанием плана, без дополнительного контекста. `ExecutabilityVerifier-subagent` (verify фаза 3) проверяет именно это. → Гл.07
 
-**ControlFlow** — Имя проекта. Prompts/governance/eval репо для multi-agent оркестрации. → [Глава 00](00-introduction.md).
+**Complexity tier** — `TRIVIAL` / `SMALL` / `MEDIUM` / `LARGE`. Назначается Planner'ом; определяет, запускаются ли plan, verify и review вообще и сколько verify-фаз запускается. → Гл.05, Гл.06, Гл.07, Гл.08
 
-**Convergence detection** — Детектор стагнации в Plan Review: если итерация ≥3 и улучшение <5% — стагнация. → [Глава 07](07-review-pipeline.md).
+**Confidence** — Числовое значение (0–1) в заголовке плана, отражающее уверенность Planner'а. Ниже 0.9 план автоматически `NEEDS_REVISION`. → Гл.06
 
-**CoreImplementer-subagent** — Backend/general-purpose имплементер. → [Глава 03](03-agent-roster.md).
+**Conceptual role** — Помеченная ответственность (например, `CoreImplementer-subagent`, `PlanAuditor-subagent`), которую Planner назначает в фазах плана (`executor_agent`) или которую `controlflow-verify` выполняет inline. **Не** поставляемый файл агента. Slim-модель поставляет один агент; восемь имён ролей исполнителей и три имени verify-ролей — концептуальные метки, исполняемые нативным Copilot. → Гл.02, Гл.03
 
-**Definition of done** — Пункт акцептации в execution-report-схемах. → [Глава 09](09-schemas.md).
+**ControlFlow** — Тонкий, не дублирующий слой поверх нативных агентных возможностей GitHub Copilot. Поставляет один агент и три skill'а; оставляет только то, чего Copilot не предоставляет нативно (schema-enforced формат плана, адверсариальный verify, tier-gated политика, scope-drift ревью, eval-харнесс на contract-drift). → Гл.00, `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md`
 
-**Delegation protocol** — Schema (`orchestrator.delegation-protocol.schema.json`). Подгружается on-demand. → [Глава 09](09-schemas.md).
+**CoreImplementer-subagent** — Концептуальная роль исполнителя для backend-имплементации (код, тесты, рефакторинг). Канонический backbone для ролей исполнителей. → Гл.03, `schemas/core-implementer.execution-report.schema.json`
 
-**Drift check** — Часть eval-харнесса (`drift-checks.mjs`). Проверяет P.A.R.T. order, frontmatter, tool-grants, allowlist. → [Глава 14](14-evals.md).
+---
 
-**Eval harness** — `evals/`. Оффлайн validation suite. `cd evals && npm test`. → [Глава 14](14-evals.md).
+## D
 
-**Escalate** — Failure class для проблем, требующих человека. Лимит 0 retry. → [Глава 13](13-failure-taxonomy.md).
+**Delegation boundary** — Правило, по которому ControlFlow не поставляет поверхность, дублирующую нативную возможность Copilot. Каноническая запись — `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md`. → Гл.02, Гл.03, Гл.10
 
-**ExecutabilityVerifier-subagent** — Симулятор cold-start, проверяет первые 3 задачи на executable. → [Глава 03](03-agent-roster.md), [Глава 07](07-review-pipeline.md).
+**Definition of done** — Список условий, которые должны быть истинными, чтобы фаза считалась завершённой. Совпадает с `quality_gates` фазы. → Гл.08
 
-**executor_agent** — Поле в каждой phase плана. Authoritative для dispatch. Enum 8 значений. → [Глава 06](06-planning.md), [Глава 08](08-execution-pipeline.md).
+**Drift check** — Тест в `evals/drift-checks.mjs`, проверяющий, что формат плана, taxonomy ролей и governance остаются согласованными (например, зеркало `plans/project-context.md` ↔ `governance/project-context-registry.json`). → Гл.04, Гл.14
 
-**Failure classification** — Обязательное поле при не-успешном статусе. 4 значения: transient/fixable/needs_replan/escalate. → [Глава 13](13-failure-taxonomy.md).
+---
 
-**Final review gate** — Опциональный гейт после всех фаз. Авто для LARGE. CodeReviewer в final mode. → [Глава 08](08-execution-pipeline.md).
+## E
 
-**Fixable** — Failure class для маленьких исправимых дефектов. Лимит 1 retry. → [Глава 13](13-failure-taxonomy.md).
+**Eval harness** — Оффлайн-набор тестов в `evals/`. Никаких live-агентов, никаких сетевых вызовов. → Гл.14
 
-**Frontmatter** — YAML-блок в начале `*.agent.md` с полями `description`, `tools`, `model`, `model_role`. → [Глава 04](04-part-spec.md).
+**Escalate** — Классификация сбоя: риск безопасности/данных или неразрешимый блокер. Нативный Copilot останавливается и ждёт user approval. Ноль автоматических retry. → Гл.13
 
-**Gate event** — Структурное событие на переходе Orchestrator-а. Schema: `orchestrator.gate-event.schema.json`. → [Глава 05](05-orchestration.md), [Глава 09](09-schemas.md).
+**ExecutabilityVerifier-subagent** — Метка inline verify-роли для `controlflow-verify` фазы 3 (executability cold-start). Симулирует свежего исполнителя, начинающего Phase 1 только с планом. Запускается на тире `LARGE` или при срабатывании HIGH-risk override. → Гл.07, `schemas/executability-verifier.execution-report.schema.json`
 
-**Governance** — 7 JSON-файлов в `governance/`. Single source of truth для прав и runtime-параметров. → [Глава 10](10-governance.md).
+**executor_agent** — Обязательное поле фазы; enum из восьми имён ролей исполнителей, enforced `schemas/planner.plan.schema.json`. Три inline verify-роли исключены из этого enum. → Гл.06, Гл.08
 
-**Handoff** — Передача артефакта от одного агента другому через `plan_path` или подобное. Не implicit approval. → [Глава 06](06-planning.md), [Глава 15](15-case-studies.md).
+---
 
-**HIGH_RISK_APPROVAL_GATE** — Gate-event type, требующий явного одобрения пользователя. → [Глава 05](05-orchestration.md).
+## F
 
-**Idea interview** — Шаг 0 Planner-а: clarification gate для расплывчатых запросов. → [Глава 06](06-planning.md), [Глава 15](15-case-studies.md).
+**Failure classification** — Обязательное поле, когда фаза или verdict записывает сбой. Значения: `transient`, `fixable`, `needs_replan`, `escalate`, `model_unavailable`. (`PlanAuditor` и `AssumptionVerifier` исключают `transient`.) → Гл.13
 
-**Iteration index** — Поле в gate-event-ах и delegation-payload-ах. Счётчик ревью-итераций. → [Глава 05](05-orchestration.md), [Глава 07](07-review-pipeline.md).
+**Fixable** — Классификация сбоя: мелкая исправимая ошибка. Нативный Copilot retry с fix hint. → Гл.13
 
-**LARGE** — Самый сложный тир. Полный ревью-pipeline (PA + AV + EV). → [Глава 06](06-planning.md), [Глава 07](07-review-pipeline.md).
+**Frontmatter** — YAML-метаданные в начале файла Copilot-агента (`.github/agents/*.agent.md`): `description`, `name`, `tools`. Без строки `model:` по умолчанию. → Гл.04
 
-**Memory architecture** — Трёхслойная модель: session / task-episodic / repo-persistent. → [Глава 12](12-memory.md).
+---
 
-**Mirage** — Assumption-fact confusion в плане. Целевая дичь AssumptionVerifier. → [Глава 07](07-review-pipeline.md).
+## G
 
-**Model role** — Логическая роль модели в frontmatter (`research-capable`, `code-implementer`, …). Резолвится через `model-routing.json`. → [Глава 10](10-governance.md).
+**Governance** — Конфиги в `governance/`, определяющие runtime-политику, реестр ролей, canonical sources и rename-allowlist. Slim-модель оставляет четыре governance-файла: `runtime-policy.json`, `project-context-registry.json`, `canonical-source-matrix.json`, `rename-allowlist.json`. → Гл.10
 
-**NEEDS_INPUT** — Статус subagent-а, означающий, что нужно уточнение. С `clarification_request` → отдельный routing path через `vscode/askQuestions`. → [Глава 05](05-orchestration.md), [Глава 13](13-failure-taxonomy.md).
+**Ground truth** — Для doc-count-проверок: количества файлов на диске, которые eval-харнесс разрешает в runtime (схемы, skills-паттерны, governance-файлы, root agent-файлы). Указание количества, не совпадающего с ground truth в allowlisted-документе, валит Pass 15. → Гл.14
 
-**needs_replan** — Failure class для архитектурных несоответствий. Routing к Planner. Лимит 1. → [Глава 13](13-failure-taxonomy.md).
+---
 
-**NOTES.md** — Repo-persistent active-objective state. Терse, обновляется на границах фаз. → [Глава 12](12-memory.md).
+## H
 
-**Observability** — `docs/agent-engineering/OBSERVABILITY.md`. Trace_id, NDJSON sink, gate-event correlation. → [Глава 12](12-memory.md).
+**Handoff** — Поле выхода Planner'а (`handoff: {target, prompt}`), указывающее пользователю путь к артефакту плана и следующий шаг (`/controlflow-verify`). Planner не диспатчит исполнение; он handoff'ает. → Гл.06
 
-**Orchestrator** — Координатор. Не пишет код, не пишет план, маршрутизирует. → [Глава 03](03-agent-roster.md), [Глава 05](05-orchestration.md).
+---
 
-**P.A.R.T.** — Prompt → Archive → Resources → Tools. Обязательный порядок секций в `*.agent.md`. → [Глава 04](04-part-spec.md).
+## I
 
-**Phase** — Единица плана. 3–10 фаз на план. Имеет id, executor_agent, files, tests, acceptance, quality_gates, skill_references. → [Глава 06](06-planning.md).
+**Idea Interview** — Фаза clarifying-вопросов Planner'а, запускаемая, когда запрос расплывчат. Спрашивает пользователя напрямую, когда ответ меняет file scope, user-visible поведение, архитектуру или обработку destructive-risk; иначе записывает bounded assumption. → Гл.06
 
-**PHASE_REVIEW_GATE** — Gate-event type для phase review. На wire — это и есть «PLAN_REVIEW» лейбла из промпта. → [Глава 05](05-orchestration.md), [Глава 18](18-faq.md).
+---
 
-**PlanAuditor-subagent** — Adversarial-ревьюер плана: architecture, security, risk, completeness. Не возвращает transient. → [Глава 03](03-agent-roster.md), [Глава 07](07-review-pipeline.md).
+## L
 
-**Planner** — Автор плана. Делает clarification, decomposition, skill selection, terminal outcomes. → [Глава 03](03-agent-roster.md), [Глава 06](06-planning.md).
+**LARGE** — Высший complexity tier. `controlflow-verify` запускает все три фазы (structural audit + mirage detection + executability cold-start). Форсируется количеством файлов (пятнадцать или больше) или любой неразрешённой HIGH-impact записью semantic-risk. → Гл.05, Гл.07
 
-**PLANNING** — Состояние Orchestrator-а во время разработки плана. → [Глава 05](05-orchestration.md).
+---
 
-**Plan path** — Поле handoff. Указывает Orchestrator-у, где читать готовый план. Reviewable input, не approval. → [Глава 15](15-case-studies.md).
+## M
 
-**Plan Review Gate** — Стадия в lifecycle Orchestrator-а (промпт-уровень). Условный гейт перед ACTING. На wire — серия `PHASE_REVIEW_GATE` событий. → [Глава 07](07-review-pipeline.md), [Глава 18](18-faq.md).
+**Memory architecture** — Трёхслойная модель памяти (session / task-episodic / repo-persistent). → Гл.12, `docs/agent-engineering/MEMORY-ARCHITECTURE.md`
 
-**PlatformEngineer-subagent** — Infra-имплементер. Approval gates, rollback, health checks. → [Глава 03](03-agent-roster.md).
+**Mirage** — Утверждение плана, не поддерживаемое реальной кодовой базой. Обнаруживается `AssumptionVerifier-subagent` (verify фаза 2). Полная taxonomy (presence P1–P10, absence A11–A17) — в `.github/skills/controlflow-verify/references/mirage-patterns.md`. → Гл.07
 
-**PreFlect** — Mandatory pre-action gate. 4 risk-класса. Decision: GO / REPLAN / ABSTAIN. → [Глава 05](05-orchestration.md), [Глава 11](11-skills.md).
+**Model routing** — **Retired.** Legacy-файлы `governance/model-routing.json` и `docs/agent-engineering/MODEL-ROUTING.md` больше не существуют. Выбор модели делегирован нативному Copilot (Auto model picker). Колонка `Model Routing Role` в реестре — концептуальный capability tier, не routing-поверхность. → Гл.10
 
-**Prompt** — Первая секция P.A.R.T. Mission, scope, contracts, state machine, protocol. → [Глава 04](04-part-spec.md).
+**model_unavailable** — Классификация сбоя: routed/primary модель недоступна или unreachable. Нативный Copilot подменяет модель, затем escalate при исчерпании. → Гл.13
 
-**Quality gate** — Поле в фазе плана. Enum 5 значений (build/test/lint/security/etc.). → [Глава 06](06-planning.md), [Глава 08](08-execution-pipeline.md).
+---
 
-**Reflection loop** — Skill-pattern для имплементеров после неудачи. → [Глава 11](11-skills.md).
+## N
 
-**Reliability gates** — `docs/agent-engineering/RELIABILITY-GATES.md`. Verification gate requirements. → [Глава 04](04-part-spec.md), [Глава 08](08-execution-pipeline.md).
+**Native Copilot** — Платформа VS Code Copilot, предоставляющая custom agents, subagent dispatch + parallelism, Plan mode, agentic code review, skills library, MCP, model selection, approvals и custom instructions. ControlFlow наслаивается поверх без дублирования. → Гл.02, `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md`
 
-**REPLAN_REQUIRED** — Терминальный статус Planner-а, когда план явно требует переработки. Ср. с ABSTAIN. → [Глава 06](06-planning.md).
+**needs_replan** — Классификация сбоя: архитектурное несоответствие или missing dependency. Пользователь re-invoke'ит `@controlflow-planner` для targeted replan — единственный класс, который re-входит в пайплайн ControlFlow. → Гл.13
 
-**Repo memory** — `/memories/repo/`. Durable facts (commands, conventions, invariants). Только `create`. → [Глава 12](12-memory.md).
+**NEEDS_REVISION** — Verdict `controlflow-verify`: ambiguous Phase 1, непроверенные пути, vague критерии или структурный сбой. Re-invoke Planner для правки, затем re-verify. → Гл.07
 
-**Repo-persistent** — Слой памяти, переживающий разные задачи. NOTES.md + /memories/repo/. → [Глава 12](12-memory.md).
+**NOTES.md** — Файл repo-persistent active-objective state. Обновляется на границах фаз; держится в бюджете до двадцати строк. → Гл.12
 
-**REVIEWING** — Состояние Orchestrator-а во время ревью фазы (CodeReviewer). → [Глава 05](05-orchestration.md).
+---
 
-**Researcher-subagent** — Глубокий research, evidence-based findings с цитатами. → [Глава 03](03-agent-roster.md).
+## O
 
-**Risk_review** — Поле плана. 7 категорий semantic risk. → [Глава 06](06-planning.md).
+**Orchestrator** — **Retired — только концептуальный дирижёр.** Legacy-агент, который вёл state machine (`PLANNING` / `WAITING_APPROVAL` / `PLAN_REVIEW` / `ACTING` / `REVIEWING` / `COMPLETE`), диспатчил сабагентов в waves и маршрутизировал сбои. В slim-модели Planner плюс нативный Copilot покрывают оркестрацию; state machine, dispatch, waves и gates ушли. См. «пайплайн plan → verify → review». → Гл.05
 
-**Schema** — JSON Schema (draft 2020-12). Контракт между агентами. → [Глава 09](09-schemas.md).
+---
 
-**Scope drift** — Изменения за пределами плана. Цель Final Review Gate. → [Глава 08](08-execution-pipeline.md), [Глава 15](15-case-studies.md).
+## P
 
-**Scoring spec** — `docs/agent-engineering/SCORING-SPEC.md`. Quantitative scoring для review verdicts. → [Глава 04](04-part-spec.md).
+**P.A.R.T.** — **Retired как обязательный шаблон.** Legacy четырёхсекционный порядок (Prompt / Archive / Resources / Tools), enforced на каждом `*.agent.md`. Дисциплина (role / scope / contracts / tools как prose) всё ещё информирует написание хорошего custom agent prompt, но это guidance, не обязательный шаблон, и drift-checker больше не аудирует его. → Гл.04
 
-**Semantic risk taxonomy** — 7 категорий из `plans/project-context.md`. Используется в risk_review и focus_areas. → [Глава 06](06-planning.md).
+**Phase** — Единица плана с `executor_agent`, acceptance criteria, quality gates и steps. → Гл.06, Гл.08
 
-**Session memory** — `/memories/session/`. Кратковременная память текущей беседы. → [Глава 12](12-memory.md).
+**Plan artifact** — Markdown-файл, который Planner записывает в `plans/<task-slug>-plan.md`, conforming to `schemas/planner.plan.schema.json`. Reviewable-вход, не implicit approval. → Гл.05, Гл.06
 
-**Skill** — Файл в `skills/patterns/`. Переиспользуемый паттерн для домена. ≤3 на фазу. → [Глава 11](11-skills.md).
+**PlanAuditor-subagent** — Метка inline verify-роли для `controlflow-verify` фазы 1 (structural audit). Подтверждает соответствие schema/template, десять секций по порядку, семь категорий риска, executor enum, правила Mermaid. → Гл.07, `schemas/plan-auditor.plan-audit.schema.json`
 
-**Skill index** — `skills/index.md`. Domain Mapping таблица. → [Глава 11](11-skills.md).
+**Planner** — Роль plan-producer, поставляемая как `@controlflow-planner`. Ведёт Idea Interview, назначает tier, заполняет семь категорий риска, объявляет `executor_agent` на фазу, пишет артефакт. Не пишет код. → Гл.03, Гл.06
 
-**SMALL** — Тир. PlanAuditor only. → [Глава 06](06-planning.md), [Глава 07](07-review-pipeline.md).
+**PlatformEngineer-subagent** — Концептуальная роль исполнителя для CI/CD, контейнеров и infrastructure-deploy. Добавляет approval-, idempotency- и rollback-гейты поверх backbone. → Гл.03, `schemas/platform-engineer.execution-report.schema.json`
 
-**Stagnation** — Convergence detection: iteration ≥3, improvement <5%. → [Глава 07](07-review-pipeline.md).
+**PreFlect** — Обязательная self-check перед каждой action-batch, с `skills/patterns/preflect-core.md`. Четыре класса риска: destructive, scope-drift, assumption, dependency. Решение: `GO` / `PAUSE` / `ABORT`. → Гл.05, Гл.11
 
-**Subagent** — Любой агент кроме Orchestrator и Planner. Файлы `*-subagent.agent.md`. → [Глава 03](03-agent-roster.md).
+**Prompt** — Тело файла custom agent, описывающее mission роли, scope IN/OUT, правило abstention и output discipline. «P» в retired-акрониме P.A.R.T. → Гл.04
 
-**Task-episodic** — Слой памяти. `plans/artifacts/<task>/`. Per-plan history. → [Глава 12](12-memory.md).
+**Pipeline** — Поток plan → verify → review поверх нативного Copilot: `controlflow-plan` (Planner производит артефакт) → `controlflow-verify` (inline адверсариальный аудит) → нативный Copilot исполняет фазы → `controlflow-review` (слой scope-drift + evidence). Три гейта, а не state machine. → Гл.05
 
-**TDD** — Test-Driven Development. Skill-pattern (`tdd-patterns.md`). → [Глава 11](11-skills.md).
+**Quality gate** — Условие готовности фазы. Enum: `tests_pass`, `lint_clean`, `schema_valid`, `safety_clear`, `human_approved_if_required`. → Гл.08
 
-**TechnicalWriter-subagent** — Documentation specialist. Parity check, diagrams. → [Глава 03](03-agent-roster.md).
+---
 
-**Tool grants** — `governance/tool-grants.json`. Single source для frontmatter `tools:`. → [Глава 10](10-governance.md).
+## R
 
-**Tool routing** — `docs/agent-engineering/TOOL-ROUTING.md`. Local-first и external tool правила. → [Глава 04](04-part-spec.md), [Глава 10](10-governance.md).
+**REJECTED** — Verdict `controlflow-verify`: структурный изъян; scope не deliverable как написано. Не начинать кодинг; запросить направление у пользователя или replan с нуля. → Гл.07
 
-**Trace ID** — UUIDv4 для корреляции логов через цепочку delegation. Создаётся Orchestrator-ом. → [Глава 05](05-orchestration.md), [Глава 12](12-memory.md).
+**REPLAN_REQUIRED** — Статус выхода Planner'а: требования нуждаются в clarification перед планированием. Блокирует прогресс. → Гл.06
 
-**Transient** — Failure class для временных сбоев. Лимит 3. PA/AV не возвращают. → [Глава 13](13-failure-taxonomy.md).
+**Repo memory** — `/memories/repo/` — durable codebase-факты. Create-only (без правок). → Гл.12
 
-**TRIVIAL** — Самый лёгкий тир. Skip PLAN_REVIEW. Code review всё равно обязателен. → [Глава 06](06-planning.md), [Глава 07](07-review-pipeline.md).
+**Repo-persistent** — Третий слой памяти: `NOTES.md` + `/memories/repo/`. Переживает reset-контекста. → Гл.12
 
-**UIImplementer-subagent** — Frontend specialist. Accessibility, responsive. → [Глава 03](03-agent-roster.md).
+**Researcher-subagent** — Концептуальная роль исполнителя для research и evidence. Возвращает findings с цитатами. → Гл.03, `schemas/researcher.research-findings.schema.json`
 
-**Validated blocking issues** — Поле в CodeReviewer verdict. Только они блокируют, не raw issues. → [Глава 08](08-execution-pipeline.md), [Глава 09](09-schemas.md).
+**risk_review** — Поле плана с семью категориями semantic risk, dispositions и applicability. → Гл.06, Гл.07
 
-**Verified items** — Список ранее verified пунктов для regression tracking. → [Глава 07](07-review-pipeline.md).
+---
 
-**vscode/askQuestions** — Тулза для прямого опроса пользователя. Используется при mandatory clarification. → [Глава 05](05-orchestration.md), [Глава 06](06-planning.md).
+## S
 
-**WAITING_APPROVAL** — Состояние Orchestrator-а в ожидании одобрения пользователя. → [Глава 05](05-orchestration.md).
+**Schema** — Файл `schemas/*.json` (JSON Schema draft 2020-12). Контрактная документация + ссылки на eval-фикстуры в slim-модели; не runtime-валидируемые inter-agent сообщения. Всего двадцать схем. → Гл.09
 
-**Wave** — Группа фаз с одинаковым `wave` числом. Параллельны внутри волны, серийны между волнами. → [Глава 08](08-execution-pipeline.md).
+**Scope drift** — Исполнение действий за пределами объявленного scope плана. Обнаруживается сравнением plan-vs-implementation в `controlflow-review`. → Гл.08, Гл.11
 
-**Wave-aware execution** — Алгоритм Orchestrator-а для wave-grouped execution. → [Глава 05](05-orchestration.md), [Глава 08](08-execution-pipeline.md).
+**Semantic risk taxonomy** — Семь категорий риска в `risk_review`: `data_volume`, `performance`, `concurrency`, `access_control`, `migration_rollback`, `dependency`, `operability`. Ни одна не пропускается; `not_applicable` с обоснованием, когда не релевантно. → Гл.06
 
-**Workflow state** — Enum в gate-event схеме: PLANNING/WAITING_APPROVAL/ACTING/REVIEWING/COMPLETE. **Не** содержит PLAN_REVIEW (это лейбл промпта). → [Глава 09](09-schemas.md), [Глава 18](18-faq.md).
+**Session memory** — Слой 1: `/memories/session/`. Conversation-scoped scratch. → Гл.12
+
+**Skill** — Переиспользуемый Markdown-паттерн. Две поверхности: три workflow skill'а в `.github/skills/controlflow-{plan,verify,review}/` и value-add паттерны в `skills/patterns/`. → Гл.11
+
+**Skill index** — `skills/index.md`. Реестр, из которого Planner инжектит ≤3 паттерна на фазу через `skill_references`. → Гл.11
+
+**Skill references** — Поле `skill_references` в фазе плана, перечисляющее value-add паттерны, которые Planner инжектит (≤3 на фазу). → Гл.06, Гл.11
+
+**SMALL** — Complexity tier. `controlflow-verify` запускает только фазу 1 (structural audit). → Гл.07
+
+**Subagent** — **Концептуальная роль исполнителя (нативный Copilot исполняет).** В slim-модели имена `*-subagent` — это метки ролей, которые Planner назначает в фазах плана; нативный Copilot исполняет их inline. Поставляемых ControlFlow-сабагентов нет. → Гл.03
+
+---
+
+## T
+
+**Task-episodic** — Слой 2: `plans/artifacts/<task-slug>/`. Per-task revision history и deliverables. → Гл.12
+
+**TDD** — Test-driven development. Применяется через `skills/patterns/tdd-patterns.md`. → Гл.11
+
+**TechnicalWriter-subagent** — Концептуальная роль исполнителя для документации и code-doc parity. → Гл.03, `schemas/technical-writer.execution-report.schema.json`
+
+**Tier-gated** — Политика, по которой complexity tier определяет, запускаются ли plan, verify и review вообще и сколько verify-фаз запускается. → Гл.05, Гл.07
+
+**Tool grants** — **Retired.** Legacy-файл `governance/tool-grants.json` больше не существует. Доступ к инструментам делегирован нативному Copilot (объявляется per-agent в `tools:` frontmatter при воссоздании). → Гл.10
+
+**Transient** — Классификация сбоя: временная ошибка (timeout, rate limit). Нативный Copilot retry с тем же scope. → Гл.13
+
+**TRIVIAL** — Низший complexity tier. Plan, verify и review все пропускаются. → Гл.07
+
+---
+
+## U
+
+**UIImplementer-subagent** — Концептуальная роль исполнителя для frontend-имплементации (UI, styling, responsive, accessibility). Добавляет a11y/responsive/design-system-гейты поверх backbone. → Гл.03, `schemas/ui-implementer.execution-report.schema.json`
+
+---
+
+## V
+
+**Verdict** — Решение, эмиттируемое skill'ом. `controlflow-verify` → `APPROVED` / `NEEDS_REVISION` / `REJECTED`; `controlflow-review` → findings + verdict. Гейт блокирует продвижение, пока не разрешён. → Гл.05, Гл.07, Гл.08
+
+**Verdict gate** — Точка решения в пайплайне. Verify-гейт блокирует исполнение до `APPROVED`; review-гейт блокирует публикацию до ревью findings пользователем. → Гл.05
+
+---
+
+## W
+
+**Workflow state (legacy)** — **Retired.** Бывший enum узлов state machine Orchestrator'а (`PLANNING` / `WAITING_APPROVAL` / `ACTING` / `REVIEWING` / `COMPLETE`). Не поставляется в slim-модели. Гейты пайплайна заменяют его. → Гл.05
+
+---
 
 ## См. также
 
+- [Глава 00 — Введение](00-introduction.md)
 - [Глава 18 — FAQ](18-faq.md)
-- [README пособия](README.md)
+- [plans/project-context.md](../../plans/project-context.md)
+- [docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md](../agent-engineering/NATIVE-DELEGATION-BOUNDARY.md)

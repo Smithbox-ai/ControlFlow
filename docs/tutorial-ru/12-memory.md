@@ -2,235 +2,226 @@
 
 ## Зачем эта глава
 
-Понять **трёхслойную модель памяти** ControlFlow: что куда писать, что откуда читать, и почему такое разделение существует.
+Понять, **где живёт состояние** в пайплайне plan → verify → review и почему трёхслойная модель памяти предотвращает потерю контекста при context resets. Модель памяти не изменена slim-рефакторингом; изменилось то, кто в неё пишет. В slim-модели нативный Copilot исполняет фазы inline (концептуальные роли-исполнители, которые назначает Planner), `@controlflow-planner` владеет артефактом плана, а пользователь re-invoke'ит Planner для replan'ов. Никакого агента Orchestrator, пишущего в `NOTES.md` на каждой границе фазы, нет — эта запись теперь ответственность пользователя (или нативного Copilot) на границах фаз.
 
 ## Ключевые понятия
 
-- **Session memory** — кратковременная, ограничена текущей беседой.
-- **Task-episodic memory** — память одной задачи (одного плана).
-- **Repo-persistent memory** — долгосрочная, переживающая разные задачи.
-- **NOTES.md** — repo-persistent active-objective state.
+- **Session memory** — scratch, ограниченный беседой; очищается после завершения разговора.
+- **Task-episodic memory** — per-task история в `plans/artifacts/<task-slug>/`; переживает беседу.
+- **Repo-persistent memory** — durable-факты в `NOTES.md` + `/memories/repo/`; переживает context resets.
+- **Context compaction** — обрезка контекста при исчерпании бюджета; слои памяти позволяют восстановление.
+- **Концептуальная роль, не поставляемый агент** — роли-исполнители, читающие и пишущие память, это preserved 8-имённая концептуальная taxonomy, исполняемая inline нативным Copilot (см. главу 03). В slim-модели нет файла агента Orchestrator.
 
-## Три слоя
+## Трёхслойная модель памяти
 
 ```mermaid
 flowchart TD
-    subgraph Session["Session Memory"]
-        S[Текущий разговор<br/>/memories/session/]
+    subgraph L1["Слой 1: Session"]
+        SM["/memories/session/<br/>Conversation scratch<br/>Cleared на reset"]
     end
-
-    subgraph Task["Task-Episodic Memory"]
-        T[plans/artifacts/&lt;task&gt;/<br/>Per-plan record]
+    subgraph L2["Слой 2: Task-Episodic"]
+        TE["plans/artifacts/<task-slug>/<br/>Per-task: решения,<br/>revision history, deliverables"]
     end
-
-    subgraph Repo["Repo-Persistent Memory"]
-        N[NOTES.md<br/>active objective + phase]
-        R["/memories/repo/<br/>conventions, commands, invariants"]
+    subgraph L3["Слой 3: Repo-Persistent"]
+        NM["NOTES.md<br/>Active objective state"]
+        RM["/memories/repo/<br/>Durable codebase facts"]
     end
-
-    Question[Вопрос или задача] -->|read order 1| Task
-    Question -->|read order 2| Session
-    Question -->|read order 3| Repo
-
-    Action[Запись] -.->|task-specific| Task
-    Action -.->|cross-plan fact| Repo
-    Action -.->|temporary| Session
+    L1 -->|promote на границах фаз| L2
+    L2 -->|promote при завершении задачи| L3
 ```
 
-Источник: [docs/agent-engineering/MEMORY-ARCHITECTURE.md](../agent-engineering/MEMORY-ARCHITECTURE.md).
+Канонический spec — `docs/agent-engineering/MEMORY-ARCHITECTURE.md`. Каждая концептуальная роль, пишущая в память, следует одному трёхслойному контракту.
 
-## Типология содержимого памяти (Memory Content Taxonomy)
+## Memory Content Taxonomy
 
-Каждая запись в `/memories/repo/` должна быть классифицирована по одному из четырёх типов:
+Каждая запись в `/memories/repo/` должна классифицироваться в один из четырёх типов контента:
 
-| Тип | Что хранит |
-|-----|-----------|
-| `user` | Персональные предпочтения и workflow, применимые ко всему окружению |
-| `feedback` | Исторические корректировки: прошлые ошибки, ограничения, которые агент должен учитывать |
-| `project` | Ключевые архитектурные решения, структура и соглашения проекта |
-| `reference` | Проверенные CLI-команды, значения конфигурации, инструкции по сборке |
+| Тип | Что хранить |
+|-----|-------------|
+| `user` | Персональные предпочтения и workflow, охватывающие всё окружение |
+| `feedback` | Исторические корректировки: прошлые ошибки, ограничения, которые агент должен соблюдать |
+| `project` | Ключевые архитектурные решения, структура и установленные project conventions |
+| `reference` | Проверенные CLI-команды, значения конфигурации и инструкции по сборке |
 
-**Что никогда не записывать в repo-persistent память:**
-- Производимое состояние кода (то, что можно перечитать прямо из репо).
-- Git-история (commit messages, ветки, merge records).
-- Эфемерное состояние задачи (однотёрновые заметки, scratch-инструментов, «итерация 3 прошла в 14:32»).
+**Save exclusions — никогда не писать в repo-persistent память:**
+- Derivable code state (то, что можно перечитать из репо напрямую).
+- Git history (commit messages, имена веток, merge records).
+- Ephemeral task state (однотёрновые заметки, tool scratch, «итерация 3 прошла в 14:32»).
 
-- Для длинных orchestration-сессий используйте шаблон session notes: `plans/templates/session-notes-template.md`. Он содержит пять разделов: `Current State`, `Files and Functions`, `Errors & Corrections`, `Key Results`, `Worklog`.
-**Проверять перед использованием:** любое утверждение о конкретном файле или функции, извлечённое из памяти, должно быть перепроверено по текущей кодовой базе, прежде чем на него опираться. Память — подсказка, а не источник истины для конкретных местоположений в коде.
+**Verify before recommending:** любое утверждение о названном файле или функции из памяти должно быть перепроверено по текущей кодовой базе перед тем, как на него опираться или сообщать его. Память — подсказка, не источник истины для конкретных мест в коде.
 
-## Слой 1: Session
+## Слой 1: Session Memory
 
-**Где живёт:** `/memories/session/` (виртуальный путь, реализуется через memory tool).
+**Расположение:** `/memories/session/`
 
-**Что хранит:**
-- Текущая задача.
-- В прогрессе — гипотезы и черновики.
-- Промежуточные scratch-заметки.
-- Состояние, нужное только до конца беседы.
-
-**Жизненный цикл:** ограничен **одной беседой**. После reset — стерто.
+**Назначение:** Scratch-пространство для текущей беседы. Хранит:
+- Контекст текущей фазы.
+- Промежуточные research-заметки.
+- Открытые вопросы сессии.
 
 **Правила:**
-- Не использовать для cross-task фактов.
-- Не использовать для invariants.
-- Использовать для **только текущего turn-а или серии turns**.
+- Не создавать новые session-файлы без необходимости.
+- Листать существующие файлы перед чтением — они не auto-загружаются в контекст.
+- Очищаются при завершении беседы.
+- Для длинных orchestration-прогонов используйте session-notes шаблон в `plans/templates/session-notes-template.md`. Он содержит пять секций: `Current State`, `Files and Functions`, `Errors & Corrections`, `Key Results`, `Worklog`.
 
-## Слой 2: Task-Episodic
+**Кто использует:** Любая концептуальная роль во время своего прогона (исполняемая inline нативным Copilot).
 
-**Где живёт:** `plans/artifacts/<task-slug>/`.
+## Слой 2: Task-Episodic Memory
 
-**Что хранит:**
-- Per-plan history (verdicts, iterations, evidence).
-- Verified items list для regression tracking.
-- Final review log.
-- Observability NDJSON (`plans/artifacts/observability/<task>.ndjson`).
+**Расположение:** `plans/artifacts/<task-slug>/`
 
-**Жизненный цикл:** живёт сколько живёт plan-артефакт. Архивируется вместе с планом.
+**Назначение:** История для одной конкретной задачи. Хранит:
+- Revision history (почему план был пересмотрен?).
+- Verified items across iterations.
+- Phase completion reports.
+- Промежуточные deliverables (дизайны, диаграммы, verify verdicts).
 
 **Правила:**
-- Если факт применим к **одному** плану — сюда.
-- Хранит «эпизодическую» историю задачи.
-- Не дублирует план — план в `plans/<task>-plan.md`, артефакты — рядом.
+- Создавать одну папку на задачу; slug = kebab-case заголовок задачи.
+- Содержимое переживает беседу.
+- Planner и нативный Copilot читают это в revision loops для regression tracking.
 
-## Слой 3: Repo-Persistent
+**Примеры файлов в папке задачи:**
+- `verify-verdict.md` — компактный verdict, написанный `controlflow-verify`.
+- `final_review.md` — опциональный финальный review-advisory от `controlflow-review`.
+- `verified_items.md` — verified items из итерации 1.
 
-Самый интересный — **разделён на два подслоя**.
+## Слой 3: Repo-Persistent Memory
+
+**Два расположения:**
 
 ### NOTES.md
 
-**Что хранит:** active-objective state only.
-- Текущая задача (что мы делаем сейчас).
-- Текущая фаза.
-- Blockers и unresolved risks.
+**Назначение:** Только active-objective state. Содержит:
+- Текущая активная цель и её фаза.
+- Неразрешённые blockers и риски.
+- Текущая граница фазы.
 
-**Не хранит:** task-specific историю (это в episodic), invariants (это в /memories/repo/).
-
-**Обновляется:** на границах фаз. Stale entries удаляются при superseding.
-
-**Цитата из политики:**
-> «`NOTES.md` holds repo-persistent active-objective state only — keep it terse, update at phase boundaries, prune stale entries.»
+**Правила:**
+- Обновлять на каждой границе фазы (пользователь или нативный Copilot во время исполнения; Planner не пишет mid-execution).
+- Удалять устаревшие записи при superseding.
+- Держаться в пределах 20-строчного бюджета (enforced через `evals/validate.mjs` Pass 7; style drift проверяется через `validateNotesMdStyle` в `evals/drift-checks.mjs`).
+- Не использовать `NOTES.md` для task-specific истории — это в task-episodic памяти.
 
 ### /memories/repo/
 
-**Где живёт:** управляется через repo memory tool (Copilot).
+**Назначение:** Durable codebase facts, переживающие context resets. Примеры:
+- «Команда тестирования — `cd evals && npm test`.»
+- «PlanAuditor исключает классификацию сбоев `transient`.»
+- «Slim-модель поставляет один агент и три skill'а.»
 
-**Что хранит:**
-- Conventions (например, «используем Python typing»).
-- Verified commands (например, «`cd evals && npm test` запускает eval-харнесс»).
-- Invariants (например, «P.A.R.T. order is mandatory»).
-- Лучшие практики, не очевидные из кода.
+**Правила:**
+- Поддерживается только `create` — никаких inline-редактирований.
+- Каждый факт должен быть коротким (1–2 предложения), с цитатами.
+- Хранить только если: независимо actionable, вряд ли изменится, релевантно для будущих задач.
 
-**Поддерживается только `create`** (per memory architecture). Для repo memory — JSON-объект с полями `subject`, `fact`, `citations`, `reason`, `category`.
+## Правила чтения и записи
 
-**Что НЕ хранить:**
-- Секреты.
-- Изменчивые факты (например, версии).
-- Task-specific детали.
+| Событие | Чтение | Запись |
+|---------|--------|--------|
+| Context start | Session (если есть), `NOTES.md` | — |
+| Plan written | `NOTES.md`, repo-persistent | `plans/<task-slug>-plan.md` (task-episodic) |
+| Phase start | Task-episodic (релевантные файлы) | Session note; продвигать durable cross-plan факты в `/memories/repo/` через Checklist C в `skills/patterns/repo-memory-hygiene.md` |
+| Phase end | — | Task-episodic (completion report, `NOTES.md`) |
+| Task complete | — | `/memories/repo/` (durable факты) |
+| Conversation end | — | Session files очищены |
 
-## Read order и Write rules
-
-**Read order (рекомендованный):**
-1. **Task-episodic** first — самое актуальное для текущей задачи.
-2. **Session** — текущий контекст беседы.
-3. **Repo-persistent** — общие факты как fallback.
-
-**Write rules:**
-| Факт | Куда |
-|------|------|
-| Применим к одному плану | Task-episodic |
-| Применим cross-plan | Repo-persistent |
-| Не переживёт turn | Session |
-| Active objective | NOTES.md |
-
-> «If a fact applies to exactly one plan, it belongs in task-episodic memory. If it applies across plans, it belongs in repo-persistent memory. If it will not outlive the current turn, leave it in session memory.»
+Перед записью в `/memories/repo/` или обновлением `NOTES.md` на границе фазы загрузите и следуйте `skills/patterns/repo-memory-hygiene.md` (дедуп-чек-лист + прунинг-routine).
 
 ## Пример сценария
 
-**Задача:** Добавить экспорт CSV в страницу отчётов.
+| Шаг | Кто | Слой памяти |
+|-----|-----|-------------|
+| 1 | Пользователь говорит «реализуй фичу X» | — |
+| 2 | `@controlflow-planner` читает `NOTES.md` | Repo-persistent |
+| 3 | Planner пишет `plans/feature-x-plan.md`; создаётся task-episodic dir | Task-episodic |
+| 4 | `controlflow-verify` пишет `verify-verdict.md` | Task-episodic |
+| 5 | Phase 1 исполняется (нативный Copilot inline); пишется completion report | Task-episodic |
+| 6 | Context reset | Session очищен |
+| 7 | Нативный Copilot читает `NOTES.md` и `plans/artifacts/feature-x/` | Оба слоя |
+| 8 | Задача завершена; записать durable факт про API convention | `/memories/repo/` |
 
-| Что | Куда |
-|-----|------|
-| Текущая фаза «design API» | NOTES.md (repo-persistent) |
-| План `plans/csv-export-plan.md` | Plan artifact (отдельно) |
-| Verdict от PlanAuditor для итерации 1 | Task-episodic (`plans/artifacts/csv-export/`) |
-| Гипотеза «возможно, использовать stream API» | Session |
-| Факт «`cd evals && npm test` — каноническая верификация» | Repo-persistent (`/memories/repo/`) |
+## Context Compaction Policy
 
-## Memory pollution
+Когда context-бюджет приближается к лимиту, нативный Copilot (исполняющий текущую фазу):
+- **Сохраняет:** активная фаза, неразрешённые blockers, одобренные решения, safety-constraints.
+- **Сбрасывает:** verbose промежуточный tool-output, уже суммированный.
+- **Эмиттит:** компактную summary детерминированными буллетами перед продолжением.
 
-**Что это:** загрязнение repo-persistent памяти fact-ами, которые на самом деле task-specific.
+Compaction-ladder (L1 inline truncation → L2 summary replacement → L3 chunk discard → L4 spill to disk под `.cache/tool-output/<task-slug>/` → L5 hard reset с сохранением continuity через `NOTES.md` и task-episodic artifact tree) описана в `docs/agent-engineering/MEMORY-ARCHITECTURE.md`.
 
-**Симптомы:**
-- В `/memories/repo/` появляются ссылки на конкретные plan-артефакты.
-- NOTES.md разрастается до многостраничного документа.
-- Stale entries не удаляются.
+Идея: session и task-episodic слои держат состояние, поэтому модель можно сбросить без потери истории задачи.
+
+## Memory Pollution
+
+Избыточные или шумные memory-записи — это **memory pollution**. Симптомы:
+- `NOTES.md` обрастает устаревшими записями.
+- `/memories/repo/` хранит факты, которые часто меняются.
+- Session-файлы накапливают неиспользуемые заметки.
 
 **Профилактика:**
-- Регулярно пересматривать NOTES.md (на границах фаз).
-- Перед записью в repo — спросить: «применимо ли это к будущим задачам?»
-- Удалять/обновлять устаревшие memory entries.
-Дисциплина использования памяти (Memory Use Discipline)
+- Прать устаревшие `NOTES.md` записи на каждой границе фаз.
+- Хранить в `/memories/repo/` только факты, удовлетворяющие критериям «durable».
+- Не создавать session-файлы без необходимости.
 
-Два поведенческих инварианта (покрываются `evals/tests/prompt-behavior-contract.test.mjs`):
+## Memory Use Discipline
 
-1. **Verify before use** — любое утверждение о конкретном файле или функции, извлечённое из памяти (session notes, `/memories/repo/` или `NOTES.md`), должно быть перепроверено по текущей кодовой базе, прежде чем действовать на его основе. Устаревшая память — подсказка, а не источник истины о конкретных местах в коде.
+Два поведенческих инварианта (enforced через `evals/tests/prompt-behavior-contract.test.mjs`):
 
-2. **Ignore memory on request** — если пользователь явно говорит «ignore memory» (или эквивалентно: «don't use memory», «fresh context»), агент не должен обращаться к `/memories/repo/`, NOTES.md или session notes в этом turn-е. Действие per-turn, не сохраняется.
+1. **Verify before use** — любое утверждение о названном файле или функции, происходящее из памяти (session notes, `/memories/repo/` или `NOTES.md`), должно быть перепроверено по текущей кодовой базе перед тем, как на него опираться или сообщать его пользователю. Устаревшая память — подсказка, не источник истины для конкретных мест в коде.
 
-Источник: `docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md → §7 Memory Use Discipline`.
+2. **Ignore memory on request** — когда пользователь явно говорит «ignore memory» (или эквивалент: «don't use memory», «fresh context»), агент не должен обращаться к `/memories/repo/`, `NOTES.md` или session notes в этом turn-е. Override per-turn, не сохраняется.
 
-## 
-## Observability и память
+См. `docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md → §7 Memory Use Discipline`.
 
-`plans/artifacts/observability/<task-id>.ndjson` — это **task-episodic**, но с особым форматом (NDJSON для трассировки). Содержит gate-events с `trace_id` для корреляции.
+## Task-Episodic Auto-Archive
 
-См. [docs/agent-engineering/OBSERVABILITY.md](../agent-engineering/OBSERVABILITY.md).
+`plans/artifacts/<task-slug>/` накапливается неограниченно, если явно не архивировать. Инструментарий:
 
-## Memory layers vs Storage
+- **Скрипт:** `evals/archive-completed-plans.mjs` — сканирует `plans/*.md`, обнаруживает закрытые планы (статус `DONE`, `SUPERSEDED`, `DEFERRED`), проверяет возраст ≥ 14 дней, затем перемещает план и его сопоставленную artifact-директорию в `plans/archive/<YYYY-MM>/`. Dry-run по умолчанию (`npm run archive:dry`); `--apply` mode для исполнения (`npm run archive:apply`).
+- **Safety:** idempotent, без удалений, `READY_FOR_EXECUTION` планы никогда не eligible.
 
-Не путайте **логические слои** с **физическим хранилищем**:
+Для идентификации планов, готовых к архивации: `cd evals && npm run archive:dry`. Для исполнения: `npm run archive:apply`.
 
-| Логический слой | Физическое хранилище |
-|----------------|---------------------|
-| Session | Memory tool (`/memories/session/`) |
-| Task-episodic | Файлы в `plans/artifacts/<task>/` |
-| Repo-persistent — active state | `NOTES.md` (commit-tracked) |
-- **Записывать неклассифицированные или производимые факты в `/memories/repo/`.** Сначала классифицируйте по типологии; отбрасывайте derivable code state, git-историю и эфемерное состояние задачи.
-- **Действовать на основе устаревшей памяти без верификации.** После рефакторинга claims о конкретных файлах/функциях становятся ложными. Всегда перепроверяйте.
+## Logical vs Physical Storage
 
-## Упражнения
+| Логический слой | Физическое расположение |
+|-----------------|-------------------------|
+| Session memory | `/memories/session/` (VS Code / Copilot Chat) |
+| Task-episodic | `plans/artifacts/<task-slug>/` (файловая система) |
+| Repo-persistent | `NOTES.md` + `/memories/repo/` (файловая система + Copilot memory tool) |
 
-1. **(новичок)** Откройте `NOTES.md` в репо. Какая там сейчас active objective?
-2. **(новичок)** Сколько слоёв в модели памяти ControlFlow?
-3. **(средний)** Куда вы запишете факт: «Для проекта X используется PostgreSQL 16 с расширением pgvector»?
-4. **(средний)** Что произойдёт, если NOTES.md не обновлён две недели?
-5. **(продвинутый)** Объясните, почему repo memory поддерживает только `create`, а не `update`/`delete`.
-6. **(средний)** Фаза только что завершилась. CoreImplementer-subagent обнаружил новое API-соглашение. Пройдите через Checklist C (в `skills/patterns/repo-memory-hygiene.md`) и решите, стоит ли продвигать этот факт в `/memories/repo/`.
-7. **(продвинутый)** В `<repository_memories>` вы видите шесть записей с незначительно различающимися описаниями одной и той же команды `cd evals && npm test`. Запустите Checklist D (периодический аудит) и составьте Audit Report для этой ситуации
-- **Не обновлять NOTES.md на границах фаз**. Stale state ведёт к рассинхрону.
-- **Хранить session-state в repo-persistent**. Память не должна расти от коротких заметок.
-- **Помещать секреты в repo memory**. Никогда.
+## Типичные ошибки
+
+- **Запись неклассифицированных или derivable фактов в `/memories/repo/`.** Сначала классифицируйте по content taxonomy; отбрасывайте derivable code state, git history и ephemeral task state перед продвижением.
+- **Действие на основе устаревшей памяти без верификации.** Утверждения о названных файлах и функциях из памяти становятся некорректными после рефакторинга. Всегда перепроверяйте по текущей кодовой базе перед действием.
+- **Создание session-файлов для всего.** Они должны быть минимальным scratch — не полным журналом задачи.
+- **Забыть прочитать task-episodic память после reset.** Regression tracking и verified items — там.
+- **Искать агента Orchestrator для обновления `NOTES.md`.** В slim-модели нет агента Orchestrator. Пользователь или нативный Copilot обновляет `NOTES.md` на границах фаз; Planner не пишет mid-execution.
 
 ## Упражнения
 
-1. **(новичок)** Откройте `NOTES.md` в репо. Какая там сейчас active objective?
-2. **(новичок)** Сколько слоёв в модели памяти ControlFlow?
-3. **(средний)** Куда вы запишете факт: «Для проекта X используется PostgreSQL 16 с расширением pgvector»?
-4. **(средний)** Что произойдёт, если NOTES.md не обновлён две недели?
-5. **(продвинутый)** Объясните, почему repo memory поддерживает только `create`, а не `update`/`delete`.
+1. **(новичок)** Откройте `NOTES.md` — какая текущая active objective?
+2. **(новичок)** Какой слой памяти хранит per-task revision history?
+3. **(средний)** Фаза завершилась успешно. Что нужно записать в память и куда?
+4. **(средний)** Context reset происходит на фазе 3 из 6. Какие данные есть у нативного Copilot для реконструкции состояния?
+5. **(продвинутый)** Спроектируйте стратегию использования памяти для LARGE-tier 10-фазной задачи, требующей resumability после context reset.
+6. **(средний)** Фаза только что завершилась. Исполнитель обнаружил новое API-соглашение. Пройдите через Checklist C (в `skills/patterns/repo-memory-hygiene.md`), чтобы решить, продвигать ли этот факт в `/memories/repo/`.
+7. **(продвинутый)** Ваш `/memories/repo/` context-блок показывает шесть записей с немного разными описаниями одной и той же команды `cd evals && npm test`. Запустите Checklist D (периодический аудит) и составьте Audit Report для этой ситуации.
 
 ## Контрольные вопросы
 
-1. Перечислите 3 слоя памяти.
-2. Что хранится в NOTES.md?
-3. Куда писать invariants (например, P.A.R.T. order)?
-4. Какой read order рекомендован?
-5. Чем отличается task-episodic от session?
+1. Назовите 3 слоя памяти.
+2. Что хранит `NOTES.md` и каков его строковый бюджет?
+3. Что такое task-episodic deliverables?
+4. Что такое memory pollution?
+5. Кто обновляет `NOTES.md` на границах фаз в slim-модели?
 
 ## См. также
 
-- [Глава 05 — Оркестрация](05-orchestration.md)
-- [Глава 10 — Governance](10-governance.md)
 - [docs/agent-engineering/MEMORY-ARCHITECTURE.md](../agent-engineering/MEMORY-ARCHITECTURE.md)
-- [docs/agent-engineering/OBSERVABILITY.md](../agent-engineering/OBSERVABILITY.md)
+- [Глава 05 — Пайплайн plan → verify → review](05-orchestration.md)
+- [Глава 08 — Пайплайн исполнения](08-execution-pipeline.md)
+- [Глава 11 — Skills](11-skills.md)
 - [NOTES.md](../../NOTES.md)
