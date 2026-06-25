@@ -1,0 +1,80 @@
+{
+  "scenario_id": "plan-auditor-replan-loop",
+  "title": "PlanAuditor-Planner Replan Loop Cap",
+  "description": "Validates that Orchestrator caps the PlanAuditor→Planner revision loop per complexity tier (SMALL: 2, MEDIUM/LARGE: 5)",
+  "agent": "Orchestrator",
+  "category": "orchestration",
+  "inputs": [
+    {
+      "label": "first-revision-succeeds",
+      "description": "PlanAuditor finds issues, Planner revises, PlanAuditor approves on second pass",
+      "input": {
+        "iteration_1": {
+          "plan_auditor_status": "NEEDS_REVISION",
+          "failure_classification": "fixable"
+        },
+        "iteration_2": {
+          "plan_auditor_status": "APPROVED"
+        }
+      },
+      "expected_behavior": {
+        "total_iterations": 2,
+        "final_state": "ACTING",
+        "escalated": false
+      }
+    },
+    {
+      "label": "two-revisions-then-approve",
+      "description": "PlanAuditor finds issues twice, Planner revises twice, PlanAuditor approves on third pass",
+      "input": {
+        "iteration_1": {
+          "plan_auditor_status": "NEEDS_REVISION",
+          "failure_classification": "fixable"
+        },
+        "iteration_2": {
+          "plan_auditor_status": "NEEDS_REVISION",
+          "failure_classification": "fixable"
+        },
+        "iteration_3": {
+          "plan_auditor_status": "APPROVED"
+        }
+      },
+      "expected_behavior": {
+        "total_iterations": 3,
+        "max_revision_rounds": 2,
+        "final_state": "ACTING",
+        "escalated": false
+      }
+    },
+    {
+      "label": "cap-exceeded-escalates",
+      "description": "After 2 revision rounds, if PlanAuditor still rejects, escalate to user",
+      "input": {
+        "iteration_1": {
+          "plan_auditor_status": "NEEDS_REVISION",
+          "failure_classification": "fixable"
+        },
+        "iteration_2": {
+          "plan_auditor_status": "NEEDS_REVISION",
+          "failure_classification": "fixable"
+        },
+        "iteration_3_would_be": {
+          "note": "Orchestrator does NOT run a 3rd revision. Instead, escalates."
+        }
+      },
+      "expected_behavior": {
+        "total_revision_rounds": 2,
+        "escalated": true,
+        "state_transition": "WAITING_APPROVAL",
+        "user_sees": "PlanAuditor findings from both rounds plus Planner revision attempts"
+      }
+    }
+  ],
+  "assertions": [
+    "Maximum PlanAuditor→Planner revision rounds is tier-dependent (SMALL: 2, MEDIUM/LARGE: 5) — exhaustion escalates to user",
+    "Each revision round sends PlanAuditor findings to Planner as revision context",
+    "If PlanAuditor approves within 2 rounds, pipeline proceeds to ACTING",
+    "If 2 rounds exhausted without approval, Orchestrator escalates to user",
+    "Escalation includes accumulated findings from all rounds"
+  ]
+}

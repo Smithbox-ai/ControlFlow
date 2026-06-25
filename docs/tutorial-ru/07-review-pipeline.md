@@ -1,188 +1,225 @@
-# Глава 07 — Ревью-пайплайн (controlflow-verify)
+# Глава 07 — Ревью-пайплайн
 
 ## Зачем эта глава
 
-Понять **`controlflow-verify`** — адверсариальный гейт до исполнения, запускающийся *до* того, как будет тронут код. Это «verify»-половина пайплайна: Planner производит артефакт; `controlflow-verify` пытается его опровергнуть; только на `APPROVED` начинается имплементация. Найти проблему в плане на порядки дешевле, чем в коде.
-
-Эта глава — **pre-execution** verify-гейт. Post-execution «review»-гейт (`controlflow-review`) — глава 08. Вместе они два гейта, обрамляющие исполнение в пайплайне plan → verify → review (глава 05).
+Разобрать **PLAN_REVIEW** — адверсариальную фазу проверки плана *до* исполнения. Понять, какие ревьюеры участвуют, как они дополняют друг друга, и почему дешевле найти проблему здесь, чем в коде.
 
 ## Ключевые понятия
 
-- **`controlflow-verify`** — skill, запускающий адверсариальную pre-execution верификацию **inline в главном контексте** (ноль сабагентов). Invoke через `/controlflow-verify`.
-- **Inline, не dispatch** — verify runs в главном контексте разговора. Он **не** спавнит verifier-агентов. Три verify-роли — это фазы skill'а, не поставляемые агенты.
-- **Адверсариальный фрейминг** — ваша задача **сломать** план, а не защищать его. Steelman rejection. По умолчанию `flagged`, когда evidence недостаточно; не рационализируйте pass.
-- **Три фазы = три verify-роли** — `PlanAuditor-subagent` (фаза 1, structural audit), `AssumptionVerifier-subagent` (фаза 2, mirage detection), `ExecutabilityVerifier-subagent` (фаза 3, executability cold-start). Это метки концептуальных ролей; они **не должны** появляться как `executor_agent` в фазах плана.
-- **Tier-gated глубина фаз** — `SMALL` → фаза 1; `MEDIUM` → фазы 1–2; `LARGE` → фазы 1–3; любая неразрешённая HIGH-impact semantic-risk → все три независимо от тира.
-- **Verdict** — `APPROVED` / `NEEDS_REVISION` / `REJECTED`, с confidence score.
-- **Taxonomy миражей** — presence-миражи P1–P10 и absence-миражи A11–A17 (ось factual-claims).
-- **Чтение с диска** — verify skill читает артефакт плана из `plans/<task-slug>-plan.md`, а не из chat-копии.
+- **PLAN_REVIEW** — стадия Orchestrator-а между одобрением плана и началом исполнения.
+- **Адверсариальное ревью** — ревьюер пытается **сломать** план, а не подтвердить его.
+- **Reviewer** — read-only агент, который никогда не появляется в `executor_agent`.
+- **Iteration loop** — цикл ревью с лимитом итераций; каждая итерация может уточнять активный `persisted_artifact` через `in_place_update` (без создания нового файла плана с нуля на каждую ревизию). Для связности истории в replan-диспатчи к Planner пробрасываются `iteration_index` из цикла ревью и `trace_id` задачи.
+- **Stagnation** — ситуация, когда план перестал улучшаться между итерациями; триггерит эскалацию.
 
-## Verify-пайплайн
+## Триггеры PLAN_REVIEW
+
+Триггер хранится в `governance/runtime-policy.json` → `plan_review_gate_trigger_conditions`. PLAN_REVIEW активируется, если выполнено **хотя бы одно**:
+
+- Phase count ≥ `min_phases`.
+- `confidence` < `confidence_threshold`.
+- В скоупе есть деструктивные/высокорисковые операции.
+- Есть `risk_review` запись с `applicability: applicable` AND `impact: HIGH` AND `disposition` ≠ `resolved`.
+
+Если ни одно не сработало — пайплайн пропускается, идём сразу в исполнение.
+
+## Маршрутизация по тиру
+
+| Tier | Активные ревьюеры | Max iterations |
+| ---- | ----------------- | -------------- |
+| TRIVIAL | — (пайплайн пропущен) | — |
+| SMALL | PlanAuditor | 2 |
+| MEDIUM | PlanAuditor + AssumptionVerifier | 5 |
+| LARGE | PlanAuditor + AssumptionVerifier + ExecutabilityVerifier | 5 |
+
+Источник: `governance/runtime-policy.json` → `review_pipeline_by_tier` и `max_iterations_by_tier`.
+
+**Override:** Любой план с HIGH-impact unresolved risk → принудительно LARGE-пайплайн, независимо от тира.
+
+## Три ревьюера и их предметы
 
 ```mermaid
-flowchart TD
-    Plan[("plans/<task-slug>-plan.md<br/>чтение с диска")]
-    P1[Фаза 1 — Structural audit<br/>PlanAuditor-subagent]
-    P2[Фаза 2 — Mirage detection<br/>AssumptionVerifier-subagent]
-    P3[Фаза 3 — Executability cold-start<br/>ExecutabilityVerifier-subagent]
-    Verdict{{Verdict + confidence}}
-    Out[("plans/artifacts/<task-slug>/verify-verdict.md")]
-
-    Plan --> P1
-    P1 -->|SMALL+ pass| P2
-    P2 -->|MEDIUM+ pass| P3
-    P3 --> Verdict
-    P1 -->|structural failure| Verdict
-    P2 -->|BLOCKING mirage| Verdict
-    Verdict -->|APPROVED| Exec[Имплементация может начаться]
-    Verdict -->|NEEDS_REVISION| Replan[Re-invoke Planner для правки]
-    Verdict -->|REJECTED| User[Запросить направление у пользователя]
-    Verdict --> Out
-    Replan -.->|правка артефакта| Plan
+flowchart LR
+    Plan[План от Planner] --> PA[PlanAuditor<br/>Архитектура / Безопасность<br/>Риски / Откат]
+    Plan --> AV[AssumptionVerifier<br/>17 паттернов миражей<br/>Утверждения vs Факты]
+    Plan --> EV[ExecutabilityVerifier<br/>Холодный старт<br/>Первые 3 задачи]
+    PA --> Verdict{Verdict}
+    AV --> Verdict
+    EV --> Verdict
+    Verdict -->|APPROVED| Exec[Исполнение]
+    Verdict -->|NEEDS_REVISION| Replan[Planner: точечный replan]
+    Verdict -->|REJECTED| User[Пользователь]
+    Replan --> Plan
 ```
 
-Пайплайн tier-gated: SMALL запускает только фазу 1; MEDIUM — фазы 1–2; LARGE — все три. Structural failure в фазе 1 short-circuit'ит в `NEEDS_REVISION` немедленно.
+### PlanAuditor — дизайн и риски
 
-## Tier-gated глубина фаз
+**Что ищет:**
 
-Таблица тиров совпадает с `README.md`, `.github/copilot-instructions.md` и `plans/project-context.md`.
+- Архитектурные несогласованности.
+- Уязвимости безопасности.
+- Отсутствие отката для деструктивных шагов.
+- Конфликты зависимостей между фазами.
+- Пропуски в покрытии скоупа.
 
-| Tier | Какие verify-фазы запускать |
-|------|------------------------------|
-| **TRIVIAL** | skip |
-| **SMALL** | фаза 1 (structural audit) |
-| **MEDIUM** | фазы 1–2 (audit + assumption/mirage) |
-| **LARGE** | фазы 1–3 (audit + mirage + executability cold-start) |
+**Focus areas** определяются маппингом из [project-context.md](../../plans/project-context.md):
 
-**Override-правило:** любой план с записью `risk_review`, где `applicability: applicable` AND `impact: HIGH` AND `disposition` не `resolved`, форсит все три фазы независимо от тира. Не начинать имплементацию SMALL+ работы, пока `controlflow-verify` не вернёт `APPROVED`.
+| Risk category | PlanAuditor focus |
+| ------------- | ----------------- |
+| data_volume, performance | `["performance"]` |
+| concurrency, access_control | `["architecture"]` |
+| migration_rollback | `["destructive_risk", "missing_rollback"]` |
+| dependency | `["architecture"]` |
+| operability | `["scope_gap"]` |
 
-## Адверсариальный фрейминг (применим к каждой фазе)
+**Контракт:** `schemas/plan-auditor.plan-audit.schema.json`. Failure-классификация **исключает** `transient`.
 
-- Ваша задача — сломать план, а не защищать его. Steelman rejection.
-- По умолчанию `flagged`, когда evidence недостаточно — не рационализируйте pass.
-- Для каждого claim'а спросите: «Что сделало бы это ложным?» — затем проверьте это.
-- Различайте **validated blockers** и **hypotheses**; явно указывайте validation gaps.
-- `confidence` Planner'а **не** заменяет ваш собственный скоринг.
+### AssumptionVerifier — миражи
 
-Адверсариальный фрейминг — корректив для inline-ревью, которому не хватает изоляции свежего контекста агента. Поскольку нет свежего verifier-сабагента, скептицизм должен нести само framing.
+**Что ищет:** утверждения в плане, не подтверждённые кодовой базой. **17 паттернов**, например:
 
-## Фаза 1 — Structural Audit (PlanAuditor-subagent)
+- «Файл X существует» — на самом деле нет.
+- «Функция Y возвращает Z» — на самом деле другое.
+- «API W доступен» — на самом deprecated.
+- «Зависимость уже установлена» — нет.
+- «Тест покрывает случай» — на самом деле нет.
 
-Подтвердить, что артефакт соответствует `schemas/planner.plan.schema.json` и `plans/templates/plan-document-template.md`:
+**Severity:** `BLOCKING` / `WARNING` / `INFO`. Только `BLOCKING` останавливает пайплайн.
 
-1. YAML header присутствует; `Status` — один из `READY_FOR_EXECUTION`, `ABSTAIN`, `REPLAN_REQUIRED`; `Agent: Planner`; `Schema Version: 1.2.0`; `Confidence` — числовое.
-2. Все 10 секций присутствуют по порядку; 5 lifecycle-секций присутствуют и упорядочены для SMALL+.
-3. Секция 7 содержит ровно семь категорий риска, каждая один раз.
-4. Каждая фаза объявляет один `executor_agent` из schema enum; quality gates используют только пять стандартных значений (`tests_pass`, `lint_clean`, `schema_valid`, `safety_clear`, `human_approved_if_required`).
-5. Acceptance criteria включают минимум один измеримый observable outcome на фазу.
-6. Tier LARGE включает `flowchart TD` + `sequenceDiagram`; каждая ≤30 строк.
+**Зачем нужен поверх PlanAuditor:** PlanAuditor смотрит на дизайн (правильно ли решено?). AssumptionVerifier — на достоверность фактов (правда ли то, что Planner написал?). Разные оси.
 
-**Structural failure → `NEEDS_REVISION` немедленно.** Classification сбоев для этой фазы **исключает** `transient`.
+**Контракт:** `schemas/assumption-verifier.plan-audit.schema.json`.
 
-### Маппинг focus-областей фазы 1
+### ExecutabilityVerifier — холодный старт
 
-Когда запись semantic-risk триггерит аудит, категория риска мапится в focus-области аудита. Эта таблица — та, что в `plans/project-context.md`:
+**Что ищет:** Симулирует, может ли исполнитель, видя только репозиторий + первые 3 задачи плана, начать работу без дополнительных вопросов.
 
-| Категория риска | Focus-области аудита |
-|-----------------|----------------------|
-| `data_volume`, `performance` | `["performance"]` |
-| `concurrency`, `access_control` | `["architecture"]` |
-| `migration_rollback` | `["destructive_risk", "missing_rollback"]` |
-| `dependency` | `["architecture"]` |
-| `operability` | `["scope_gap"]` |
+**Чеклист:**
 
-## Фаза 2 — Assumption / Mirage Check (AssumptionVerifier-subagent)
+- Конкретны ли пути файлов?
+- Есть ли input/output контракты?
+- Указаны ли verification commands?
+- Понятны ли критерии acceptance?
 
-Попытаться **опровергнуть** factual claims плана:
+**Status:** `PASS` / `WARN` / `FAIL`. `FAIL`/`WARN` уходит в Planner на доработку.
 
-1. Каждый указанный file/path/symbol реален — открыть или grep'нуть. Указанный файл, которого не существует — это мираж и blocker.
-2. Каждое предположение bounded по scope, а не скрытое решение о scope.
-3. Зависимости и version constraints pinned или явно помечены.
-4. Никакого hand-waving «должно быть безопасно» по concurrency или shared mutable state — ownership и ordering явные.
-5. Data-volume-опасения задокументированы там, где применимо (bulk ops, пагинация).
+**Контракт:** `schemas/executability-verifier.execution-report.schema.json`.
 
-Полная taxonomy миражей — в `.github/skills/controlflow-verify/references/mirage-patterns.md`:
+## Iteration loop
 
-- **Presence-миражи (P1–P10)** — «Файл X существует» (его нет); «Функция Y возвращает Z» (возвращает другое); «API W доступен» (deprecated); «Зависимость уже установлена» (нет); «Тест покрывает случай» (нет).
-- **Absence-миражи (A11–A17)** — error-пути, которые план пропустил, отсутствующие миграции, отсутствующий rollback, отсутствующие security boundaries на чувствительных операциях.
+```mermaid
+sequenceDiagram
+    participant O as Orchestrator
+    participant PA as PlanAuditor
+    participant AV as AssumptionVerifier
+    participant EV as ExecutabilityVerifier
+    participant P as Planner
+    participant U as User
 
-Severity — `BLOCKING` / `WARNING` / `INFO`. Только `BLOCKING` останавливает пайплайн. `AssumptionVerifier` дополняет `PlanAuditor`, потому что они проверяют **разные оси**: PlanAuditor ревьюит _дизайн_ (корректно ли решение?); AssumptionVerifier ревьюит _factual accuracy_ (то, что Planner написал, действительно правда?).
+    Note over O: iteration_index = 1
+    par по тиру
+        O->>PA: dispatch(plan_path, iter=1)
+        O->>AV: dispatch(plan_path, iter=1)
+    end
+    PA-->>O: APPROVED
+    AV-->>O: 0 BLOCKING
+    Note over O: LARGE tier → ExecutabilityVerifier
+    O->>EV: dispatch(plan_path)
+    EV-->>O: PASS
+    O->>U: план APPROVED → ACTING
 
-## Фаза 3 — Executability Cold-Start Simulation (ExecutabilityVerifier-subagent)
+    alt NEEDS_REVISION или BLOCKING mirages
+        O->>P: revised plan request (iter+1)
+        P-->>O: revised plan
+        Note over O: повторить loop
+    end
 
-Симулировать свежего исполнителя, начинающего Phase 1 только с планом в руках:
+    alt iteration_index ≥ 3 и улучшение < 5%
+        O->>U: stagnation → WAITING_APPROVAL
+    end
 
-1. Может ли Phase 1 выполниться без вопроса пользователю? Если да — ок; если нет — пометить ambiguity как blocker Phase 1.
-2. Достаточно ли concrete verification-команды, чтобы запустить as-is (без угадывания)?
-3. Есть ли у каждой destructive или migration-heavy фазы rollback/recovery guidance? HIGH blast radius → требуется `human_approved_if_required`; MEDIUM → `safety_clear`.
-4. Явный ли формат inter-phase contract deliverable и знает ли downstream-фаза, как его валидировать?
-
-Status — `PASS` / `WARN` / `FAIL`. `FAIL` или `WARN` маршрутизирует обратно Planner'у на доработку.
-
-## Confidence Score и Verdict
-
-Оцените каждый применимый checklist-item как `confirmed` / `uncertain` / `refuted`:
-
+    alt iteration_index > max_iterations
+        O->>U: best version + unresolved
+    end
 ```
-confidence = confirmed_count / total_items_with_any_actionable_question
-```
 
-- `uncertain ≥ 2` → cap confidence на 0.85.
-- Любой HIGH-impact open question → cap на 0.7.
-- Все проверки pass, Phase 1 actionable, критерии измеримы → **`APPROVED`**.
-- Ambiguous Phase 1, непроверенные пути, vague критерии, нет rollback на destructive change → **`NEEDS_REVISION`** (перечислить каждый finding с точной ссылкой на секцию; re-audit после исправления; re-invoke Planner для правки).
-- Structural flaw; scope не deliverable как написано → **`REJECTED`** (объяснить blockers; запросить направление у пользователя; не начинать кодинг).
+## Regression tracking
 
-Компактный verdict пишется в `plans/artifacts/<task-slug>/verify-verdict.md` для auditability, затем показывается пользователю с findings, которые его обосновывают.
+При `iteration_index > 1` Orchestrator передаёт ревьюерам **список ранее верифицированных пунктов**. Если такой пункт теперь снова не проходит → автоматический BLOCKING regression issue.
 
-| Verdict | Значение | Следующий шаг |
-|---------|----------|---------------|
-| `APPROVED` | Все проверки pass; Phase 1 actionable; критерии измеримы | Имплементация может начаться (глава 08) |
-| `NEEDS_REVISION` | Устранимые проблемы — ambiguous Phase 1, непроверенные пути, vague критерии | Re-invoke `@controlflow-planner` для правки; re-run verify |
-| `REJECTED` | Structural flaw; scope не deliverable как написано | Запросить направление у пользователя или replan с нуля; не начинать кодинг |
+> «Any previously verified item that now fails → automatic BLOCKING regression issue.» — [Orchestrator.agent.md](../../Orchestrator.agent.md)
 
-`ABSTAIN` — **не** verify verdict. (`ABSTAIN` — _Planner_-терминальный исход, не verify verdict — см. главу 06.) Если verify не может уверенно оценить item, он помечает его и указывает validation gap; он не молча проходит.
+## Stagnation detection
 
-## Verify-Specific Failure Checks
+Если `iteration_index ≥ 3` и улучшение скоринга относительно последних 2 итераций < 5% → **стагнация**. Orchestrator транзитит в `WAITING_APPROVAL` с findings, и решение принимает пользователь.
 
-- Не pass'ить план, который вы не прочитали с диска.
-- Не помечать finding resolved без re-check evidence.
-- Не позволять `confidence` Planner'а заменять ваш собственный скоринг.
-- Не схлопывать три фазы в один skim для «маленького» плана — запускайте фазы, которые требует tier.
-- Не начинать имплементацию SMALL+ работы, пока verify не вернёт `APPROVED`.
+## Revision-Loop Invalidation (Closed World)
+
+Что считается «значительной» правкой плана и заставляет **полностью** перезапустить пайплайн:
+
+- Изменения в `Planner.agent.md`, `Orchestrator.agent.md`, `governance/runtime-policy.json`.
+- Изменения в orchestration handoff тестах/сценариях, review routing, verification commands.
+- Изменения в policy surfaces, phase structure, task/file paths, contracts, `risk_review`, `complexity_tier`.
+- Изменения в executability-bearing steps.
+- **Любая неоднозначная** правка по умолчанию.
+
+Селективный rerun допустим **только** для текстовой формулировки reviewer-summary без изменения самих артефактов плана.
+
+## Output ревьюеров
+
+Каждый ревьюер возвращает структурированный отчёт со статусом:
+
+| Status | Значение |
+| ------ | -------- |
+| APPROVED | Замечаний нет, план идёт в исполнение. |
+| NEEDS_REVISION | Есть исправимые замечания, replan через Planner. |
+| REJECTED | План фундаментально неправилен; эскалация к пользователю. |
+| ABSTAIN | Ревьюер не может уверенно оценить; пайплайн идёт дальше с пометкой. |
+
+**Важно:** ABSTAIN от ревьюера **не блокирует** план. Это сигнал «я не уверен», а не «я нашёл проблему».
+
+## Optional Final Review Gate
+
+Для LARGE-задач (или по запросу пользователя) после завершения всех фаз срабатывает **финальное ревью**:
+
+1. Orchestrator собирает агрегированный список изменённых файлов из всех фаз.
+2. Делает snapshot фаз плана.
+3. Диспатчит CodeReviewer с `review_scope: "final"`.
+4. Если найдены blocking — fix отдаётся **исполнителю**, **не** ревьюеру (CodeReviewer никогда не владеет fix-cycle). Максимум 1 fix-cycle.
+5. Если всё чисто — финальная advisory-запись в `plans/artifacts/<task>/final_review.md`.
+
+См. `governance/runtime-policy.json` → `final_review_gate`.
 
 ## Типичные ошибки
 
-- **Трактовать `controlflow-verify` как опциональный на SMALL.** SMALL запускает фазу 1 (structural audit) — это не skip-verify. Только TRIVIAL пропускает пайплайн.
-- **Inline'ить план в чат и верифицировать chat-копию.** Verify skill читает с диска (`plans/<task-slug>-plan.md`). План в чате — не артефакт плана.
-- **Защищать план вместо опровержения.** Адверсариальный фрейминг обязателен. По умолчанию `flagged`, когда evidence недостаточно.
-- **Схлопывать фазы в один skim.** Запускайте фазы, которые требует tier. LARGE — все три; MEDIUM — две; SMALL — одну.
-- **Игнорировать HIGH-risk override.** План может быть SMALL по числу файлов, но неразрешённая HIGH-impact applicable запись `risk_review` форсит все три фазы.
-- **Назначать verify-роль как `executor_agent`.** `PlanAuditor-subagent`, `AssumptionVerifier-subagent` и `ExecutabilityVerifier-subagent` — read-only verify-фазы, выполняемые inline; они не должны появляться в `executor_agent`.
-- **Трактовать AssumptionVerifier как «вторую пару глаз».** Он проверяет **другую ось** (factual accuracy claims плана), чем PlanAuditor (корректность дизайна).
-- **Форсировать продолжение после `REJECTED`.** `REJECTED` значит стоп; запросить направление у пользователя или replan с нуля.
+- **Считать ABSTAIN от ревьюера блокировкой**. Не блокирует — пайплайн идёт дальше.
+- **Считать AssumptionVerifier «второй пар глаз»**. Нет, у него **другая** ось (факты vs дизайн).
+- **Игнорировать override от HIGH risk**. Plan может быть SMALL по файлам, но HIGH risk → LARGE pipeline.
+- **Назначать ревьюера как executor_agent**. Запрещено схемой.
+- **Ждать ABSTAIN решит проблему**. ABSTAIN означает «не уверен», нужны доп. данные.
+- **Поправить план без полного rerun** для значимой правки. Closed-world rule: если правка не строго текстуальная — полный rerun обязателен.
 
 ## Упражнения
 
-1. **(новичок)** Откройте `.github/skills/controlflow-verify/SKILL.md` и перечислите три фазы и метку роли, которой соответствует каждая.
-2. **(новичок)** Откройте `.github/skills/controlflow-verify/references/mirage-patterns.md`. Назовите один presence-мираж (P1–P10) и один absence-мираж (A11–A17).
-3. **(средний)** При каких условиях SMALL-tier план получает полный трёхфазный LARGE-пайплайн?
-4. **(средний)** На итерации PlanAuditor проходит (`APPROVED`-эквивалент), но AssumptionVerifier находит `BLOCKING`-мираж. Каков verdict и что происходит дальше?
-5. **(продвинутый)** План ссылается на `src/api/users.ts` и `getUsers()` в Phase 1. Пройдите, как именно фаза 2 попыталась бы опровергнуть каждый claim. Какие команды вы бы запустили?
+1. **(новичок)** Откройте `governance/runtime-policy.json` и найдите `review_pipeline_by_tier`. Какой пайплайн для MEDIUM?
+2. **(новичок)** Откройте `schemas/assumption-verifier.plan-audit.schema.json`. Какие severity допустимы?
+3. **(средний)** При каких условиях SMALL-tier план получит full LARGE pipeline?
+4. **(средний)** Что произойдёт, если на iteration 2 PlanAuditor вернёт `APPROVED`, но AssumptionVerifier найдёт BLOCKING mirage?
+5. **(продвинутый)** Объясните, почему CodeReviewer **никогда** не владеет fix-cycle на финальном ревью.
 
 ## Контрольные вопросы
 
-1. Перечислите три verify-фазы, метку роли каждой и tier, на котором каждая активируется.
-2. Что такое адверсариальный фрейминг и почему он необходим именно потому, что verify runs inline, а не как свежий сабагент?
-3. Каковы три verdict'а и что каждый значит для имплементации?
-4. Как вычисляется confidence score и какие два условия cap его ниже 0.9?
-5. Где определена таблица Phase 1 Audit Focus Area Mapping и что она мапит?
+1. Перечислите 3 ревьюера и их предметы.
+2. Что такое regression tracking?
+3. Когда срабатывает stagnation detection?
+4. Какой класс failure ревьюеры исключают?
+5. На каких тирах активируется ExecutabilityVerifier?
 
 ## См. также
 
-- [Глава 05 — Пайплайн plan → verify → review](05-orchestration.md)
+- [Глава 05 — Оркестрация](05-orchestration.md)
 - [Глава 06 — Планирование](06-planning.md)
-- [Глава 08 — Исполнение + ревью поверх нативного Copilot](08-execution-pipeline.md)
-- [Глава 09 — Schemas (контракты)](09-schemas.md)
-- [.github/skills/controlflow-verify/SKILL.md](../../.github/skills/controlflow-verify/SKILL.md)
-- [plans/project-context.md](../../plans/project-context.md)
+- [Глава 09 — Схемы](09-schemas.md)
+- [PlanAuditor-subagent.agent.md](../../PlanAuditor-subagent.agent.md)
+- [AssumptionVerifier-subagent.agent.md](../../AssumptionVerifier-subagent.agent.md)
+- [ExecutabilityVerifier-subagent.agent.md](../../ExecutabilityVerifier-subagent.agent.md)

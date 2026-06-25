@@ -1,0 +1,4 @@
+interface:
+  display_name: "ControlFlow Orchestration"
+  short_description: "Guide phased execution, approvals, and retries"
+  default_prompt: "Use $controlflow-orchestration to execute this task in phases with clear gates."

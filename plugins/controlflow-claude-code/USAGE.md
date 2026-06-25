@@ -1,6 +1,6 @@
 # ControlFlow for Claude Code - Usage
 
-Version: 1.0.0
+Version: 0.2.0
 
 ## Local Development Installation
 
@@ -22,7 +22,7 @@ To load this plugin from a local directory during development:
 ## Plugin Marketplace Installation
 
 The repo-root `.claude-plugin/marketplace.json` registers this plugin for a local
-marketplace at version 1.0.0. To install it via the marketplace (instead of the
+marketplace at version 0.2.0. To install it via the marketplace (instead of the
 `--plugin-dir` dev workflow above):
 
 1. Register the repo as a marketplace (run from repo root):
@@ -70,7 +70,7 @@ Skill frontmatter check (run from repo root):
    powershell -Command "Get-ChildItem plugins/controlflow-claude-code/skills -Recurse -Filter SKILL.md | ForEach-Object { $content = Get-Content $_ -Raw; if ($content -notmatch 'name:' -or $content -notmatch 'description:') { throw ('Missing required frontmatter in: ' + $_.FullName) } }"
 ```
 
-There are **no plugin agents** in 1.0.0 (verification runs inline), so there is no
+There are **no plugin agents** in 0.2.0 (verification runs inline), so there is no
 `agents/` directory and no agent-frontmatter check.
 
 Claude Code native validation (requires claude CLI):
@@ -109,7 +109,7 @@ Typical MEDIUM/LARGE flow (routing lives in the repo `CLAUDE.md`):
 `controlflow-verify` writes a single combined verdict to
 `plans/artifacts/{task-slug}/verify-verdict.md` (structural audit + mirage findings +
 executability verdict + overall APPROVED/NEEDS_REVISION/REJECTED). There are no separate
-per-verifier report templates in 1.0.0.
+per-verifier report templates in 0.2.0.
 
 ## Repo-Wide Verification
 

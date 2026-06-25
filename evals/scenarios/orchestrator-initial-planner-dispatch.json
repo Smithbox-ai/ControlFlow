@@ -1,0 +1,67 @@
+{
+  "id": "orchestrator-initial-planner-dispatch",
+  "target_agent": "Orchestrator",
+  "category": "structural",
+  "goal": "Structural reference fixture: documents expected Orchestrator behavior when a user requests planning or implementation and no plan_path or active plan exists. Orchestrator must dispatch Planner as an entry-point delegate (not a phase executor), receive the returned plan_path, and route it into the existing Planning Gate and PLAN_REVIEW trigger evaluation without treating it as implicit implementation approval.",
+  "inputs": [
+    {
+      "label": "no-plan-path-user-requests-implementation",
+      "description": "User asks Orchestrator to implement a new feature. No plan_path or active plan artifact exists. Orchestrator must delegate to Planner for initial plan creation before any implementation can proceed.",
+      "input": {
+        "query": "Add rate limiting to all API endpoints",
+        "context": "No existing plan_path. No active in-memory plan. User is asking for a new capability — Orchestrator has no plan artifact to execute against."
+      },
+      "expected": {
+        "dispatches_planner": true,
+        "plan_path_re_enters_planning_gate": true,
+        "plan_path_treated_as_implementation_approval": false,
+        "planner_role": "entry-point-delegate",
+        "planner_is_phase_executor": false
+      }
+    },
+    {
+      "label": "no-plan-path-user-requests-planning",
+      "description": "User explicitly asks Orchestrator to plan a task. No plan_path exists. Orchestrator dispatches Planner, waits for plan_path handoff, then enters PLAN_REVIEW trigger evaluation.",
+      "input": {
+        "query": "Plan a migration of the user authentication system to OAuth2",
+        "context": "No existing plan_path. User is asking to plan, not to execute. Orchestrator delegates plan authorship to Planner."
+      },
+      "expected": {
+        "dispatches_planner": true,
+        "plan_path_re_enters_planning_gate": true,
+        "plan_path_treated_as_implementation_approval": false,
+        "planner_role": "entry-point-delegate",
+        "planner_is_phase_executor": false
+      }
+    },
+    {
+      "label": "existing-plan-path-no-dispatch",
+      "description": "Orchestrator receives a request with an existing plan_path already provided. The Initial Planner Dispatch Gate must not trigger — Orchestrator continues directly through the Planning Gate and PLAN_REVIEW evaluation.",
+      "input": {
+        "query": "Continue executing the plan",
+        "plan_path": "plans/artifacts/some-task/plan.md",
+        "context": "plan_path already exists — Orchestrator should not re-dispatch Planner."
+      },
+      "expected": {
+        "dispatches_planner": false,
+        "initial_dispatch_gate_triggered": false,
+        "plan_path_re_enters_planning_gate": true
+      }
+    }
+  ],
+  "expected": {
+    "fixture_type": "structural-reference-only",
+    "offline_harness_observes_live_runSubagent_calls": false,
+    "planner_is_phase_executor": false,
+    "model_resolution_before_tier": "top_level_primary",
+    "model_resolution_note": "Before Planner returns a plan artifact, no complexity_tier exists. Orchestrator must use the target role's top-level primary model per the Universal Model Resolution Rule — never omit model because tier context is missing.",
+    "plan_path_contract": "Planner returns plan_path as a handoff artifact. Orchestrator treats it as a reviewable input entering the Planning Gate and PLAN_REVIEW trigger evaluation, identical to any other plan artifact. It is not implementation approval.",
+    "assertions": [
+      "Orchestrator has an explicit Initial Planner Dispatch Gate that activates only when no plan_path or active plan exists and the user requests planning or implementation.",
+      "The gate dispatches Planner as an entry-point delegate using the Universal Model Resolution Rule with the top-level primary model because no complexity_tier exists yet.",
+      "Planner's returned plan_path enters the Planning Gate and PLAN_REVIEW trigger evaluation — it does not bypass user approval or review gates.",
+      "Planner does not become a phase executor; it remains the plan-authorship agent whose output Orchestrator coordinates.",
+      "When a plan_path is already available, the Initial Planner Dispatch Gate does not trigger."
+    ]
+  }
+}

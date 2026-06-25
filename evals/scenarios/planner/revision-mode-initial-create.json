@@ -97,7 +97,7 @@
   "complexity_tier": "SMALL",
   "revision_mode": "initial_create",
   "handoff": {
-    "target_agent": "controlflow-verify",
-    "prompt": "Review this SMALL-tier initial-create plan before execution (controlflow-verify phase 1 per runtime policy)."
+    "target_agent": "Orchestrator",
+    "prompt": "Execute Phase 1 via CoreImplementer-subagent. SMALL tier enters PLAN_REVIEW per runtime policy."
   }
 }

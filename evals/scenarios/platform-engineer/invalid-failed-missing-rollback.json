@@ -1,0 +1,37 @@
+{
+  "_target_schema": "platform-engineer.execution-report.schema.json",
+  "_fixture_type": "schema",
+  "_expected_validation": "fail",
+
+  "schema_version": "1.0.0",
+  "agent": "PlatformEngineer-subagent",
+  "status": "FAILED",
+  "failure_classification": "fixable",
+  "confidence": 0.4,
+  "abstain": { "is_abstaining": false, "reasons": [] },
+  "scope": {
+    "in_scope": ["Deploy authentication service to staging"],
+    "out_of_scope": ["Database schema migration"]
+  },
+  "changes": [],
+  "health_checks": [
+    { "service": "auth-service", "state": "UNHEALTHY", "details": "Container failed to start." }
+  ],
+  "deployment_details": {
+    "environment": "staging",
+    "state": "FAILED"
+  },
+  "approval_gates_passed": ["none_required"],
+  "tests": {
+    "individual": "FAIL",
+    "full_suite": "FAIL"
+  },
+  "build": { "state": "FAIL" },
+  "lint": { "state": "PASS" },
+  "dependencies": [],
+  "definition_of_done": {
+    "all_items_complete": false,
+    "unchecked_items": ["deployment_successful"]
+  },
+  "next_steps": ["Investigate container startup failure and retry deployment."]
+}

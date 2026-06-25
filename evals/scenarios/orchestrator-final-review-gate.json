@@ -1,0 +1,94 @@
+{
+  "id": "orchestrator-final-review-gate",
+  "target_agent": "Orchestrator",
+  "goal": "Orchestrator Completion Gate activates final review gate based on complexity_tier and policy flag",
+  "expected": {
+    "final_review_gate_triggered": "conditional"
+  },
+  "inputs": [
+    {
+      "id": "large-tier-auto-trigger",
+      "description": "LARGE complexity tier auto-triggers final review gate per auto_trigger_tiers policy",
+      "input": {
+        "complexity_tier": "LARGE",
+        "final_review_gate_policy": {
+          "enabled_by_default": false,
+          "auto_trigger_tiers": ["LARGE"],
+          "allow_user_trigger": true,
+          "max_fix_cycles": 1
+        }
+      },
+      "expected": {
+        "final_review_gate_triggered": true,
+        "code_reviewer_dispatch": {
+          "review_scope": "final",
+          "phase_id": 0
+        }
+      }
+    },
+    {
+      "id": "small-tier-no-trigger",
+      "description": "SMALL complexity tier does not auto-trigger final review gate",
+      "input": {
+        "complexity_tier": "SMALL",
+        "final_review_gate_policy": {
+          "enabled_by_default": false,
+          "auto_trigger_tiers": ["LARGE"],
+          "allow_user_trigger": true,
+          "max_fix_cycles": 1
+        }
+      },
+      "expected": {
+        "final_review_gate_triggered": false
+      }
+    },
+    {
+      "id": "enabled-by-default-trigger",
+      "description": "enabled_by_default=true triggers gate regardless of tier",
+      "input": {
+        "complexity_tier": "SMALL",
+        "final_review_gate_policy": {
+          "enabled_by_default": true,
+          "auto_trigger_tiers": ["LARGE"],
+          "allow_user_trigger": true,
+          "max_fix_cycles": 1
+        }
+      },
+      "expected": {
+        "final_review_gate_triggered": true,
+        "code_reviewer_dispatch": {
+          "review_scope": "final",
+          "phase_id": 0
+        }
+      }
+    },
+    {
+      "id": "blocking-findings-fix-cycle",
+      "description": "Blocking validated_blocking_issues route to original phase executor, not CodeReviewer",
+      "input": {
+        "complexity_tier": "LARGE",
+        "final_review_gate_policy": {
+          "enabled_by_default": false,
+          "auto_trigger_tiers": ["LARGE"],
+          "allow_user_trigger": true,
+          "max_fix_cycles": 1
+        },
+        "final_review_result": {
+          "validated_blocking_issues": [
+            { "severity": "CRITICAL", "file": "src/auth.ts", "description": "SQL injection vulnerability" }
+          ]
+        },
+        "plan_phases_snapshot": [
+          { "phase_id": 1, "files": ["src/auth.ts"] },
+          { "phase_id": 2, "files": ["src/api.ts"] }
+        ]
+      },
+      "expected": {
+        "fix_executor_resolution": "highest_phase_id_wins",
+        "fix_executor_phase_id": 1,
+        "code_reviewer_owns_fix": false,
+        "escalate_if_still_blocked_after_fix_cycles": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "ControlFlow Memory Hygiene"
+  short_description: "Keep durable notes clean, terse, and re-verifiable"
+  default_prompt: "Use $controlflow-memory-hygiene to keep notes for this long-running task clean and current."

@@ -1,0 +1,148 @@
+{
+  "id": "orchestrator-todo-orchestration",
+  "target_agent": "Orchestrator",
+  "goal": "Orchestrator creates phase todo items at plan start, marks the relevant todo completed after a phase review passes, and reconciles all todos at plan completion",
+  "input": {
+    "plan": {
+      "phases": [
+        {
+          "id": "P1",
+          "wave": 1,
+          "title": "Database migrations"
+        },
+        {
+          "id": "P2",
+          "wave": 2,
+          "title": "API layer changes",
+          "dependencies": [
+            "P1"
+          ]
+        },
+        {
+          "id": "P3",
+          "wave": 2,
+          "title": "Frontend updates",
+          "dependencies": [
+            "P1"
+          ]
+        }
+      ]
+    },
+    "phase_review": {
+      "phase_id": "P1",
+      "review_status": "APPROVED",
+      "tests": {
+        "individual": "PASS",
+        "full_suite": "PASS"
+      },
+      "build": {
+        "state": "PASS"
+      },
+      "lint": {
+        "state": "PASS"
+      }
+    }
+  },
+  "expected": {
+    "must_use_tool_sequence": [
+      "todo",
+      "todo",
+      "todo",
+      "todo"
+    ],
+    "todo_created_for_each_phase": true,
+    "todo_title_format": "Phase {N} — {Title}",
+    "todo_tool_calls": {
+      "on_plan_start": {
+        "tool": "#todos",
+        "action": "create",
+        "count": 3,
+        "titles": [
+          "Phase 1 — Database migrations",
+          "Phase 2 — API layer changes",
+          "Phase 3 — Frontend updates"
+        ]
+      },
+      "on_phase_review_pass": {
+        "tool": "#todos",
+        "action": "complete",
+        "phase_id": "P1",
+        "title": "Phase 1 — Database migrations",
+        "count_per_review_pass": 1,
+        "one_completion_call_per_phase": true,
+        "must_occur_immediately_after_gate": true,
+        "must_occur_after": "phase_review_gate_pass",
+        "must_occur_before_approval_pause": true,
+        "must_occur_before": "approval_pause",
+        "must_not_batch_with_other_phases": true
+      },
+      "on_plan_completion": {
+        "tool": "#todos",
+        "action": "reconcile",
+        "all_todos_completed": true,
+        "must_not_produce_summary_with_open_todos": true
+      },
+      "on_prior_phase_open_before_next_phase_start": {
+        "tool": "#todos",
+        "action": "reconcile",
+        "trigger": "prior_phase_todo_open",
+        "must_use_todo_tool": true,
+        "blocks_next_phase_start": true,
+        "must_occur_before_next_phase_start": true,
+        "applicable_phase_transitions": [
+          "P1→P2",
+          "P1→P3"
+        ]
+      }
+    },
+    "pre_phase_gate_checks_prior_todo": true,
+    "pre_phase_open_todo_reconcile_required": {
+      "if_prior_phase_todo_is_open": true,
+      "orchestrator_must": "use todo tool to reconcile prior phase todo before starting next phase",
+      "before": "next_phase_start"
+    },
+    "must_not": [
+      "advance wave or mark plan complete with any phase todo still open",
+      "mark phase todo as completed after the user approval pause",
+      "start next wave phase while the prior phase todo remains open"
+    ],
+    "negative_cases": [
+      {
+        "case_id": "no-batching-phase-completions",
+        "description": "Separate approved P1 and P2 phase reviews must not be represented by one bulk #todos completion call.",
+        "input": {
+          "approved_phase_reviews": ["P1", "P2"],
+          "todo_completion_calls": [
+            {
+              "tool": "#todos",
+              "action": "complete",
+              "phase_ids": ["P1", "P2"]
+            }
+          ]
+        },
+        "expected": {
+          "rejected": true,
+          "violates": "no-batching-phase-completions",
+          "required_behavior": "one #todos completion call per approved phase review before approval pause"
+        }
+      },
+      {
+        "case_id": "open-prior-todo-blocks-next-phase",
+        "description": "P2 or P3 cannot start while the P1 todo remains open after P1 has passed review.",
+        "input": {
+          "prior_phase_review": {
+            "phase_id": "P1",
+            "status": "APPROVED"
+          },
+          "open_todos": ["P1"],
+          "attempted_next_phase_starts": ["P2", "P3"]
+        },
+        "expected": {
+          "rejected": true,
+          "violates": "open-prior-todo-blocks-next-phase",
+          "required_behavior": "reconcile the P1 todo with #todos before starting P2 or P3"
+        }
+      }
+    ]
+  }
+}

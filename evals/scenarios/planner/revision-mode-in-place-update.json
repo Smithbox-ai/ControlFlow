@@ -98,7 +98,7 @@
   "revision_mode": "in_place_update",
   "active_plan_path": "plans/code-quality-and-token-efficiency-2026-06-plan.md",
   "handoff": {
-    "target_agent": "controlflow-verify",
-    "prompt": "Re-review this in-place-updated plan before execution; same plan_path; do not create a new plan artifact."
+    "target_agent": "Orchestrator",
+    "prompt": "Execute Phase 1 in place; same plan_path; do not create a new plan artifact."
   }
 }

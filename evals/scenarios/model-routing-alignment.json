@@ -1,0 +1,36 @@
+{
+  "id": "model-routing-alignment",
+  "target_agent": "Orchestrator",
+  "category": "structural",
+  "goal": "Structural reference fixture: records the Phase 2 model-routing alignment contract across governance role defaults, direct-invocation frontmatter, tier-aware internal dispatch, and payload-level delegation schema wording.",
+  "input": {
+    "routing_source": "governance/model-routing.json",
+    "delegation_schema": "schemas/orchestrator.delegation-protocol.schema.json",
+    "direct_invocation_frontmatter": {
+      "model_role_source": "agent frontmatter model_role",
+      "model_default_source": "roles[model_role].primary",
+      "by_tier_scope": "Internal dispatch only; by_tier entries resolve the outer tool-call model and do not force direct-invocation frontmatter defaults."
+    },
+    "payload_contract": {
+      "payload_model_field": "model",
+      "payload_model_purpose": "delegation contract, validation, and audit context",
+      "outer_runtime_enforcement_field": "agent/runSubagent outer tool-call model",
+      "payload_model_is_runtime_enforcement_boundary": false
+    }
+  },
+  "expected": {
+    "agent_role_index_matches_consumers": true,
+    "frontmatter_model_matches_role_top_level_primary": true,
+    "frontmatter_not_forced_to_by_tier_overrides": true,
+    "payload_model_required_for_all_delegates": true,
+    "payload_model_description_required_phrases": [
+      "payload-level",
+      "delegation contract",
+      "audit context",
+      "outer tool-call model",
+      "does not by itself override frontmatter"
+    ],
+    "payload_model_is_runtime_enforcement_boundary": false,
+    "outer_model_is_runtime_enforcement_boundary": true
+  }
+}

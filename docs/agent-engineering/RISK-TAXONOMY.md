@@ -1,6 +1,6 @@
 # Risk Taxonomy (Semantic + Audit Dimensions)
 
-Canonical risk taxonomy for ControlFlow. Replaces the inline 7-row semantic risk table at `plans/project-context.md`. That call site references this doc. Pass 14 (`validateCanonicalSourceMatrixContract`) keeps the canonical-source-matrix in lock-step with `plans/project-context.md`.
+Canonical risk taxonomy for ControlFlow. Replaces the inline 7-row semantic risk table at `plans/project-context.md` and the 8-audit-dimension list at `PlanAuditor-subagent.agent.md`. Both call sites reference this doc. Pass 14 (`validateCanonicalSourceMatrixContract`) keeps the canonical-source-matrix in lock-step with `plans/project-context.md`.
 
 ## Semantic Risk Categories
 
@@ -28,12 +28,12 @@ For each plan, evaluate against these dimensions:
 
 2. **Architecture Audit**
    - Circular dependencies between phases.
-   - File collision risks between phases that edit the same files.
+   - File collision risks within waves (parallel phases editing same files).
    - Missing inter-phase contracts for dependent data.
    - Scope creep: phases that exceed their stated objective.
 
 3. **Dependency Conflict Detection**
-   - Phases that modify overlapping files.
+   - Phases in the same wave that modify overlapping files.
    - External dependency additions without version pinning.
    - Missing `dependencies` field for phases that require prior phase output.
 
@@ -62,10 +62,10 @@ For each plan, evaluate against these dimensions:
 
 ## Cross-Reference
 
-When a semantic `risk_review` entry triggers the audit phase, `controlflow-verify` Phase 1 (Audit) maps the risk category to audit focus areas using the `controlflow-verify Phase 1 (Audit) Focus Area Mapping` table in `plans/project-context.md`. The inline verify role for Phase 1 is `PlanAuditor-subagent` (performed inline by the skill — not a shipped agent). The semantic risk categories and the audit dimensions are complementary: the categories tell the Planner what to think about when planning, while the audit dimensions tell the verify phase what to check when reviewing. There is no Orchestrator in the slim model — the retired conductor's routing surface is gone, and the verify skill performs the audit inline.
+Orchestrator's `Complexity-Aware Routing` block (in `Orchestrator.agent.md`) is a routing reference, NOT a duplicate audit list. When a semantic `risk_review` entry triggers PlanAuditor review, Orchestrator maps the risk category to PlanAuditor focus areas using the `Orchestrator → PlanAuditor Focus Area Mapping` table in `plans/project-context.md`. PlanAuditor then evaluates the plan against the eight audit dimensions above. The semantic risk categories and the audit dimensions are complementary: the categories tell Planner what to think about when planning, while the audit dimensions tell PlanAuditor what to check when reviewing.
 
 ## See also
 
-- `plans/project-context.md` — the Semantic Risk Taxonomy table and the controlflow-verify Phase 1 (Audit) focus-area mapping.
-- `governance/canonical-source-matrix.json` — the `Semantic-risk taxonomy` row points to this doc (lock-step mirror enforced by Pass 14).
-- [`NATIVE-DELEGATION-BOUNDARY.md`](NATIVE-DELEGATION-BOUNDARY.md) — the verify skill is part of ControlFlow's non-native value-add.
+- [plans/project-context.md](../project-context.md) — Semantic Risk Taxonomy table and Orchestrator → PlanAuditor focus-area mapping.
+- [PlanAuditor-subagent.agent.md](../../PlanAuditor-subagent.agent.md) — Audit Methodology and Verdict Rules.
+- [governance/canonical-source-matrix.json](../../governance/canonical-source-matrix.json) — `Semantic-risk taxonomy` row points to this doc (lock-step mirror enforced by Pass 14).

@@ -1,288 +1,266 @@
-# Глава 15 — Разборы кейсов
+# Глава 15 — Кейсы и разборы
 
 ## Зачем эта глава
 
-Конкретные сценарии, показывающие, как тонкий ControlFlow-пайплайн работает на практике поверх нативного Copilot. Каждый кейс прослеживает реальный паттерн взаимодействия с диаграммой. После этой главы вы сможете набросать любую задачу end-to-end: пользователь → `@controlflow-planner` → артефакт плана → `controlflow-verify` (tier-gated) → нативный Copilot исполняет фазы → `controlflow-review`.
+Увидеть **реальные сценарии** взаимодействия агентов end-to-end. Каждый кейс взят из `evals/scenarios/` и показывает, как теория из предыдущих глав работает на практике.
 
-## Как читать разбор кейса
+## Кейс 1: Planner — Idea Interview Trigger
 
-Каждый кейс содержит:
-- **Сценарий** — чего хочет пользователь.
-- **Поток** — sequence- или flowchart-диаграмма по тонкому пайплайну.
-- **Ключевые решения** — какие правила, tier или verdict-гейт определяют происходящее.
+**Сценарий:** `evals/scenarios/planner-idea-interview-trigger.json`.
 
-## Кейс 1: Idea Interview у Planner'а
+**Контекст:** пользователь даёт расплывчатый запрос: «Сделай систему уведомлений».
 
-**Сценарий:** Пользователь говорит «хочу добавить CSV-экспорт в админ-панель».
+**Что происходит:**
 
 ```mermaid
 sequenceDiagram
-    participant U as Пользователь
-    participant P as "@controlflow-planner"
+    participant U as User
+    participant P as Planner
+    participant V as vscode/askQuestions
 
-    U->>P: "Add CSV export to admin panel"
-    P->>P: загрузить skill controlflow-plan
-    P->>U: Q1: Какую модель вы хотите экспортировать?
-    U-->>P: User model, all fields
-    P->>U: Q2: Какой формат — flat CSV или с nested?
-    U-->>P: Flat CSV
-    P->>U: Q3: Есть лимиты на количество строк?
-    U-->>P: Нет лимитов, до 100K строк
-    P->>P: risk_review.data_volume = HIGH (100K rows)
-    P->>P: complexity_tier = MEDIUM
-    P->>P: объявить executor_agent на фазу + 7 категорий риска
-    P-->>U: артефакт плана в plans/feature-csv-export-plan.md
+    U->>P: «Сделай систему уведомлений»
+    P->>P: Step 0 — Idea Interview Gate
+    P->>P: Detect: вход недостаточно структурный
+    P->>P: Idea-to-prompt skill applied
+    P->>V: Ask: канал? (email/SMS/push)<br/>Аудитория? (admin/user/всех)<br/>Триггеры?
+    V->>U: Show questions
+    U->>V: Email + user-level + on-order-ship
+    V-->>P: Answers
+    P->>P: Step 1+ — Discovery → Plan
 ```
 
-**Ключевые решения:**
-- Planner запускает **Idea Interview**, потому что запрос расплывчат (file scope / поведение неясны).
-- `data_volume: HIGH` записывается в `risk_review`; tier — `MEDIUM` (шесть фаз, кросс-домен).
-- Planner записывает артефакт в `plans/feature-csv-export-plan.md` и указывает пользователю путь — он никогда не inline'ит план в чат.
-- Planner **не** одобряет план; он только производит reviewable-артефакт.
+**Ключевое:**
+- Planner **не угадывает**. До шага 1 — interview gate.
+- `vscode/askQuestions` используется **прямо** Planner-ом (не через Orchestrator).
+- Без ответов план не пишется (или пишется со status ABSTAIN).
 
-## Кейс 2: Артефакт плана → Verify-гейт
+**Что бы пошло не так без этого:**
+- План бы строился под несуществующую гипотезу.
+- Расплата дороже на следующих фазах (replan, undo).
 
-**Сценарий:** Planner произвёл план тира MEDIUM. Пользователь запускает `/controlflow-verify`.
+## Кейс 2: Planner → Orchestrator handoff
 
-```mermaid
-flowchart TD
-    Art[("plans/feature-csv-export-plan.md")]
-    Verify["controlflow-verify<br/>inline, tier-gated"]
-    Tier{tier?}
-    P1["Фаза 1 — structural audit<br/>(PlanAuditor-subagent)"]
-    P2["Фаза 2 — mirage detection<br/>(AssumptionVerifier-subagent)"]
-    P3["Фаза 3 — executability cold-start<br/>(ExecutabilityVerifier-subagent)"]
-    Verdict{verdict}
-    Approved[APPROVED → имплементация]
-    Revise[NEEDS_REVISION → re-invoke Planner]
-    Reject[REJECTED → replan с нуля]
+**Сценарий:** `evals/scenarios/planner-orchestrator-handoff.json`.
 
-    Art --> Verify
-    Verify --> Tier
-    Tier -->|TRIVIAL| Skip[skip verify]
-    Tier -->|SMALL| P1
-    Tier -->|MEDIUM| P1
-    Tier -->|LARGE / HIGH-risk override| P1
-    P1 --> P2
-    P2 --> Tier2{MEDIUM или LARGE?}
-    Tier2 -->|MEDIUM| Verdict
-    Tier2 -->|LARGE| P3
-    P3 --> Verdict
-    P1 --> Verdict
-    Verdict --> Approved
-    Verdict --> Revise
-    Verdict --> Reject
-```
+**Контекст:** Planner закончил план. Передаёт Orchestrator-у.
 
-**Ключевые решения:**
-- `controlflow-verify` читает план **с диска** (не встроенную в чат копию).
-- Tier `MEDIUM` → запускаются фазы 1–2 (structural audit + mirage detection). Фаза 3 (executability cold-start) пропускается, если только tier не `LARGE` или не срабатывает HIGH-risk override.
-- Три verify-фазы соответствуют трём inline verify-ролям (`PlanAuditor-subagent`, `AssumptionVerifier-subagent`, `ExecutabilityVerifier-subagent`) — они выполняются inline, **не** диспатчатся как сабагенты.
-- Записанный план — не одобрение. Имплементация может начаться только на `APPROVED`.
-
-## Кейс 3: Адверсариальный mirage detection (MEDIUM)
-
-**Сценарий:** План тира MEDIUM. `AssumptionVerifier-subagent` (verify фаза 2) находит mirage: план ссылается на `src/export/UserExportService.ts`, которого нет в кодовой базе.
+**Поток:**
 
 ```mermaid
 sequenceDiagram
-    participant V as controlflow-verify
-    participant AV as "AssumptionVerifier-subagent<br/>(inline фаза 2)"
-    participant U as Пользователь
-    participant P as "@controlflow-planner"
+    participant P as Planner
+    participant Plan as "plans/TASK-plan.md"
+    participant O as Orchestrator
+    participant U as User
 
-    V->>V: читает план с диска
-    V->>V: фаза 1 — structural audit (PlanAuditor-subagent) — PASS
-    V->>AV: фаза 2 — проверить каждый указанный path/symbol
-    AV->>AV: grep для UserExportService.ts → не найден
-    AV-->>V: NEEDS_REVISION — mirage: указанный файл не существует
-    V-->>U: NEEDS_REVISION + findings (ссылка на секцию, файл, строку)
-    U->>P: re-invoke Planner для правки плана
-    P-->>U: исправленный артефакт плана (тот же путь)
-    U->>V: /controlflow-verify (повторный запуск)
-    V-->>U: APPROVED
-```
-
-**Ключевые решения:**
-- `AssumptionVerifier-subagent` пытается **опровергнуть** фактические утверждения плана (по умолчанию `flagged`, когда evidence недостаточно).
-- Один BLOCKING mirage форсит `NEEDS_REVISION`; пользователь re-invoke'ит Planner с findings.
-- После правки verify перезапускается с фазы 1 — нет ярлыка «пропатчить только сломанную фазу».
-- Taxonomy mirages (presence P1–P10, absence A11–A17) живёт в `.github/skills/controlflow-verify/references/mirage-patterns.md`.
-
-## Кейс 4: Executability cold-start (LARGE)
-
-**Сценарий:** План тира LARGE. `ExecutabilityVerifier-subagent` (verify фаза 3) симулирует свежего исполнителя, начинающего Phase 1 только с планом в руках.
-
-```mermaid
-flowchart TD
-    EV["ExecutabilityVerifier-subagent<br/>(inline фаза 3)"]
-    W1[Симулировать старт Phase 1]
-    Q{Может свежий исполнитель<br/>начать без вопросов к пользователю?}
-    Gap[Пометить ambiguity как Phase 1 blocker]
-    Cmd{Verification-команды конкретны?}
-    RB{Деструктивная фаза имеет rollback?}
-    Pass[status: PASS → APPROVED]
-    Fail[status: NEEDS_REVISION → re-invoke Planner]
-
-    EV --> W1
-    W1 --> Q
-    Q -->|нет| Gap
-    Q -->|да| Cmd
-    Cmd -->|нет| Gap
-    Cmd -->|да| RB
-    RB -->|нет| Gap
-    RB -->|да| Pass
-    Gap --> Fail
-```
-
-**Ключевые решения:**
-- Фаза 3 симулирует cold-start исполнителя: никакого prior-контекста, только артефакт плана.
-- «Нет конкретного file path», «vague verification-команда» или «деструктивная фаза без rollback» — это executability-блокеры.
-- Блокер маршрутизируется обратно к Planner'у для **targeted refinement**, а не полного replan.
-- Tier gating: `LARGE` (или любой неразрешённый HIGH-impact semantic risk) форсит все три фазы.
-
-## Кейс 5: Failure classification во время исполнения
-
-**Сценарий:** Нативный Copilot исполняет Phase 3 (роль исполнителя `CoreImplementer-subagent`). Тест падает с flaky timeout.
-
-```mermaid
-flowchart TD
-    Native["Нативный Copilot исполняет Phase 3<br/>(роль исполнителя: CoreImplementer-subagent)"]
-    Fail[Тест FAILED — transient timeout]
-    Class{failure_classification}
-    Transient[transient → нативный Copilot retry]
-    Fixable[fixable → нативный Copilot retry с fix hint]
-    Replan[needs_replan → re-invoke @controlflow-planner]
-    Esc[escalate → STOP + user approval]
-    Mu[model_unavailable → нативный Copilot подменяет модель]
-    Log[записать в lifecycle-секцию плана<br/>(Progress / Idempotence & Recovery)]
-    Continue[Phase 3 продолжается]
-
-    Native --> Fail
-    Fail --> Class
-    Class --> Transient
-    Class --> Fixable
-    Class --> Replan
-    Class --> Esc
-    Class --> Mu
-    Transient --> Log
-    Fixable --> Log
-    Replan --> Log
-    Esc --> Log
-    Mu --> Log
-    Log --> Continue
-```
-
-**Ключевые решения:**
-- Retry routing, retry budgets и parallelism — **задача нативного Copilot**, не ControlFlow.
-- `needs_replan` — единственный класс, который re-входит в пайплайн ControlFlow — пользователь re-invoke'ит `@controlflow-planner` для targeted replan.
-- Каждый сбой записывается в lifecycle-секцию плана (`## Progress`, `## Discoveries`, `## Idempotence & Recovery`) со своим `failure_classification`.
-- ControlFlow метит; нативный Copilot маршрутизирует.
-
-## Кейс 6: Mid-execution clarification
-
-**Сценарий:** Нативный Copilot, исполняя UI-фазу (роль исполнителя `UIImplementer-subagent`), не может решить, как показать empty state в диалоге экспорта.
-
-```mermaid
-sequenceDiagram
-    participant N as Нативный Copilot
-    participant U as Пользователь
-    participant P as "@controlflow-planner"
-
-    N->>N: исполняет UI-фазу; ambiguous empty state
-    alt ambiguity не меняет file scope / архитектуру
-        N->>U: нативная ask-questions поверхность: "Как показать empty state?" (options: skeleton / message / hide)
-        U-->>N: "hide"
-        N->>N: продолжить фазу с выбором в контексте
-    else ambiguity меняет file scope или архитектуру
-        U->>P: re-invoke @controlflow-planner для targeted replan
-        P->>P: читает существующий артефакт, обновляет затронутые фазы
-        P-->>U: исправленный артефакт плана
-        U->>N: возобновить исполнение после /controlflow-verify APPROVED
+    P->>Plan: Write final plan with handoff{target_agent: Orchestrator, prompt}
+    P-->>O: Handoff via plan_path
+    O->>O: Read plan: complexity_tier, risk_review
+    O->>O: Evaluate PLAN_REVIEW triggers
+    Note over O: triggers met?
+    alt Triggers met
+        O->>U: Present plan + risk summary, request approval
+    else No triggers
+        O->>U: Light approval ("Approve plan?")
     end
 ```
 
-**Ключевые решения:**
-- Mid-execution clarification — **задача нативного Copilot** — в slim-модели нет ControlFlow `NEEDS_INPUT` routing-таблицы.
-- Если ответ меняет file scope, user-visible поведение, архитектуру или обработку destructive-risk, пользователь re-invoke'ит Planner для targeted replan вместо того, чтобы разрешать inline.
-- Исправленный план должен снова пройти `controlflow-verify` до возобновления исполнения.
+**Ключевое:**
+- Plan_path — **reviewable input**, не implicit approval.
+- Orchestrator **самостоятельно** проверяет триггеры PLAN_REVIEW.
+- `complexity_tier` из плана определяет ревью-pipeline.
+- Handoff prompt содержит инструкции, а не код.
 
-## Кейс 7: Review-гейт — scope drift
+**Что бы пошло не так без этого:**
+- Если бы Orchestrator принимал план «as-is», LARGE-tier план не получил бы Plan Review.
+- AssumptionVerifier и ExecutabilityVerifier пропустились бы.
 
-**Сценарий:** Задача тира LARGE, все фазы завершены. Пользователь запускает `/controlflow-review`. Diff показывает, что Phase 4 (роль исполнителя `CoreImplementer-subagent`) модифицировала `src/auth/permissions.ts` — файл, не входящий в объявленный scope Phase 4.
+## Кейс 3: Orchestrator + PlanAuditor — adversarial detection
+
+**Сценарии:** `orchestrator-plan-auditor-integration.json` + `plan-auditor-adversarial-detection.json`.
+
+**Контекст:** Оркестратор отправил план LARGE-тира на ревью. PlanAuditor нашёл BLOCKING-уязвимость.
+
+**Поток:**
 
 ```mermaid
-flowchart TD
-    Review["controlflow-review<br/>(слой поверх нативного Copilot code review)"]
-    NativePass["Нативный Copilot code review<br/>механический/style-проход"]
-    Cmp[Сравнение с планом: diff vs фазы/файлы/criteria]
-    Vuln[Проактивный поиск уязвимостей / ошибок]
-    Ev[Дисциплина evidence: severity, confidence, file, line, impact, validation]
-    Issue{blocking findings?}
-    Drift[Scope drift: permissions.ts изменён вне scope Phase 4]
-    Findings[Findings предъявляются первыми, по severity]
-    Verdict[verdict + residual risks]
-    User[Пользователь ревьюит verdict до публикации]
+sequenceDiagram
+    participant O as Orchestrator
+    participant PA as PlanAuditor
+    participant AV as AssumptionVerifier
+    participant EV as ExecutabilityVerifier
+    participant P as Planner
 
-    Review --> NativePass
-    Review --> Cmp
-    Review --> Vuln
-    Review --> Ev
-    Cmp --> Drift
-    Drift --> Issue
-    Issue -->|да| Findings
-    Issue -->|нет| Verdict
-    Findings --> Verdict
-    Verdict --> User
+    par
+        O->>PA: dispatch (plan_path, iter=1, trace_id)
+        O->>AV: dispatch (plan_path, iter=1, trace_id)
+    end
+    PA-->>O: NEEDS_REVISION<br/>findings: SQL injection in /v1/login plan<br/>severity: BLOCKING
+    AV-->>O: APPROVED<br/>0 mirages
+    Note over O: PA blocking → don't dispatch EV yet
+    O->>P: REPLAN with PA findings
+    P->>P: Add parameterized query, prepared statements
+    P-->>O: Updated plan (iter=2)
+    par
+        O->>PA: dispatch (plan_path, iter=2)
+        O->>AV: dispatch (plan_path, iter=2)
+    end
+    PA-->>O: APPROVED
+    AV-->>O: APPROVED
+    O->>EV: dispatch (plan_path)
+    EV-->>O: PASS
+    Note over O: Plan APPROVED, exit loop
 ```
 
-**Ключевые решения:**
-- `controlflow-review` — это **слой поверх** нативного Copilot code review, не замена. Механический/style-проход принадлежит нативному ревью; ControlFlow добавляет сравнение с планом, проактивный поиск уязвимостей и дисциплину evidence.
-- Scope drift помечается сравнением diff'а имплементации с объявленными фазами, файлами и acceptance criteria плана.
-- `controlflow-review` **не чинит** проблемы — он метит их severity, confidence, file, line, user impact и validation method. Пользователь (или новая фаза плана) владеет фиксом.
-- Findings предъявляются первыми, упорядоченными по severity. Soft-метки (`Nit`, `Optional`, `FYI`) идут только после blocking findings.
+**Ключевое:**
+- На итерации 1 — PA + AV параллельно.
+- ExecutabilityVerifier dispatchится **только если** PA approved и AV без BLOCKING (закон шага 4 из §4 Plan Review).
+- PA не возвращает `transient` — её failure всегда содержательный.
+- Trace_id и iteration_index пробрасываются.
 
----
+**Regression tracking:** на итерации 2 PA получает verified items с итерации 1 как контекст. Если что-то ранее verified теперь fails → automatic BLOCKING.
 
-## Шаблон чтения сценария
+## Кейс 4: ExecutabilityVerifier — cold-start contract
 
-Работая с незнакомым сценарием, используйте этот шаблон:
+**Сценарий:** `evals/scenarios/executability-verifier-contract.json`.
 
-1. **Какой tier был назначен?** (TRIVIAL / SMALL / MEDIUM / LARGE — и сработал ли HIGH-risk override?)
-2. **Что вернул `controlflow-verify`?** (APPROVED / NEEDS_REVISION / REJECTED — и какая фаза пометила?)
-3. **Кто произвёл сбой или finding?** (Planner? verify-фаза? нативный Copilot mid-execution? `controlflow-review`?)
-4. **Какой routing-путь применяется?** (re-invoke Planner / нативный Copilot retry / user approval / ship)
-5. **Записано ли в lifecycle-секцию?** (`Progress` / `Discoveries` / `Idempotence & Recovery` с `failure_classification`.)
-6. **Что происходит после фикса?** (продолжить исполнение / re-verify / ship / replan с нуля.)
+**Контекст:** PA approved, AV без mirages. Orchestrator dispatchит ExecutabilityVerifier.
 
-## Типичные заблуждения
+**Что делает EV:**
 
-- **Путать «Planner произвёл план» с «план одобрен».** Planner handoff'ает reviewable-артефакт; `controlflow-verify` всё равно должен вернуть `APPROVED` до исполнения.
-- **Ожидать фазу 3 (executability cold-start) на SMALL-задаче.** Фаза 3 запускается только на `LARGE` или когда срабатывает HIGH-risk override.
-- **Искать Orchestrator dispatch / wave scheduler.** Оба retired. Нативный Copilot запускает фазы; пайплайн гейтит до и после.
-- **Ожидать, что `controlflow-review` чинит проблемы.** Он метит; пользователь или новая фаза плана владеют фиксом.
-- **Маршрутизировать mid-execution ambiguity через ControlFlow-таблицу.** Нативный Copilot обрабатывает clarification; только scope/architecture-changing ambiguity re-входит в пайплайн через Planner.
+1. Берёт первые 3 задачи из первой фазы плана.
+2. Для каждой симулирует **холодный старт** — «я только сейчас читаю задачу, могу ли я её выполнить?».
+3. Ищет gaps:
+   - Нет ссылок на файлы.
+   - Команды без exact strings.
+   - Неопределённые термины.
+   - Implicit предположения о состоянии.
+
+**Возможные исходы:**
+- PASS — все 3 задачи executable.
+- WARN — мелкие gaps, не критичные.
+- FAIL — задача нельзя выполнить без догадок → routing к Planner.
+
+**Пример FAIL:**
+
+> Task: «Update the parser to handle the new format»
+> EV gap: «"new format" не определён, нет ссылки на спецификацию».
+
+После fix плана task становится: «Update `src/parser.py` to handle CSV with quoted strings per RFC 4180». Теперь PASS.
+
+## Кейс 5: Failure retry — каскад классификаций
+
+**Сценарий:** `evals/scenarios/failure-retry.json`.
+
+**Контекст:** CoreImplementer работает над фазой 4. Fails 3 раза подряд по разным причинам.
+
+**Поток:**
+
+| Attempt | Failure | Classification | Action |
+|---------|---------|---------------|--------|
+| 1 | Test timeout | `transient` | Retry identical (1/3) |
+| 2 | Test passed; lint: undefined variable | `fixable` | Retry with hint (1/1) |
+| 3 | Lint passed; build fails: missing dependency in package.json | `fixable` | **Limit reached** (1/1 already used) → escalate |
+
+**Что произойдёт:** Orchestrator транзит в `WAITING_APPROVAL` и показывает пользователю накопленные findings. Пользователь выбирает: «добавить зависимость вручную» / «переразложить план» / «остановить задачу».
+
+**Ключевое:** retry-budget на phase = 5, но **классовые** лимиты ниже. Fixable исчерпался на attempt 3.
+
+## Кейс 6: NEEDS_INPUT routing
+
+**Сценарий:** `evals/scenarios/needs-input-routing.json`.
+
+**Контекст:** UIImplementer обнаружил архитектурную развилку: «использовать React Context или Redux для shared state?».
+
+**Поток:**
+
+```mermaid
+sequenceDiagram
+    participant UI as UIImplementer
+    participant O as Orchestrator
+    participant V as vscode/askQuestions
+    participant U as User
+
+    UI->>UI: Detect architecture fork
+    UI-->>O: status: NEEDS_INPUT<br/>clarification_request: {...}
+    O->>O: Detect clarification_request
+    O->>V: Present options<br/>Option A: Context (pros/cons/files)<br/>Option B: Redux (pros/cons/files)<br/>Recommended: A
+    V->>U: Show questions
+    U->>V: Choose A
+    V-->>O: Selection
+    O->>UI: Retry with scope: «Use React Context»
+    UI-->>O: COMPLETE
+```
+
+**Ключевое:**
+- `NEEDS_INPUT` + `clarification_request` — **отдельный routing path**, не failure.
+- Orchestrator не «угадывает» за пользователя.
+- UIImplementer даёт **рекомендацию**, но решение — за пользователем.
+
+## Кейс 7: Final Review Gate — scope drift
+
+**Сценарий:** `evals/scenarios/code-reviewer-final-scope-drift.json`.
+
+**Контекст:** Все фазы COMPLETE. Активирован Final Review Gate (LARGE-tier).
+
+**Что делает CodeReviewer (final mode):**
+
+1. Получает агрегированный `changed_files[]` со всех фаз.
+2. Получает `plan_phases_snapshot[]` — какие файлы планировались на какой фазе.
+3. Сверяет: какие файлы **изменены, но не планировались**?
+
+**Пример находки:**
+- Фаза 3 планировала менять `src/auth.py`.
+- Реально изменились: `src/auth.py`, `src/user.py`, `src/db.py`.
+- Файлы `user.py` и `db.py` не были в плане → **scope drift**.
+- Severity: MAJOR.
+
+**Routing fix:**
+- Высший phase_id, в чьём `files[]` встречался `user.py`, владеет fix-cycle-ом.
+- Orchestrator dispatchит этого executor-а с targeted scope: «откатить лишнее или дополнить план/тесты».
+- Re-run CodeReviewer (final mode) — **max 1** fix cycle.
+- Если опять blocking — escalate.
+
+**CodeReviewer НИКОГДА не делает fix.** Только diagnoses.
+
+## Шаблон чтения сценариев
+
+Любой scenario JSON в `evals/scenarios/` имеет:
+- `name` — человеко-читаемое имя.
+- `description` — что демонстрирует.
+- `actors` — какие агенты участвуют.
+- `events[]` — последовательность gate-events / handoffs.
+- `expected_outcome` — что должно случиться.
+
+Прочитать сценарий = понять «правильное» поведение.
+
+## Типичные ошибки при разборе
+
+- **Считать, что сценарий — реальный run**. Это **фикстура**, не лог.
+- **Игнорировать iteration_index в событиях**. Он показывает регрессионную динамику.
+- **Не сверяться со схемой**. Без схемы поля могут быть прочитаны неверно.
+- **Считать, что Orchestrator может «пропустить» PLAN_REVIEW по своему усмотрению**. Нет, триггеры детерминированы.
 
 ## Упражнения
 
-1. **(новичок)** В кейсе 1 почему `data_volume: HIGH` не форсит автоматически `LARGE`? Какой tier получается и какие verify-фазы запускаются?
-2. **(новичок)** В кейсе 3 почему verify перезапускается с фазы 1 после правки, а не патчит только сломанное утверждение?
-3. **(средний)** В кейсе 6 что различает две ветки (inline clarification vs targeted replan)? Приведите пример каждой.
-4. **(средний)** В кейсе 5 какой класс сбоев — единственный, который re-входит в пайплайн ControlFlow, и какова точка входа?
-5. **(продвинутый)** В кейсе 7 составьте список findings, который эмиттит `controlflow-review` для scope drift `permissions.ts` — severity, confidence, file, line, user impact, validation method.
+1. **(новичок)** Откройте `evals/scenarios/planner-orchestrator-handoff.json`. Какой `complexity_tier` в сценарии?
+2. **(новичок)** Откройте `evals/scenarios/failure-retry.json`. Сколько retry attempts описано?
+3. **(средний)** Сравните `plan-auditor-adversarial-detection.json` с `executability-verifier-contract.json`. Какие severity present у findings?
+4. **(средний)** Постройте свой mini-сценарий: `MEDIUM`-tier план, PA approved на итерации 1, AV нашёл 1 BLOCKING mirage. Что делает Orchestrator?
+5. **(продвинутый)** Найдите все сценарии, где включён `final_review_gate`. Какой % процент?
 
 ## Контрольные вопросы
 
-1. Когда запускается verify-фаза 3 (executability cold-start)?
-2. Что такое mirage и какая inline verify-роль его обнаруживает?
-3. Чем `controlflow-review` отличается от нативного Copilot code review?
-4. Почему записанный план — не то же самое, что одобренный план?
-5. Какой класс сбоев re-входит в пайплайн ControlFlow и как?
+1. Где Planner вызывает `vscode/askQuestions` — на каком шаге?
+2. Когда Orchestrator dispatchит EV?
+3. В чём разница между `NEEDS_INPUT` и `FAILED` routing?
+4. Кто owns fix-cycle при final review BLOCKING?
+5. Что происходит при regression на итерации 2 PA?
 
 ## См. также
 
-- [Глава 05 — Пайплайн plan → verify → review](05-orchestration.md)
-- [Глава 07 — Ревью-пайплайн (controlflow-verify)](07-review-pipeline.md)
-- [Глава 08 — Исполнение + review поверх нативного Copilot](08-execution-pipeline.md)
+- [Глава 05 — Оркестрация](05-orchestration.md)
+- [Глава 07 — Ревью пайплайн](07-review-pipeline.md)
+- [Глава 08 — Пайплайн исполнения](08-execution-pipeline.md)
 - [Глава 13 — Таксономия сбоев](13-failure-taxonomy.md)
-- [docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md](../agent-engineering/NATIVE-DELEGATION-BOUNDARY.md)
+- [evals/scenarios/](../../evals/scenarios/)

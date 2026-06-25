@@ -1,0 +1,4 @@
+interface:
+  display_name: "ControlFlow Strict Workflow"
+  short_description: "Run the full strict workflow from plan to review"
+  default_prompt: "Use $controlflow-strict-workflow to run the full ControlFlow-Codex process for this task."

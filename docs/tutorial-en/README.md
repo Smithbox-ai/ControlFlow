@@ -1,6 +1,6 @@
 # ControlFlow Tutorial (English)
 
-A practical guide to ControlFlow — a thin, non-duplicating layer over GitHub Copilot's native agent capabilities. Suitable for both newcomers and developers who want to understand the system deeply.
+A practical guide to the ControlFlow multi-agent orchestration system. Suitable for both newcomers and developers who want to understand the system deeply.
 
 ## Table of Contents
 
@@ -9,17 +9,17 @@ A practical guide to ControlFlow — a thin, non-duplicating layer over GitHub C
 | 00 | [Introduction](00-introduction.md) | What ControlFlow is and what it delivers |
 | 01 | [Quick Start](01-quickstart.md) | Orientation in 30 minutes |
 | 02 | [Architecture Overview](02-architecture-overview.md) | Mental model of the whole system |
-| 03 | [Role Taxonomy](03-agent-roster.md) | Conceptual executor + verify role labels (not shipped agents) |
-| 04 | [Agent prompt structure (guidance)](04-part-spec.md) | How to write a good custom agent prompt |
-| 05 | [The plan → verify → review pipeline](05-orchestration.md) | How the pipeline governs the process |
+| 03 | [Agent Roster](03-agent-roster.md) | All 13 agents — roles, inputs, outputs |
+| 04 | [P.A.R.T. Specification](04-part-spec.md) | Mandatory structure of every agent file |
+| 05 | [Orchestration](05-orchestration.md) | How the Orchestrator governs the process |
 | 06 | [Planning](06-planning.md) | How the Planner turns ideas into plans |
-| 07 | [Review Pipeline (controlflow-verify)](07-review-pipeline.md) | Adversarial verify before execution |
-| 08 | [Execution + review over native Copilot](08-execution-pipeline.md) | Native Copilot executes phases; `controlflow-review` gates after |
-| 09 | [Schemas (Contracts)](09-schemas.md) | All JSON schemas — purpose and key fields |
-| 10 | [Governance](10-governance.md) | Governance files — policy, registry, matrix, allowlist |
-| 11 | [Skills](11-skills.md) | Three workflow skills + value-add patterns |
+| 07 | [Review Pipeline](07-review-pipeline.md) | Adversarial PLAN_REVIEW before execution |
+| 08 | [Execution Pipeline](08-execution-pipeline.md) | Phases, waves, quality gates |
+| 09 | [Schemas (Contracts)](09-schemas.md) | All 20 JSON schemas — purpose and key fields |
+| 10 | [Governance](10-governance.md) | 7 governance files — permissions and runtime knobs |
+| 11 | [Skills (Patterns)](11-skills.md) | Reusable expert patterns for agents |
 | 12 | [Memory Architecture](12-memory.md) | Three-layer memory model |
-| 13 | [Failure Taxonomy](13-failure-taxonomy.md) | Failure classes and routing |
+| 13 | [Failure Taxonomy](13-failure-taxonomy.md) | 4 failure classes and routing |
 | 14 | [Eval Harness](14-evals.md) | Offline validation suite |
 | 15 | [Case Studies](15-case-studies.md) | End-to-end scenario walkthroughs |
 | 16 | [Exercises](16-exercises.md) | Practice tasks by level |
@@ -31,7 +31,7 @@ A practical guide to ControlFlow — a thin, non-duplicating layer over GitHub C
 ### 🟢 New to the system
 00 → 01 → 02 → 03 → 04
 
-### 🟡 Understanding the pipeline and planning
+### 🟡 Understanding orchestration and planning
 05 → 06 → 07 → 08
 
 ### 🔵 Infrastructure: schemas, governance, skills, memory, evals
@@ -55,14 +55,11 @@ Each chapter follows this structure:
 ## Canonical Sources
 
 All chapter content is derived from:
-- `.github/agents/controlflow-planner.agent.md` — the sole shipped agent; authoritative for planner behavior.
-- `.github/copilot-instructions.md` — the shared routing stub (tier table, failure classification).
-- `.github/skills/controlflow-plan/`, `.github/skills/controlflow-verify/`, `.github/skills/controlflow-review/` — the three workflow skills.
-- `governance/runtime-policy.json` — authoritative for tier-gated verify depth, semantic-risk policy, and verdict routing.
-- `governance/project-context-registry.json` — authoritative for the conceptual role taxonomy (executor + verify roles).
-- `schemas/*.json` — authoritative for contract shapes (the plan format anchor is `schemas/planner.plan.schema.json`).
-- `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md` — authoritative for the native-vs-ControlFlow delegation boundary.
-- `plans/project-context.md` — authoritative human-readable mirror of the role taxonomy, tiers, and conventions.
+- Agent files (`*.agent.md`) — authoritative for agent behavior.
+- `governance/runtime-policy.json` — authoritative for thresholds, tiers, retry budgets.
+- `schemas/*.json` — authoritative for inter-agent contracts.
+- `docs/agent-engineering/` — authoritative for engineering policies.
+- `plans/project-context.md` — authoritative for agent roster and conventions.
 
 When the tutorial conflicts with a canonical source, the canonical source wins.
 

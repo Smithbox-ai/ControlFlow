@@ -1,0 +1,31 @@
+{
+  "id": "code-reviewer-final-scope-drift",
+  "target_agent": "CodeReviewer-subagent",
+  "goal": "Final-scope review detects out_of_scope_changes when a file was modified that was not in any phase's planned files",
+  "input": {
+    "task": "Holistic final review where an unplanned file was modified",
+    "phase_id": 0,
+    "review_scope": "final",
+    "changed_files": ["src/auth.ts", "src/api.ts", "src/utils/unplanned-helper.ts"],
+    "plan_phases_snapshot": [
+      { "phase_id": 1, "files": ["src/auth.ts"] },
+      { "phase_id": 2, "files": ["src/api.ts"] }
+    ]
+  },
+  "expected": {
+    "schema": "schemas/code-reviewer.verdict.schema.json",
+    "required_status": ["APPROVED", "NEEDS_REVISION", "FAILED", "ABSTAIN"],
+    "must_include": [
+      "review_scope",
+      "final_review_summary",
+      "changed_files_analysis",
+      "validated_blocking_issues"
+    ],
+    "final_scope_invariants": {
+      "review_scope_value": "final",
+      "out_of_scope_changes_must_contain": "src/utils/unplanned-helper.ts",
+      "uses_injected_prior_phase_findings": true,
+      "no_self_sourced_plan_artifacts": true
+    }
+  }
+}

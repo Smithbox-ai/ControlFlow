@@ -1,28 +1,22 @@
 /**
- * ControlFlow — Prompt Behavior Contract Regression Tests (Phase 2 rewrite)
+ * ControlFlow — Prompt Behavior Contract Regression Tests
  *
- * Re-anchored to the slim Copilot-first canonical surface:
- *   - 3 skills: .github/skills/controlflow-{plan,verify,review}/SKILL.md (+ references/)
- *   - 1 agent:  .github/agents/controlflow-planner.agent.md
- *   - routing stub: .github/copilot-instructions.md
- *   - slimmed governance/runtime-policy.json (review_pipeline_by_tier +
- *     semantic_risk_policy + verdict_routing only)
- *   - immutable contract: schemas/planner.plan.schema.json +
- *     plans/templates/plan-document-template.md
+ * Verifies that agent prompt files preserve behavioral invariants
+ * defined in docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md.
  *
- * The heavy 13-agent model (Orchestrator + 12 subagents) is a retired surface and is
- * no longer referenced here. Phase 3 deletes those files; Phase 2 only rewires the eval.
+ * These tests complement validate.mjs (structural) by checking
+ * behavioral consistency: evidence discipline, follow-through,
+ * abstention rules, and output contracts.
  *
  * Exit 0 on all checks passed, exit 1 on any failure.
  */
 
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..', '..');
-const SCENARIOS_DIR = join(__dirname, '..', 'scenarios');
 
 let passed = 0;
 let failed = 0;
@@ -37,443 +31,611 @@ function check(label, ok) {
   }
 }
 
-function readSkill(name) {
-  return readFileSync(join(ROOT, '.github', 'skills', `controlflow-${name}`, 'SKILL.md'), 'utf8');
+function readAgent(name) {
+  return readFileSync(join(ROOT, `${name}.agent.md`), 'utf8');
 }
-function readSkillRef(name, ref) {
-  return readFileSync(join(ROOT, '.github', 'skills', `controlflow-${name}`, 'references', ref), 'utf8');
-}
-function readPlannerAgent() {
-  return readFileSync(join(ROOT, '.github', 'agents', 'controlflow-planner.agent.md'), 'utf8');
-}
+
 function readShared() {
   return readFileSync(join(ROOT, '.github', 'copilot-instructions.md'), 'utf8');
 }
-function readSchema() {
-  return JSON.parse(readFileSync(join(ROOT, 'schemas', 'planner.plan.schema.json'), 'utf8'));
-}
-function readTemplate() {
-  return readFileSync(join(ROOT, 'plans', 'templates', 'plan-document-template.md'), 'utf8');
-}
-function readRuntimePolicy() {
-  return JSON.parse(readFileSync(join(ROOT, 'governance', 'runtime-policy.json'), 'utf8'));
-}
-function loadScenario(file) {
-  return JSON.parse(readFileSync(join(SCENARIOS_DIR, file), 'utf8'));
-}
 
 // ──────────────────────────────────────────────
-// controlflow-plan skill — behavioral invariants
+// Planner behavioral invariants
 // ──────────────────────────────────────────────
-console.log('\n=== controlflow-plan — Behavioral Invariants ===');
+console.log('\n=== Planner — Behavioral Invariants ===');
 {
-  const plan = readSkill('plan');
-  const schema = readSchema();
-  const template = readTemplate();
-  const policy = readRuntimePolicy();
+  const src = readAgent('Planner');
 
-  // Plan-format single-sourcing from schema + template
+  // Confidence threshold gate
   check(
-    'plan skill: single-sources format from schemas/planner.plan.schema.json',
-    /schemas\/planner\.plan\.schema\.json/.test(plan)
-  );
-  check(
-    'plan skill: single-sources format from plans/templates/plan-document-template.md',
-    /plans\/templates\/plan-document-template\.md/.test(plan)
+    'Confidence threshold: ABSTAIN or REPLAN when below 0.9',
+    /confidence.*0\.9/i.test(src) && /ABSTAIN|REPLAN_REQUIRED/i.test(src)
   );
 
-  // Tier classification + LARGE override
+  // Mandatory workflow gates (sequential order)
   check(
-    'plan skill: assigns one complexity tier from references/complexity-tiers.md',
-    /references\/complexity-tiers\.md/.test(plan) && /TRIVIAL|SMALL|MEDIUM|LARGE/.test(plan)
+    'Mandatory gate: Idea Interview Gate present',
+    /Idea Interview Gate/i.test(src)
   );
   check(
-    'plan skill: unresolved HIGH-impact semantic risk forces LARGE regardless of file count',
-    /HIGH-impact semantic risk forces LARGE/i.test(plan)
-  );
-
-  // 7 semantic-risk categories, each once, not_applicable allowed with justification
-  check(
-    'plan skill: requires all seven semantic risk categories',
-    /all seven semantic risk categories|seven semantic risk/i.test(plan)
+    'Mandatory gate: Clarification Gate present',
+    /Clarification Gate/i.test(src)
   );
   check(
-    'plan skill: never skip a row — use not_applicable with justification',
-    /not_applicable/i.test(plan) && /never skip/i.test(plan)
+    'Mandatory gate: Semantic Risk Discovery Gate present',
+    /Semantic Risk Discovery Gate/i.test(src)
+  );
+  check(
+    'Mandatory gate: Complexity Gate present',
+    /Complexity Gate/i.test(src)
   );
 
-  // 10 sections in order + 5 lifecycle sections
+  // Gate ordering: Idea Interview < Clarification < Semantic Risk < Complexity
+  const ideaIdx = src.search(/Idea Interview Gate/i);
+  const clarIdx = src.search(/Clarification Gate/i);
+  const riskIdx = src.search(/Semantic Risk Discovery Gate/i);
+  const compIdx = src.search(/Complexity Gate/i);
   check(
-    'plan skill: documents the 10 sections in order',
-    /10 sections in order/i.test(plan)
-  );
-  check(
-    'plan skill: documents the 5 lifecycle sections (Progress, Discoveries, Decision Log, Outcomes, Idempotence & Recovery)',
-    /Progress/.test(plan) && /Discoveries/.test(plan) && /Decision Log/.test(plan) &&
-    /Outcomes/.test(plan) && /Idempotence & Recovery/.test(plan)
-  );
-
-  // executor_agent per phase from schema enum
-  check(
-    'plan skill: every phase declares exactly one executor_agent from the schema enum',
-    /executor_agent/.test(plan) && /schema enum/i.test(plan)
+    'Gate ordering: Idea Interview → Clarification → Semantic Risk → Complexity',
+    ideaIdx < clarIdx && clarIdx < riskIdx && riskIdx < compIdx
   );
 
-  // ABSTAIN / REPLAN_REQUIRED below 0.9
+  // Artifact-before-response contract
   check(
-    'plan skill: ABSTAIN or REPLAN_REQUIRED when confidence below 0.9',
-    /ABSTAIN/.test(plan) && /REPLAN_REQUIRED/.test(plan) && /0\.9/.test(plan)
+    'Output contract: artifact file created before chat response',
+    /create the markdown plan file first/i.test(src) ||
+    /plan file.*before.*chat/i.test(src) ||
+    /do not produce any chat output until the file is saved/i.test(src)
   );
 
-  // No inline plan in chat — artifact-first
   check(
-    'plan skill: do NOT inline the plan in chat (artifact-first)',
-    /do NOT inline the plan in chat/i.test(plan)
+    'Output contract: persisted_artifact covers initial create, same-path update, and supersession artifact modes',
+    /Persist the markdown plan artifact first/i.test(src) &&
+    /initial_create/i.test(src) &&
+    /in_place_update[\s\S]*return that same path as `plan_path`/i.test(src) &&
+    /new_artifact_supersession[\s\S]*revision_of/i.test(src)
   );
 
-  // Mermaid rules per tier
+  // Chat-after-artifact: no inline plan content in chat
   check(
-    'plan skill: Mermaid sequenceDiagram for MEDIUM+ non-trivial orchestration; flowchart TD + sequenceDiagram for LARGE',
-    /sequenceDiagram/.test(plan) && /flowchart TD/.test(plan) && /LARGE/.test(plan)
+    'Output contract: chat must not contain inline plan breakdowns',
+    /must NOT contain inline phase breakdowns/i.test(src) ||
+    /concise handoff message/i.test(src)
   );
 
-  // Quality gates use only the five standard values (cross-check schema)
-  const schemaGates = schema?.properties?.phases?.items?.properties?.quality_gates;
+  // Quality standards: incremental, TDD, specific, testable, practical
   check(
-    'plan skill: quality gates referenced (schema phase quality_gates present)',
-    schemaGates != null
+    'Quality standards: Incremental + TDD + Specific + Testable + Practical',
+    /Incremental/i.test(src) && /TDD/i.test(src) && /Specific/i.test(src) &&
+    /Testable/i.test(src) && /Practical/i.test(src)
   );
 
-  // Cross-source: plan skill 7 categories == runtime-policy semantic_risk_policy.categories
-  const policyCats = policy?.semantic_risk_policy?.categories;
+  // Phase count bounds (3–10)
   check(
-    'plan skill: runtime-policy semantic_risk_policy.categories has 7 categories',
-    Array.isArray(policyCats) && policyCats.length === 7
+    'Phase count bounds: 3–10 enforced',
+    /phase count.*3.*10|3[–-]10/i.test(src)
   );
+
+  // Phase 6: TRIVIAL scope phase-count exception
+  check(
+    'Planner: TRIVIAL scope phase-count exception documented with all seven risk_review categories required',
+    /TRIVIAL.*exception|TRIVIAL.*as few as/i.test(src) &&
+    /risk_review.*not_applicable|not_applicable.*risk_review/i.test(src)
+  );
+
+  // Semantic risk heuristics should anchor to the canonical taxonomy source.
+  check(
+    'Semantic risk taxonomy: Planner points to project-context canonical source',
+    /plans\/project-context\.md/i.test(src) && /Semantic Risk Taxonomy/i.test(src)
+  );
+
+  // Semantic risk categories must be delegated to canonical taxonomy source (not duplicated inline)
+  check(
+    'Semantic risk: Planner references plans/project-context.md Semantic Risk Taxonomy (canonical source)',
+    /plans\/project-context\.md.*Semantic Risk Taxonomy|Semantic Risk Taxonomy.*plans\/project-context\.md/i.test(src)
+  );
+
+  const complexityGateSection = src.match(/4\. Complexity Gate:[\s\S]*?5\. Skill Selection:/i)?.[0] ?? '';
+
+  check(
+    'Complexity gate: Planner emits complexity_tier but defers tier routing to Orchestrator/runtime-policy',
+    /complexity_tier/i.test(complexityGateSection) &&
+    /Orchestrator/i.test(complexityGateSection) &&
+    /runtime-policy\.json/i.test(complexityGateSection) &&
+    /LARGE[\s\S]*mandatory Researcher(?:-subagent)? pre-research phase/i.test(complexityGateSection) &&
+    !/MEDIUM[\s\S]*(PlanAuditor|AssumptionVerifier|ExecutabilityVerifier|full review|iteration)/i.test(complexityGateSection) &&
+    !/LARGE[\s\S]*(PlanAuditor|AssumptionVerifier|ExecutabilityVerifier|full review|all agents active|iteration)/i.test(complexityGateSection)
+  );
+
+  // Terminal states still produce artifacts
+  check(
+    'Terminal states: ABSTAIN and REPLAN_REQUIRED must produce plan file',
+    /ABSTAIN.*REPLAN_REQUIRED.*must produce.*plan file|Both.*ABSTAIN.*REPLAN_REQUIRED.*MUST produce/i.test(src)
+  );
+
+  // No ABSTAIN without clarification attempt
+  check(
+    'ABSTAIN discipline: clarification must be attempted first',
+    /do not return.*ABSTAIN.*without.*clarification/i.test(src)
+  );
+
+  // ── Phase 3: delegate roster and critic ownership ─────────────────────────
+  // Parse agents: frontmatter for Planner
+  const plannerAgentsMatch = src.match(/^agents:\s*\[(.*)\]$/m);
+  const plannerAgentEntries = plannerAgentsMatch
+    ? plannerAgentsMatch[1].split(',').map(x => x.trim().replace(/^["']|["']$/g, '')).filter(Boolean)
+    : [];
+
+  check(
+    'Agents frontmatter: explicit non-empty roster present (non-wildcard)',
+    plannerAgentEntries.length > 0
+  );
+  check(
+    'Agents frontmatter: no wildcard "*" in roster',
+    !plannerAgentEntries.includes('*')
+  );
+  check(
+    'Agents frontmatter: exactly CodeMapper-subagent and Researcher-subagent, no extras',
+    plannerAgentEntries.length === 2 &&
+    plannerAgentEntries.includes('CodeMapper-subagent') &&
+    plannerAgentEntries.includes('Researcher-subagent')
+  );
+  check(
+    'Delegation scope: prompt restricts delegation to CodeMapper-subagent or Researcher-subagent',
+    /MUST delegate only to.*CodeMapper-subagent.*or.*Researcher-subagent/i.test(src)
+  );
+  check(
+    'Delegation scope: external agents explicitly prohibited in prompt text',
+    /External agents are prohibited/i.test(src)
+  );
+  check(
+    'Critic activation: Planner defers PLAN_REVIEW ownership to Orchestrator',
+    /those belong to Orchestrator/i.test(src)
+  );
+  check(
+    'Critic activation: Planner does not invoke PlanAuditor/AssumptionVerifier/ExecutabilityVerifier directly',
+    /No invoking PlanAuditor-subagent.*AssumptionVerifier-subagent.*or ExecutabilityVerifier-subagent/i.test(src) ||
+    /does not invoke PlanAuditor-subagent.*AssumptionVerifier-subagent.*or ExecutabilityVerifier-subagent/i.test(src)
+  );
+  check(
+    'Critic activation: complexity_tier signals which review agents to activate, routing deferred to Orchestrator',
+    /complexity_tier.*signals.*Orchestrator.*which review agents.*activate|complexity_tier.*field.*signals.*Orchestrator/i.test(src)
+  );
+
+  // ── Phase 2: schema-level contract checks (F1–F3) ─────────────────────────
+  {
+    const plannerSchema = JSON.parse(readFileSync(join(ROOT, 'schemas', 'planner.plan.schema.json'), 'utf8'));
+    const executorAgentEnum = plannerSchema.properties?.phases?.items?.properties?.executor_agent?.enum ?? [];
+    check(
+      'Planner: TRIVIAL risk_review shortcut must not use category "all" — seven specific not_applicable entries required',
+      !/category:\s*["']all["']/.test(src)
+    );
+    check(
+      'Planner schema: complexity_tier is in the top-level required array',
+      Array.isArray(plannerSchema.required) && plannerSchema.required.includes('complexity_tier')
+    );
+    check(
+      'Planner schema: AssumptionVerifier-subagent must NOT be in executor_agent enum (review-only)',
+      !executorAgentEnum.includes('AssumptionVerifier-subagent')
+    );
+    check(
+      'Planner schema: ExecutabilityVerifier-subagent must NOT be in executor_agent enum (review-only)',
+      !executorAgentEnum.includes('ExecutabilityVerifier-subagent')
+    );
+    // Phase 2: schema description ownership checks — routing deferred to Orchestrator/runtime-policy.json
+    check(
+      'Planner schema: complexity_tier description defers routing to Orchestrator via runtime-policy.json',
+      plannerSchema.properties?.complexity_tier?.description != null &&
+      /Orchestrator/i.test(plannerSchema.properties.complexity_tier.description) &&
+      /runtime-policy\.json/i.test(plannerSchema.properties.complexity_tier.description)
+    );
+    check(
+      'Planner schema: iteration_budget description references governance/runtime-policy.json as authority',
+      plannerSchema.properties?.iteration_budget?.description != null &&
+      /runtime-policy\.json/i.test(plannerSchema.properties.iteration_budget.description)
+    );
+  }
 }
 
 // ──────────────────────────────────────────────
-// controlflow-planner agent — behavioral invariants
+// Researcher behavioral invariants
 // ──────────────────────────────────────────────
-console.log('\n=== controlflow-planner agent — Behavioral Invariants ===');
+console.log('\n=== Researcher — Behavioral Invariants ===');
 {
-  const agent = readPlannerAgent();
-  const schema = readSchema();
+  const src = readAgent('Researcher-subagent');
 
-  // Single output is a saved plan artifact
+  // Every claim requires evidence with file/line
   check(
-    'planner agent: single output is a saved, execution-ready plan artifact',
-    /saved/.test(agent) && /plan artifact/i.test(agent)
-  );
-  check(
-    'planner agent: do NOT inline the plan in chat',
-    /do NOT inline the plan in chat/i.test(agent)
+    'Evidence discipline: every claim requires file/line evidence',
+    /every claim.*evidence/i.test(src) && /file.*line/i.test(src)
   );
 
-  // Idea Interview for vague requests
+  // ABSTAIN on insufficient evidence
   check(
-    'planner agent: Idea Interview when request is vague',
-    /Idea Interview/i.test(agent)
-  );
-  check(
-    'planner agent: Idea Interview asks Goal, Scope, Constraints, Success criteria, Risk tolerance',
-    /Goal/i.test(agent) && /Scope/i.test(agent) && /Constraints/i.test(agent) &&
-    /Success criteria/i.test(agent) && /Risk tolerance/i.test(agent)
-  );
-  check(
-    'planner agent: stop interview once unknowns can be bounded assumptions',
-    /bounded assumptions/i.test(agent)
+    'ABSTAIN: required when evidence is insufficient',
+    /insufficient.*ABSTAIN|ABSTAIN.*insufficient/i.test(src) ||
+    /evidence.*insufficient.*ABSTAIN/i.test(src)
   );
 
-  // ABSTAIN / REPLAN_REQUIRED discipline
+  // No speculative inference
   check(
-    'planner agent: ABSTAIN or REPLAN_REQUIRED when evidence insufficient',
-    /ABSTAIN/.test(agent) && /REPLAN_REQUIRED/.test(agent)
-  );
-  check(
-    'planner agent: do not force a plan past the evidence',
-    /do not force a plan past the evidence/i.test(agent)
+    'No speculation: facts separated from hypotheses',
+    /separate.*facts.*hypotheses|speculative/i.test(src)
   );
 
-  // Hand off to native Copilot for implementation (no ControlFlow implementer agent)
+  // Status enum bounded to 3 values
   check(
-    'planner agent: implementation is native Copilot job, no ControlFlow implementer agent',
-    /native Copilot/i.test(agent) && /no ControlFlow implementer agent/i.test(agent)
+    'Status enum: COMPLETE, ABSTAIN, INSUFFICIENT_EVIDENCE only',
+    /COMPLETE/i.test(src) && /ABSTAIN/i.test(src) && /INSUFFICIENT_EVIDENCE/i.test(src)
   );
 
-  // executor_agent is a per-phase role label, not a spawned agent
+  // Convergence: 2+ sources required
   check(
-    'planner agent: executor_agent is a per-phase role label, not a spawned agent',
-    /per-phase role label/i.test(agent)
-  );
-
-  // Schema: AssumptionVerifier/ExecutabilityVerifier NOT in executor_agent enum (review-only)
-  const executorAgentEnum = schema?.properties?.phases?.items?.properties?.executor_agent?.enum ?? [];
-  check(
-    'planner schema: AssumptionVerifier-subagent NOT in executor_agent enum (review-only)',
-    !executorAgentEnum.includes('AssumptionVerifier-subagent')
-  );
-  check(
-    'planner schema: ExecutabilityVerifier-subagent NOT in executor_agent enum (review-only)',
-    !executorAgentEnum.includes('ExecutabilityVerifier-subagent')
-  );
-  check(
-    'planner schema: complexity_tier is in the top-level required array',
-    Array.isArray(schema.required) && schema.required.includes('complexity_tier')
-  );
-  // Phase 2 re-anchor: the complexity_tier description in the schema still mentions Orchestrator
-  // (a retired surface). We assert the surviving invariant — the description references
-  // runtime-policy.json as the routing authority — without requiring "Orchestrator".
-  check(
-    'planner schema: complexity_tier description references runtime-policy.json as routing authority',
-    schema?.properties?.complexity_tier?.description != null &&
-    /runtime-policy\.json/i.test(schema.properties.complexity_tier.description)
+    'Convergence: 2+ independent sources required',
+    /2\+.*sources.*agree|2\+.*independent.*sources/i.test(src)
   );
 }
 
 // ──────────────────────────────────────────────
-// controlflow-verify skill — behavioral invariants
+// CodeMapper behavioral invariants
 // ──────────────────────────────────────────────
-console.log('\n=== controlflow-verify — Behavioral Invariants ===');
+console.log('\n=== CodeMapper — Behavioral Invariants ===');
 {
-  const verify = readSkill('verify');
-  const mirageRef = readSkillRef('verify', 'mirage-patterns.md');
-  const policy = readRuntimePolicy();
+  const src = readAgent('CodeMapper-subagent');
 
-  // Adversarial framing
+  // Read-only constraint
   check(
-    'verify skill: adversarial framing — job is to break the plan, not defend it',
-    /break the plan/i.test(verify) && /steelman the rejection/i.test(verify)
-  );
-  check(
-    'verify skill: default to flagged when evidence insufficient',
-    /default to .?flagged/i.test(verify)
+    'Read-only: no file edits, no command execution',
+    /read.only/i.test(src) && /no.*edit/i.test(src)
   );
 
-  // Three phases + tier gating
+  // Parallel-first search mandate (3–10)
   check(
-    'verify skill: three phases (Structural Audit, Assumption/Mirage Check, Executability Cold-Start)',
-    /Phase 1 — Structural Audit/.test(verify) &&
-    /Phase 2 — Assumption \/ Mirage Check/.test(verify) &&
-    /Phase 3 — Executability Cold-Start Simulation/.test(verify)
-  );
-  check(
-    'verify skill: tier gating TRIVIAL skip, SMALL phase 1, MEDIUM phases 1–2, LARGE phases 1–3',
-    /SMALL.*phase 1/i.test(verify) && /MEDIUM.*phases 1–2/i.test(verify) && /LARGE.*phases 1–3/i.test(verify)
-  );
-  check(
-    'verify skill: unresolved HIGH-impact semantic risk runs all three regardless of tier',
-    /HIGH-impact semantic risk/i.test(verify) && /all three/i.test(verify)
+    'Parallel-first: 3–10 independent searches before sequential reads',
+    /parallel.*3.*10|3[–-]10.*parallel|parallel batch.*3/i.test(src) ||
+    (/parallel/i.test(src) && /3.*search/i.test(src))
   );
 
-  // Mirage taxonomy P1–P10 presence, A11–A17 absence
-  const presenceIds = ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10'];
-  const absenceIds = ['A11', 'A12', 'A13', 'A14', 'A15', 'A16', 'A17'];
+  // PreFlect evaluation before output
   check(
-    'verify skill: references mirage-patterns.md with P1–P10 and A11–A17',
-    /P1–P10/.test(verify) && /A11–A17/.test(verify) && /mirage-patterns\.md/.test(verify)
-  );
-  check(
-    'mirage-patterns.md: all 10 presence mirage ids P1–P10 present',
-    presenceIds.every(id => new RegExp(`\\b${id}\\b`).test(mirageRef))
-  );
-  check(
-    'mirage-patterns.md: all 7 absence mirage ids A11–A17 present',
-    absenceIds.every(id => new RegExp(`\\b${id}\\b`).test(mirageRef))
-  );
-  check(
-    'mirage-patterns.md: presence mirages section and absence mirages section both present',
-    /Presence Mirages/.test(mirageRef) && /Absence Mirages/.test(mirageRef)
+    'PreFlect: evaluation required before returning discovery report',
+    /PreFlect/i.test(src)
   );
 
-  // Executability cold-start
+  // ABSTAIN on contradictory/insufficient results
   check(
-    'verify skill: Phase 1 must execute without asking the user a question',
-    /execute without asking the user a question/i.test(verify)
-  );
-  check(
-    'verify skill: verification commands concrete enough to run as-is',
-    /concrete enough to run as-is/i.test(verify)
-  );
-  check(
-    'verify skill: destructive/migration phases need rollback; HIGH → human_approved_if_required, MEDIUM → safety_clear',
-    /human_approved_if_required/i.test(verify) && /safety_clear/i.test(verify)
+    'ABSTAIN: required on contradictory or insufficient results',
+    /ABSTAIN/i.test(src) && /contradict|insufficient/i.test(src)
   );
 
-  // Verdict logic: APPROVED / NEEDS_REVISION / REJECTED
+  // No speculative claims
   check(
-    'verify skill: emits APPROVED verdict',
-    /\bAPPROVED\b/.test(verify)
-  );
-  check(
-    'verify skill: emits NEEDS_REVISION verdict',
-    /NEEDS_REVISION/.test(verify)
-  );
-  check(
-    'verify skill: emits REJECTED verdict',
-    /\bREJECTED\b/.test(verify)
-  );
-
-  // Confidence caps (M4: runtime-policy.json is the single source of truth)
-  const ct = policy?.verdict_routing?.confidence_thresholds;
-  check(
-    'runtime-policy verdict_routing.confidence_thresholds: ready_for_execution_min = 0.9',
-    ct?.ready_for_execution_min === 0.9
-  );
-  check(
-    'runtime-policy verdict_routing.confidence_thresholds: uncertain_count_cap = 0.85',
-    ct?.uncertain_count_cap === 0.85
-  );
-  check(
-    'runtime-policy verdict_routing.confidence_thresholds: high_impact_open_question_cap = 0.7',
-    ct?.high_impact_open_question_cap === 0.7
-  );
-  check(
-    'verify skill: uncertain ≥ 2 caps confidence at 0.85',
-    /uncertain ≥ 2/i.test(verify) && /0\.85/.test(verify)
-  );
-  check(
-    'verify skill: any HIGH-impact open question caps confidence at 0.7',
-    /HIGH-impact open question/i.test(verify) && /0\.7/.test(verify)
-  );
-
-  // M4 cross-phase note: the verify SKILL.md restates the two caps its verdict logic
-  // uses (0.85 uncertain cap, 0.7 HIGH-impact open-question cap). The 0.9
-  // ready_for_execution_min is the planner's gate and is restated in the plan skill,
-  // not the verify skill. Assert the numbers the verify skill does restate match
-  // runtime-policy.json (record drift as a finding if mismatch). 0.9 is intentionally
-  // not required here — its absence from the verify skill is correct, not drift.
-  const verifyHas085 = /0\.85/.test(verify);
-  const verifyHas07 = /0\.7/.test(verify);
-  check(
-    'M4: verify SKILL.md restates confidence caps 0.85 / 0.7 (matches runtime-policy.json; 0.9 is the planner gate, not restated here)',
-    verifyHas085 && verifyHas07
-  );
-
-  // Verdict artifact written for auditability
-  check(
-    'verify skill: writes verdict artifact to plans/artifacts/<task-slug>/verify-verdict.md',
-    /verify-verdict\.md/.test(verify)
-  );
-
-  // Read plan from disk, not chat
-  check(
-    'verify skill: reads the plan from disk — do not work from a chat-embedded copy',
-    /read it from disk/i.test(verify) || /do not work from a chat-embedded copy/i.test(verify)
-  );
-  check(
-    'verify skill: must not let the planner confidence substitute for own scoring',
-    /do not let the planner'?s confidence/i.test(verify)
+    'No speculation: no claims without references',
+    /speculative.*claim|no.*claim.*without.*ref/i.test(src)
   );
 }
 
 // ──────────────────────────────────────────────
-// controlflow-review skill — behavioral invariants
+// CoreImplementer behavioral invariants (F9)
 // ──────────────────────────────────────────────
-console.log('\n=== controlflow-review — Behavioral Invariants ===');
+console.log('\n=== CoreImplementer — Behavioral Invariants ===');
 {
-  const review = readSkill('review');
+  const src = readAgent('CoreImplementer-subagent');
 
-  // Layer over native Copilot review, not a replacement
   check(
-    'review skill: layer over native Copilot review, not a replacement',
-    /layer over/i.test(review) && /not a\s+replacement/i.test(review)
-  );
-
-  // Native-pass delegation
-  check(
-    'review skill: delegates mechanical/style pass to native Copilot code review',
-    /native Copilot code review/i.test(review) && /delegate/i.test(review)
-  );
-  check(
-    'review skill: references security-review for security-focused work',
-    /security-review/i.test(review)
-  );
-  check(
-    'review skill: must not duplicate native Copilot code review mechanical pass',
-    /do not duplicate native Copilot code review/i.test(review)
+    'CoreImplementer: failure_classification present with all four values',
+    /transient/i.test(src) && /fixable/i.test(src) &&
+    /needs_replan/i.test(src) && /escalate/i.test(src)
   );
 
-  // ControlFlow layer: scope drift, evidence discipline, proactive vulnerability search
   check(
-    'review skill: adds plan-vs-implementation scope-drift comparison',
-    /scope.?drift/i.test(review) && /plan/i.test(review)
-  );
-  check(
-    'review skill: adds evidence-backed finding discipline',
-    /evidence/i.test(review) && /finding/i.test(review)
-  );
-  check(
-    'review skill: adds proactive vulnerability/error search',
-    /proactive/i.test(review) && /vulnerability/i.test(review)
+    'CoreImplementer: COMPLETE status value documented',
+    /COMPLETE/i.test(src)
   );
 
-  // Scope drift detection detail
   check(
-    'review skill: tracks planned-but-not-implemented and implemented-but-not-planned',
-    /implemented but not planned/i.test(review) && /planned but not implemented/i.test(review)
-  );
-  check(
-    'review skill: must not skip plan comparison when a plan artifact exists',
-    /do not skip the plan comparison/i.test(review)
+    'CoreImplementer: NEEDS_INPUT status value documented',
+    /NEEDS_INPUT/i.test(src)
   );
 
-  // Evidence labels
   check(
-    'review skill: each finding labeled with severity, confidence, file, line, user impact, validation method',
-    /severity/i.test(review) && /confidence/i.test(review) && /file/i.test(review) &&
-    /line/i.test(review) && /user impact/i.test(review) && /validation method/i.test(review)
-  );
-  check(
-    'review skill: Nit / Optional / FYI only after blocking findings',
-    /Nit/.test(review) && /Optional/.test(review) && /FYI/.test(review) &&
-    /only after blocking findings/i.test(review)
-  );
-  check(
-    'review skill: soft labels must not hide correctness, security, or test-coverage defects',
-    /must not hide/i.test(review)
-  );
-
-  // Structured text, not raw JSON (re-anchored from old Shared Policy section)
-  check(
-    'review skill: structured text output, not raw JSON',
-    /structured text, not raw JSON/i.test(review)
-  );
-
-  // Findings first, ordered by severity
-  check(
-    'review skill: findings first, ordered by severity',
-    /findings first/i.test(review) && /ordered by severity/i.test(review)
-  );
-
-  // Proactive absence mirage hunt A11–A13, A16, A17
-  check(
-    'review skill: proactive hunt references absence mirages A11–A13, A16, A17',
-    /A11–A13/.test(review) && /A16/.test(review) && /A17/.test(review)
-  );
-
-  // ControlFlow keeps no agents of its own beyond the planner
-  check(
-    'review skill: ControlFlow keeps no agents of its own beyond the planner',
-    /no agents of its own beyond the planner/i.test(readShared()) || /keeps no agents/i.test(readShared())
+    'CoreImplementer: build evidence required before reporting completion',
+    /build.*pass|build.*PASS|PASS.*build/i.test(src)
   );
 }
 
 // ──────────────────────────────────────────────
-// Plan Template — Design Decisions section (kept)
+// CodeReviewer behavioral invariants (F9)
+// ──────────────────────────────────────────────
+console.log('\n=== CodeReviewer — Behavioral Invariants ===');
+{
+  const src = readAgent('CodeReviewer-subagent');
+  const finalScope = readFileSync(join(ROOT, 'docs', 'agent-engineering', 'FINAL-REVIEW-SCOPE.md'), 'utf8');
+
+  check(
+    'CodeReviewer: validated_blocking_issues output field documented',
+    /validated_blocking_issues/i.test(src)
+  );
+
+  check(
+    'CodeReviewer: APPROVED and NEEDS_REVISION status values present',
+    /APPROVED/i.test(src) && /NEEDS_REVISION/i.test(src)
+  );
+
+  check(
+    'CodeReviewer: blocks only on confirmed validated issues, not unvalidated findings',
+    /validated.*block|confirmed.*block|block.*confirmed/i.test(src)
+  );
+
+  check(
+    'CodeReviewer: final scope section present (review_scope=final)',
+    /review_scope.*final|final.*review_scope/i.test(src)
+  );
+
+  check(
+    'CodeReviewer: final scope novelty filter documented (skip already-surfaced findings)',
+    /novelty.filter|only report findings.*not already|not.*already.*surfaced/i.test(src)
+  );
+
+  check(
+    'CodeReviewer: out_of_scope_changes detection compares changed_files against plan_phases_snapshot',
+    /out_of_scope_changes/i.test(src) &&
+    /changed_files|plan_phases_snapshot/i.test(src)
+  );
+
+  check(
+    'CodeReviewer: CodeReviewer never owns fix cycles (final scope constraint)',
+    /never.*own.*fix.cycle|CodeReviewer.*NEVER.*own/i.test(finalScope)
+  );
+
+  // Phase 5: grant/wording alignment
+  check(
+    'CodeReviewer: read/readFile documented for issue validation code navigation',
+    /read\/readFile/i.test(src)
+  );
+
+  check(
+    'CodeReviewer: final scope does not claim read/readFile grant is unavailable (grant alignment)',
+    !/CodeReviewer does not hold that grant/i.test(src)
+  );
+
+  check(
+    'CodeReviewer: final scope prohibits self-sourcing plan artifacts (injected context only)',
+    /do NOT self.source.*plans\/artifacts|do not attempt to self.source.*plans\/artifacts/i.test(finalScope)
+  );
+}
+
+// ──────────────────────────────────────────────
+// BrowserTester behavioral invariants (Phase 5)
+// ──────────────────────────────────────────────
+console.log('\n=== BrowserTester — Behavioral Invariants ===');
+{
+  const src = readAgent('BrowserTester-subagent');
+
+  check(
+    'BrowserTester: execution via provided scripts/harnesses (runCommands/runTasks), not direct browser control',
+    /runCommands|runTasks/i.test(src)
+  );
+
+  check(
+    'BrowserTester: ABSTAIN when no executable harness or script is provided',
+    /ABSTAIN/i.test(src) &&
+    /no executable.*harness|no.*harness.*provided|harness.*not provided/i.test(src)
+  );
+
+  check(
+    'BrowserTester: health-first gate uses fetch for URL reachability check',
+    /health.*check|health.first/i.test(src) && /fetch/i.test(src)
+  );
+
+  check(
+    'BrowserTester: COMPLETE, NEEDS_INPUT, FAILED, ABSTAIN status values present',
+    /COMPLETE/i.test(src) && /NEEDS_INPUT/i.test(src) &&
+    /FAILED/i.test(src) && /ABSTAIN/i.test(src)
+  );
+}
+
+// ──────────────────────────────────────────────
+// TechnicalWriter behavioral invariants (F9)
+// ──────────────────────────────────────────────
+console.log('\n=== TechnicalWriter — Behavioral Invariants ===');
+{
+  const src = readAgent('TechnicalWriter-subagent');
+
+  check(
+    'TechnicalWriter: documentation-only scope (no test writing/execution)',
+    /documentation.only|doc.*only/i.test(src) ||
+    /no.*test.*writ|no.*execut/i.test(src)
+  );
+
+  check(
+    'TechnicalWriter: COMPLETE status value documented',
+    /COMPLETE/i.test(src)
+  );
+}
+
+// ──────────────────────────────────────────────
+// AssumptionVerifier behavioral invariants (F9)
+// ──────────────────────────────────────────────
+console.log('\n=== AssumptionVerifier — Behavioral Invariants ===');
+{
+  const src = readAgent('AssumptionVerifier-subagent');
+
+  check(
+    'AssumptionVerifier: COMPLETE and ABSTAIN status values present (review-only, no NEEDS_REVISION)',
+    /COMPLETE/i.test(src) && /ABSTAIN/i.test(src)
+  );
+
+  check(
+    'AssumptionVerifier: blocking mirages distinguished from non-blocking',
+    /blocking.*mirage|BLOCKING/i.test(src)
+  );
+
+  // Phase 6: failure taxonomy alignment
+  check(
+    'AssumptionVerifier: transient excluded from failure classification, model_unavailable admitted',
+    /transient.*NOT applicable|transient.*excluded/i.test(src) &&
+    /model_unavailable/i.test(src)
+  );
+
+  check(
+    'AssumptionVerifier: failure_classification required when BLOCKING mirage is found',
+    /BLOCKING.*failure_classification|failure_classification.*BLOCKING|BLOCKING.*failure_classification.*required/i.test(src)
+  );
+}
+
+// ──────────────────────────────────────────────
+// PlanAuditor behavioral invariants (F9)
+// ──────────────────────────────────────────────
+console.log('\n=== PlanAuditor — Behavioral Invariants ===');
+{
+  const src = readAgent('PlanAuditor-subagent');
+  const schema = readFileSync(join(ROOT, 'schemas', 'plan-auditor.plan-audit.schema.json'), 'utf8');
+
+  check(
+    'PlanAuditor: APPROVED, NEEDS_REVISION, REJECTED status values present',
+    /APPROVED/i.test(src) && /NEEDS_REVISION/i.test(src) && /REJECTED/i.test(src)
+  );
+
+  check(
+    'PlanAuditor: executability_checklist output field documented',
+    /schemas\/plan-auditor\.plan-audit\.schema\.json/i.test(src) &&
+    /executability_checklist/i.test(schema)
+  );
+
+  check(
+    'PlanAuditor: failure classification required on non-approved outcomes',
+    /Failure Classification|failure.*class/i.test(src)
+  );
+
+  // Phase 6: model_unavailable in failure classification
+  check(
+    'PlanAuditor: model_unavailable in failure classification values (transient excluded)',
+    /model_unavailable/i.test(src) && /transient.*NOT applicable/i.test(src)
+  );
+
+  check(
+    'PlanAuditor: output requirements failure classification list excludes transient and includes model_unavailable',
+    /\*\*Failure Classification\*\*[^\n]*model_unavailable/i.test(src) &&
+    !/\*\*Failure Classification\*\*[^\n]*transient,/i.test(src)
+  );
+}
+
+// ──────────────────────────────────────────────
+// ExecutabilityVerifier behavioral invariants (Phase 6)
+// ──────────────────────────────────────────────
+console.log('\n=== ExecutabilityVerifier — Behavioral Invariants ===');
+{
+  const src = readAgent('ExecutabilityVerifier-subagent');
+
+  check(
+    'ExecutabilityVerifier: failure_classification required when status is FAIL',
+    /when status is.*FAIL.*failure_classification|FAIL.*failure_classification.*required|failure_classification.*required.*per schema/i.test(src)
+  );
+
+  check(
+    'ExecutabilityVerifier: all five failure_classification values documented (transient, fixable, needs_replan, escalate, model_unavailable)',
+    /transient/i.test(src) && /fixable/i.test(src) && /needs_replan/i.test(src) &&
+    /escalate/i.test(src) && /model_unavailable/i.test(src)
+  );
+
+  check(
+    'ExecutabilityVerifier: BLOCKED step requires blocker_description',
+    /BLOCKED.*blocker_description|blocker_description.*BLOCKED/i.test(src)
+  );
+}
+
+// ──────────────────────────────────────────────
+// Planner — Design Step (Step 7) assertions
+// ──────────────────────────────────────────────
+console.log('\n=== Planner — Design Step (Step 7) ===');
+{
+  const src = readAgent('Planner');
+
+  check(
+    'Design checklist: Boundary changes dimension present',
+    /Boundary/i.test(src)
+  );
+
+  check(
+    'Design checklist: Data/artifact flow dimension present',
+    /data.*artifact.*flow|Data\/artifact flow/i.test(src)
+  );
+
+  check(
+    'Design checklist: Temporal choreography dimension present',
+    /temporal/i.test(src)
+  );
+
+  check(
+    'Design checklist: Constraints & trade-offs dimension present',
+    /Constraints/i.test(src) && /trade-offs/i.test(src)
+  );
+
+  check(
+    'Tier-gated diagrams: TRIVIAL and SMALL exempt from supplemental diagrams',
+    /TRIVIAL.*SMALL.*No supplemental diagrams|TRIVIAL \/ SMALL.*No supplemental/i.test(src)
+  );
+
+  check(
+    'Tier-gated diagrams: MEDIUM conditionally requires sequenceDiagram',
+    /MEDIUM.*sequenceDiagram/i.test(src)
+  );
+
+  check(
+    'Tier-gated diagrams: LARGE unconditionally requires sequenceDiagram',
+    /LARGE.*Always include.*sequenceDiagram/i.test(src)
+  );
+}
+
+// ──────────────────────────────────────────────
+// Plan Template — Design Decisions section
 // ──────────────────────────────────────────────
 console.log('\n=== Plan Template — Design Decisions Section ===');
 {
-  const template = readTemplate();
+  const template = readFileSync(join(ROOT, 'plans', 'templates', 'plan-document-template.md'), 'utf8');
 
-  check('Template: "### Design Decisions" section heading present', /^### Design Decisions$/m.test(template));
-  check('Template: "#### Architectural Choices" subsection present', /^#### Architectural Choices$/m.test(template));
-  check('Template: "#### Boundary & Integration Points" subsection present', /^#### Boundary & Integration Points$/m.test(template));
-  check('Template: "#### Temporal Flow" subsection present', /^#### Temporal Flow$/m.test(template));
-  check('Template: "#### Constraints & Trade-offs" subsection present', /^#### Constraints & Trade-offs$/m.test(template));
-  check('Template: Architecture Visualization — MEDIUM tier requires sequenceDiagram', /MEDIUM/i.test(template) && /sequenceDiagram/i.test(template));
-  check('Template: Architecture Visualization — LARGE tier requires sequenceDiagram', /LARGE/i.test(template) && /sequenceDiagram/i.test(template));
-  check('Template: Architecture Visualization — Baseline DAG for 3+ phases', /3\+?\s*phases/i.test(template) && /DAG/i.test(template));
+  check(
+    'Template: "### Design Decisions" section heading present',
+    /^### Design Decisions$/m.test(template)
+  );
+
+  check(
+    'Template: "#### Architectural Choices" subsection present',
+    /^#### Architectural Choices$/m.test(template)
+  );
+
+  check(
+    'Template: "#### Boundary & Integration Points" subsection present',
+    /^#### Boundary & Integration Points$/m.test(template)
+  );
+
+  check(
+    'Template: "#### Temporal Flow" subsection present',
+    /^#### Temporal Flow$/m.test(template)
+  );
+
+  check(
+    'Template: "#### Constraints & Trade-offs" subsection present',
+    /^#### Constraints & Trade-offs$/m.test(template)
+  );
+
+  check(
+    'Template: Architecture Visualization — MEDIUM tier requires sequenceDiagram',
+    /MEDIUM/i.test(template) && /sequenceDiagram/i.test(template)
+  );
+
+  check(
+    'Template: Architecture Visualization — LARGE tier requires sequenceDiagram',
+    /LARGE/i.test(template) && /sequenceDiagram/i.test(template)
+  );
+
+  check(
+    'Template: Architecture Visualization — Baseline DAG for 3+ phases',
+    /3\+?\s*phases/i.test(template) && /DAG/i.test(template)
+  );
+
+  // Phase 2: plan quality standards must live primarily in the template
   check(
     'Template: plan quality standards section with all key standard names',
     /Incremental/i.test(template) && /TDD/i.test(template) &&
@@ -482,19 +644,24 @@ console.log('\n=== Plan Template — Design Decisions Section ===');
 }
 
 // ──────────────────────────────────────────────
-// Mermaid Scenario — medium-tier case (kept)
+// Mermaid Scenario — medium-tier case
 // ──────────────────────────────────────────────
 console.log('\n=== Mermaid Scenario — medium-tier-requires-sequence-diagram ===');
 {
-  const scenario = loadScenario('planner-mermaid-output.json');
+  const scenario = JSON.parse(readFileSync(join(ROOT, 'evals', 'scenarios', 'planner-mermaid-output.json'), 'utf8'));
   const mediumInput = scenario.inputs?.find(i => i.label === 'medium-tier-requires-sequence-diagram');
 
-  check('Mermaid scenario: medium-tier-requires-sequence-diagram input case exists', mediumInput != null);
+  check(
+    'Mermaid scenario: medium-tier-requires-sequence-diagram input case exists',
+    mediumInput != null
+  );
+
   check(
     'Mermaid scenario: medium-tier expected.diagrams_must_include_types contains "flowchart"',
     Array.isArray(mediumInput?.expected?.diagrams_must_include_types) &&
     mediumInput.expected.diagrams_must_include_types.includes('flowchart')
   );
+
   check(
     'Mermaid scenario: medium-tier expected.diagrams_must_include_types contains "sequenceDiagram"',
     Array.isArray(mediumInput?.expected?.diagrams_must_include_types) &&
@@ -503,284 +670,240 @@ console.log('\n=== Mermaid Scenario — medium-tier-requires-sequence-diagram ==
 }
 
 // ──────────────────────────────────────────────
-// Shared policy behavioral invariants (re-anchored subset)
+// Orchestrator behavioral invariants
+// ──────────────────────────────────────────────
+console.log('\n=== Orchestrator — Behavioral Invariants ===');
+{
+  const src = readAgent('Orchestrator');
+
+  // Archive section must reference repo-memory-hygiene.md Checklist C
+  // R5/Phase 5: strengthen to single-line regex on a bullet line
+  check(
+    'Orchestrator Archive: Checklist C reference is on a single bullet line with repo-memory-hygiene.md',
+    /^\s*[-*].*Checklist C.*repo-memory-hygiene\.md.*$/m.test(src)
+  );
+
+  // Phase 5 R7: Orchestrator Context Compaction Policy must contain
+  // both `compaction.max_consecutive_failures` and `WAITING_APPROVAL`
+  // within the bounded subsection slice.
+  {
+    const lines = src.split(/\r?\n/);
+    let startIdx = -1, depth = 0;
+    for (let i = 0; i < lines.length; i++) {
+      const m = lines[i].match(/^(#{1,6})\s+(.+?)\s*$/);
+      if (m && m[2].trim() === 'Context Compaction Policy') {
+        startIdx = i; depth = m[1].length; break;
+      }
+    }
+    let slice = '';
+    if (startIdx !== -1) {
+      const out = [lines[startIdx]];
+      for (let i = startIdx + 1; i < lines.length; i++) {
+        const m = lines[i].match(/^(#{1,6})\s/);
+        if (m && m[1].length <= depth) break;
+        out.push(lines[i]);
+      }
+      slice = out.join('\n');
+    }
+    check(
+      'Orchestrator Context Compaction Policy: subsection contains compaction.max_consecutive_failures AND WAITING_APPROVAL',
+      slice.includes('compaction.max_consecutive_failures') && slice.includes('WAITING_APPROVAL')
+    );
+  }
+}
+
+// ──────────────────────────────────────────────
+// CodeReviewer behavioral invariants
+// ──────────────────────────────────────────────
+console.log('\n=== CodeReviewer — Behavioral Invariants ===');
+{
+  const src = readAgent('CodeReviewer-subagent');
+
+  // Phase 5: review_mode: "security" and security-review-discipline.md
+  // must co-occur on the SAME line (regex match across split lines).
+  const sameLine = src.split(/\r?\n/).some(
+    line => line.includes('review_mode: "security"') &&
+            line.includes('skills/patterns/security-review-discipline.md')
+  );
+  check(
+    'CodeReviewer Prompt: review_mode: "security" and security-review-discipline.md co-located on the same line',
+    sameLine
+  );
+}
+
+// ──────────────────────────────────────────────
+// Shared policy behavioral invariants
 // ──────────────────────────────────────────────
 console.log('\n=== Shared Policy — Behavioral Invariants ===');
 {
   const src = readShared();
 
+  // Failure classification: all 4 categories present
   check(
     'Failure classification: transient, fixable, needs_replan, escalate',
     /transient/i.test(src) && /fixable/i.test(src) &&
     /needs_replan/i.test(src) && /escalate/i.test(src)
   );
+
+  // Structured text output (no raw JSON in chat)
+  check(
+    'Output format: structured text, no raw JSON in chat',
+    /do NOT output raw JSON/i.test(src)
+  );
+
+  // NOTES.md maintenance required
   check(
     'NOTES.md: persistent state maintenance required',
     /NOTES\.md/i.test(src) && /persistent state/i.test(src)
   );
+
+  // P.A.R.T section order enforced
+  check(
+    'P.A.R.T: Prompt → Archive → Resources → Tools order enforced',
+    /Prompt.*Archive.*Resources.*Tools/i.test(src)
+  );
+
+  // Complexity tiers defined
   check(
     'Complexity tiers: TRIVIAL / SMALL / MEDIUM / LARGE',
-    /TRIVIAL/i.test(src) && /SMALL/i.test(src) && /MEDIUM/i.test(src) && /LARGE/i.test(src)
-  );
-  // P.A.R.T was a retired 13-agent-structure concept; the raw-JSON check is re-anchored
-  // to the review skill above. Both old checks are intentionally retired (the slim stub
-  // dropped P.A.R.T and the raw-JSON rule now lives in controlflow-review).
-}
-
-// ──────────────────────────────────────────────
-// Slimmed runtime-policy — shape assertions
-// ──────────────────────────────────────────────
-console.log('\n=== Slimmed runtime-policy — Shape ===');
-{
-  const policy = readRuntimePolicy();
-  const topKeys = Object.keys(policy).filter(k => !k.startsWith('_'));
-  check(
-    'runtime-policy: top-level keys are exactly review_pipeline_by_tier, semantic_risk_policy, verdict_routing',
-    topKeys.length === 3 &&
-    topKeys.includes('review_pipeline_by_tier') &&
-    topKeys.includes('semantic_risk_policy') &&
-    topKeys.includes('verdict_routing')
-  );
-  check(
-    'runtime-policy: review_pipeline_by_tier has TRIVIAL/SMALL/MEDIUM/LARGE',
-    policy.review_pipeline_by_tier &&
-    ['TRIVIAL', 'SMALL', 'MEDIUM', 'LARGE'].every(t => policy.review_pipeline_by_tier[t])
-  );
-  check(
-    'runtime-policy: semantic_risk_policy.categories has 7 categories',
-    Array.isArray(policy.semantic_risk_policy?.categories) &&
-    policy.semantic_risk_policy.categories.length === 7
-  );
-  check(
-    'runtime-policy: verdict_routing.verdicts has APPROVED, NEEDS_REVISION, REJECTED',
-    policy.verdict_routing?.verdicts &&
-    policy.verdict_routing.verdicts.APPROVED &&
-    policy.verdict_routing.verdicts.NEEDS_REVISION &&
-    policy.verdict_routing.verdicts.REJECTED
+    /TRIVIAL/i.test(src) && /SMALL/i.test(src) &&
+    /MEDIUM/i.test(src) && /LARGE/i.test(src)
   );
 }
 
 // ──────────────────────────────────────────────
-// Fixture-driven behavior scenarios (8 fixtures)
+// Source grounding, impact scan, and bounded decision challenge
 // ──────────────────────────────────────────────
-console.log('\n=== Fixture-Driven Behavior Scenarios ===');
+console.log('\n=== External Evidence Adaptations — Behavioral Invariants ===');
 {
-  const policy = readRuntimePolicy();
-  const schema = readSchema();
+  const researcher = readAgent('Researcher-subagent');
+  const planner = readAgent('Planner');
+  const llmBehavior = readFileSync(join(ROOT, 'skills', 'patterns', 'llm-behavior-guidelines.md'), 'utf8');
+  const sourceGrounding = readFileSync(join(ROOT, 'skills', 'patterns', 'source-grounding.md'), 'utf8');
+  const decisionChallenge = readFileSync(join(ROOT, 'skills', 'patterns', 'decision-challenge.md'), 'utf8');
+  const sourceScenario = JSON.parse(readFileSync(join(ROOT, 'evals', 'scenarios', 'source-grounding-official-unverified.json'), 'utf8'));
+  const impactScenario = JSON.parse(readFileSync(join(ROOT, 'evals', 'scenarios', 'shared-component-impact-scan.json'), 'utf8'));
+  const challengeScenario = JSON.parse(readFileSync(join(ROOT, 'evals', 'scenarios', 'bounded-decision-challenge.json'), 'utf8'));
 
-  // 1. planner-schema-output — schema conformance
-  {
-    const fx = loadScenario('planner-schema-output.json');
-    check(
-      'planner-schema-output: expected.schema is schemas/planner.plan.schema.json',
-      fx.expected?.schema === 'schemas/planner.plan.schema.json'
-    );
-    check(
-      'planner-schema-output: persisted_artifact + executor_agent required in all phases + artifact-first handoff',
-      fx.expected?.persisted_artifact === true &&
-      fx.expected?.executor_agent_required_in_all_phases === true &&
-      fx.expected?.artifact_first_handoff === true &&
-      fx.expected?.must_not_inline_plan_in_chat === true
-    );
-    check(
-      'planner-schema-output: risk_review covers all categories + complexity tier present',
-      fx.expected?.risk_review_covers_all_categories === true &&
-      fx.expected?.complexity_tier_present === true
-    );
-  }
+  check(
+    'Researcher: external claims prefer official primary sources and label unsupported material claims UNVERIFIED',
+    /official primary sources/i.test(researcher) && /UNVERIFIED/.test(researcher) &&
+    /UNVERIFIED/.test(sourceGrounding) && sourceScenario.expected?.unsupported_material_claim_state === 'UNVERIFIED'
+  );
+  check(
+    'Shared-component impact scan: usages/symbols and suspected edit locations required before shared-surface edits',
+    /shared-component usage impact scan/i.test(llmBehavior) &&
+    /usages\/symbols/i.test(llmBehavior) &&
+    impactScenario.expected?.usages_inspected === true &&
+    impactScenario.expected?.suspected_edit_locations_recorded === true
+  );
+  check(
+    'Decision challenge: bounded to one high-risk/non-trivial challenge with no external-agent or cross-model loop',
+    /high-risk or non-trivial/i.test(decisionChallenge) &&
+    /Stop after one challenge/i.test(decisionChallenge) &&
+    /Do not invoke external agents, cross-model CLIs/i.test(decisionChallenge) &&
+    /decision-challenge\.md/.test(planner) &&
+    challengeScenario.expected?.challenge_rounds_max === 1 &&
+    challengeScenario.expected?.external_agents_or_cross_model_clis_invoked === false
+  );
+}
 
-  // 2. planner-semantic-risk-seven-categories
-  {
-    const fx = loadScenario('planner-semantic-risk-seven-categories.json');
-    const expectedCats = fx.expected?.categories;
-    check(
-      'planner-semantic-risk-seven-categories: 7 categories in canonical order',
-      Array.isArray(expectedCats) && expectedCats.length === 7 &&
-      expectedCats.every(c => ['data_volume', 'performance', 'concurrency', 'access_control', 'migration_rollback', 'dependency', 'operability'].includes(c))
-    );
-    check(
-      'planner-semantic-risk-seven-categories: fixture categories deep-equal runtime-policy.semantic_risk_policy.categories',
-      Array.isArray(expectedCats) &&
-      Array.isArray(policy.semantic_risk_policy?.categories) &&
-      expectedCats.length === policy.semantic_risk_policy.categories.length &&
-      expectedCats.every((c, i) => c === policy.semantic_risk_policy.categories[i])
-    );
-    check(
-      'planner-semantic-risk-seven-categories: schema risk_review.allOf has 7 const category entries',
-      fx.expected?.schema_allOf_const_count === 7
-    );
-    check(
-      'planner-semantic-risk-seven-categories: override_rule references HIGH + LARGE',
-      /HIGH/i.test(fx.expected?.override_rule) && /LARGE/i.test(fx.expected?.override_rule)
-    );
-    // Cross-check schema risk_review allOf count
-    const schemaAllOf = schema?.properties?.risk_review?.allOf;
-    const schemaCatCount = Array.isArray(schemaAllOf) ? schemaAllOf.length : 0;
-    check(
-      'planner-semantic-risk-seven-categories: schema risk_review.allOf actually has 7 entries on disk',
-      schemaCatCount === 7
-    );
-  }
+// ──────────────────────────────────────────────
+// Compact planning artifacts and small-local execution profile
+// ──────────────────────────────────────────────
+console.log('\n=== Compact Artifacts — Small Local LLM Workflow ===');
+{
+  const planner = readAgent('Planner');
+  const researcher = readAgent('Researcher-subagent');
+  const codeMapper = readAgent('CodeMapper-subagent');
+  const orchestrator = readAgent('Orchestrator');
+  const core = readAgent('CoreImplementer-subagent');
+  const ui = readAgent('UIImplementer-subagent');
+  const platform = readAgent('PlatformEngineer-subagent');
+  const technicalWriter = readAgent('TechnicalWriter-subagent');
+  const browserTester = readAgent('BrowserTester-subagent');
+  const plannerSchema = JSON.parse(readFileSync(join(ROOT, 'schemas', 'planner.plan.schema.json'), 'utf8'));
+  const delegationSchema = JSON.parse(readFileSync(join(ROOT, 'schemas', 'orchestrator.delegation-protocol.schema.json'), 'utf8'));
+  const runtimePolicy = JSON.parse(readFileSync(join(ROOT, 'governance', 'runtime-policy.json'), 'utf8'));
+  const specScenario = JSON.parse(readFileSync(join(ROOT, 'evals', 'scenarios', 'spec-before-plan.json'), 'utf8'));
+  const researchBriefScenario = JSON.parse(readFileSync(join(ROOT, 'evals', 'scenarios', 'research-brief-handoff.json'), 'utf8'));
+  const codeContextScenario = JSON.parse(readFileSync(join(ROOT, 'evals', 'scenarios', 'code-context-pack-required.json'), 'utf8'));
+  const smallProfileScenario = JSON.parse(readFileSync(join(ROOT, 'evals', 'scenarios', 'small-model-resource-profile.json'), 'utf8'));
+  const taskCardScenario = JSON.parse(readFileSync(join(ROOT, 'evals', 'scenarios', 'phase-task-card-delegation.json'), 'utf8'));
+  const phaseProps = plannerSchema.properties?.phases?.items?.properties ?? {};
+  const planProps = plannerSchema.properties ?? {};
+  const executorShapes = delegationSchema.properties?.agents?.properties ?? {};
+  const phaseTaskCard = delegationSchema.$defs?.phaseTaskCard ?? {};
 
-  // 3. verify-mirage-detection
-  {
-    const fx = loadScenario('verify-mirage-detection.json');
-    const presence = fx.expected?.presence_mirages ?? [];
-    const absence = fx.expected?.absence_mirages ?? [];
-    check(
-      'verify-mirage-detection: 10 presence mirages P1–P10',
-      Array.isArray(presence) && presence.length === 10 &&
-      presence.every(m => /^P\d+$/.test(m.id))
-    );
-    check(
-      'verify-mirage-detection: 7 absence mirages A11–A17',
-      Array.isArray(absence) && absence.length === 7 &&
-      absence.every(m => /^A1[1-7]$/.test(m.id))
-    );
-    check(
-      'verify-mirage-detection: each mirage records claim, pattern, evidence, verdict',
-      Array.isArray(fx.expected?.each_mirage_recorded_fields) &&
-      fx.expected.each_mirage_recorded_fields.includes('claim') &&
-      fx.expected.each_mirage_recorded_fields.includes('pattern') &&
-      fx.expected.each_mirage_recorded_fields.includes('evidence') &&
-      fx.expected.each_mirage_recorded_fields.includes('verdict')
-    );
-    check(
-      'verify-mirage-detection: unconfirmable verdict is "uncertain" (not pass)',
-      fx.expected?.unconfirmable_verdict === 'uncertain'
-    );
-  }
-
-  // 4. verify-executability-cold-start
-  {
-    const fx = loadScenario('verify-executability-cold-start.json');
-    check(
-      'verify-executability-cold-start: Phase 1 executable without user question',
-      fx.expected?.phase_1_executable_without_user_question === true
-    );
-    check(
-      'verify-executability-cold-start: verification commands concrete + destructive phases have rollback',
-      fx.expected?.verification_commands_concrete === true &&
-      fx.expected?.destructive_phases_have_rollback === true
-    );
-    check(
-      'verify-executability-cold-start: HIGH blast radius → human_approved_if_required, MEDIUM → safety_clear',
-      fx.expected?.high_blast_radius_gate === 'human_approved_if_required' &&
-      fx.expected?.medium_blast_radius_gate === 'safety_clear'
-    );
-    check(
-      'verify-executability-cold-start: inter-phase contract format explicit + downstream validates',
-      fx.expected?.inter_phase_contract_format_explicit === true &&
-      fx.expected?.downstream_validates_deliverable === true
-    );
-  }
-
-  // 5. verify-verdict-logic
-  {
-    const fx = loadScenario('verify-verdict-logic.json');
-    const verdicts = fx.expected?.verdicts ?? {};
-    check(
-      'verify-verdict-logic: fixture verdicts has APPROVED, NEEDS_REVISION, REJECTED',
-      verdicts.APPROVED && verdicts.NEEDS_REVISION && verdicts.REJECTED
-    );
-    check(
-      'verify-verdict-logic: fixture verdicts deep-equal runtime-policy.verdict_routing.verdicts',
-      policy.verdict_routing?.verdicts &&
-      verdicts.APPROVED === policy.verdict_routing.verdicts.APPROVED &&
-      verdicts.NEEDS_REVISION === policy.verdict_routing.verdicts.NEEDS_REVISION &&
-      verdicts.REJECTED === policy.verdict_routing.verdicts.REJECTED
-    );
-    const caps = fx.expected?.confidence_caps ?? {};
-    check(
-      'verify-verdict-logic: confidence_caps match runtime-policy.confidence_thresholds (0.9 / 0.85 / 0.7)',
-      caps.ready_for_execution_min === 0.9 &&
-      caps.uncertain_count_cap === 0.85 &&
-      caps.high_impact_open_question_cap === 0.7
-    );
-    check(
-      'verify-verdict-logic: uncertain threshold for cap is 2',
-      fx.expected?.uncertain_threshold_for_cap === 2
-    );
-    check(
-      'verify-verdict-logic: must not substitute planner confidence',
-      fx.expected?.must_not_substitute_planner_confidence === true
-    );
-  }
-
-  // 6. review-scope-drift
-  {
-    const fx = loadScenario('review-scope-drift.json');
-    check(
-      'review-scope-drift: compares implementation to plan',
-      fx.expected?.compares_implementation_to_plan === true
-    );
-    check(
-      'review-scope-drift: scope drift finding types include planned-but-not-implemented and implemented-but-not-planned',
-      Array.isArray(fx.expected?.scope_drift_finding_types) &&
-      fx.expected.scope_drift_finding_types.includes('planned_but_not_implemented') &&
-      fx.expected.scope_drift_finding_types.includes('implemented_but_not_planned')
-    );
-    check(
-      'review-scope-drift: scope drift is a review issue not a style preference',
-      fx.expected?.scope_drift_is_review_issue_not_style === true
-    );
-    check(
-      'review-scope-drift: must not skip plan comparison when plan exists',
-      fx.expected?.does_not_skip_plan_comparison_when_plan_exists === true
-    );
-  }
-
-  // 7. review-evidence-labels
-  {
-    const fx = loadScenario('review-evidence-labels.json');
-    const requiredFields = fx.expected?.finding_required_fields ?? [];
-    check(
-      'review-evidence-labels: finding required fields include severity, confidence, file, line, user_impact, validation_method',
-      requiredFields.includes('severity') && requiredFields.includes('confidence') &&
-      requiredFields.includes('file') && requiredFields.includes('line') &&
-      requiredFields.includes('user_impact') && requiredFields.includes('validation_method')
-    );
-    check(
-      'review-evidence-labels: soft labels Nit/Optional/FYI only after blocking findings',
-      fx.expected?.soft_labels_only_after_blocking_findings === true
-    );
-    check(
-      'review-evidence-labels: soft labels must not hide correctness/security/test-coverage',
-      fx.expected?.soft_labels_must_not_hide_correctness_security_or_test_coverage === true
-    );
-    check(
-      'review-evidence-labels: structured text not raw JSON',
-      fx.expected?.structured_text_not_raw_json === true
-    );
-  }
-
-  // 8. review-native-pass-delegation
-  {
-    const fx = loadScenario('review-native-pass-delegation.json');
-    check(
-      'review-native-pass-delegation: native review delegated',
-      fx.expected?.native_review_delegated === true
-    );
-    check(
-      'review-native-pass-delegation: native review tools include native Copilot code review and security-review',
-      Array.isArray(fx.expected?.native_review_tools) &&
-      fx.expected.native_review_tools.includes('native Copilot code review') &&
-      fx.expected.native_review_tools.includes('security-review')
-    );
-    check(
-      'review-native-pass-delegation: ControlFlow layer adds scope-drift, evidence discipline, proactive vulnerability search',
-      Array.isArray(fx.expected?.controlflow_layer_added) &&
-      fx.expected.controlflow_layer_added.length === 3
-    );
-    check(
-      'review-native-pass-delegation: mechanical pass not duplicated',
-      fx.expected?.mechanical_pass_not_duplicated === true
-    );
-    check(
-      'review-native-pass-delegation: ControlFlow keeps no agents beyond planner',
-      fx.expected?.controlflow_keeps_no_agents_beyond_planner === true
-    );
-  }
+  check(
+    'Planner: spec-before-plan contract is anchored to schema, template, and spec_path',
+    /Spec Capture Gate/i.test(planner) &&
+      /schemas\/spec-capture\.schema\.json/i.test(planner) &&
+      /plans\/templates\/spec-template\.md/i.test(planner) &&
+      /spec_path/i.test(planner) &&
+      planProps.spec_path != null &&
+      specScenario.expected?.spec_path_required_for_small_plus === true
+  );
+  check(
+    'Research brief handoff: Planner and Researcher preserve compact evidence before executor rereads',
+    /ResearchBrief/i.test(researcher) &&
+      /research-brief\.schema\.json/i.test(researcher) &&
+      /research_brief_path/i.test(planner) &&
+      /context_packet_path/i.test(planner) &&
+      planProps.research_brief_path != null &&
+      researchBriefScenario.expected?.context_packet_path_present === true
+  );
+  check(
+    'Code context pack: CodeMapper and Planner expose bounded executor-facing discovery',
+    /CodeContextPack/i.test(codeMapper) &&
+      /code-context-pack\.schema\.json/i.test(codeMapper) &&
+      /code_context_pack_path/i.test(planner) &&
+      planProps.code_context_pack_path != null &&
+      codeContextScenario.expected?.expand_when_required === true
+  );
+  check(
+    'Runtime policy: small_local resource profile has compact-artifact and phase-card knobs',
+    runtimePolicy.resource_profiles?.small_local?.max_parallel_agents === 2 &&
+      runtimePolicy.resource_profiles.small_local.context_packet_required_tiers.includes('SMALL') &&
+      runtimePolicy.resource_profiles.small_local.require_phase_task_card === true &&
+      runtimePolicy.resource_profiles.small_local.research_brief_required_for_non_trivial_research === true &&
+      smallProfileScenario.expected?.phase_task_card_required === true
+  );
+  check(
+    'Delegation schema: executor payloads can carry resource_profile and phase_task_card',
+    executorShapes['CoreImplementer-subagent']?.properties?.phase_task_card != null &&
+      executorShapes['UIImplementer-subagent']?.properties?.phase_task_card != null &&
+      executorShapes['PlatformEngineer-subagent']?.properties?.phase_task_card != null &&
+      executorShapes['TechnicalWriter-subagent']?.properties?.phase_task_card != null &&
+      executorShapes['BrowserTester-subagent']?.properties?.phase_task_card != null &&
+      executorShapes['CoreImplementer-subagent']?.properties?.resource_profile != null &&
+      taskCardScenario.expected?.phase_task_card_property_present === true
+  );
+  check(
+    'PhaseTaskCard shape: allowed files, validation commands, max changed files, and escalation rule are required',
+    Array.isArray(phaseTaskCard.required) &&
+      phaseTaskCard.required.includes('allowed_files') &&
+      phaseTaskCard.required.includes('validation_commands') &&
+      phaseTaskCard.required.includes('max_changed_files') &&
+      phaseTaskCard.required.includes('escalation_rule') &&
+      phaseProps.phase_task_card_path != null
+  );
+  check(
+    'Orchestrator: small_local dispatch builds phase_task_card and routes budget overflow to replan/input',
+    /resource_profile: small_local/i.test(orchestrator) &&
+      /phase_task_card/i.test(orchestrator) &&
+      /budgets are exceeded/i.test(orchestrator) &&
+      /needs_replan/i.test(orchestrator)
+  );
+  check(
+    'Implementers: phase_task_card is authoritative local scope and reports Scope Budget',
+    [core, ui, platform, technicalWriter, browserTester].every(src =>
+      /phase_task_card/i.test(src) &&
+      /allowed_files/i.test(src) &&
+      /forbidden_areas/i.test(src) &&
+      /Scope Budget/i.test(src)
+    )
+  );
 }
 
 // ──────────────────────────────────────────────

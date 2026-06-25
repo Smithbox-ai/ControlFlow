@@ -1,0 +1,4 @@
+interface:
+  display_name: "ControlFlow Assumption Verifier"
+  short_description: "Detect plan mirages before execution begins"
+  default_prompt: "Use $controlflow-assumption-verifier to detect hidden assumptions and mirages in this saved plan."

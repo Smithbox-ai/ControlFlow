@@ -1,0 +1,62 @@
+{
+  "id": "orchestrator-state-runtime-consistency",
+  "target_agent": "Orchestrator",
+  "goal": "Orchestrator state machine transitions align with runtime-policy.json tier routing — TRIVIAL skips PLAN_REVIEW, SMALL runs PlanAuditor only, MEDIUM/LARGE runs full pipeline",
+  "input": {
+    "tiers": [
+      {
+        "complexity_tier": "TRIVIAL",
+        "runtime_policy_expects": {
+          "plan_auditor": false,
+          "assumption_verifier": false,
+          "executability_verifier": false,
+          "code_review": true
+        }
+      },
+      {
+        "complexity_tier": "SMALL",
+        "runtime_policy_expects": {
+          "plan_auditor": true,
+          "assumption_verifier": false,
+          "executability_verifier": false,
+          "code_review": true
+        }
+      },
+      {
+        "complexity_tier": "MEDIUM",
+        "runtime_policy_expects": {
+          "plan_auditor": true,
+          "assumption_verifier": true,
+          "executability_verifier": false,
+          "code_review": true
+        }
+      },
+      {
+        "complexity_tier": "LARGE",
+        "runtime_policy_expects": {
+          "plan_auditor": true,
+          "assumption_verifier": true,
+          "executability_verifier": true,
+          "code_review": true
+        }
+      }
+    ]
+  },
+  "expected": {
+    "trivial_skips_plan_review": true,
+    "small_dispatches_plan_auditor_only": true,
+    "medium_dispatches_auditor_and_assumption": true,
+    "large_dispatches_full_pipeline": true,
+    "rerun_matrix_preserves_tier_routing": true,
+    "max_iterations_match_runtime_policy": true,
+    "state_machine_transitions_documented": true
+  },
+  "assertions": [
+    "Orchestrator PLAN_REVIEW skip logic for TRIVIAL matches runtime-policy.json review_pipeline_by_tier.TRIVIAL",
+    "Orchestrator SMALL tier dispatches PlanAuditor but not AssumptionVerifier or ExecutabilityVerifier per runtime-policy.json",
+    "Orchestrator MEDIUM tier dispatches PlanAuditor and AssumptionVerifier per runtime-policy.json",
+    "Orchestrator LARGE tier dispatches all three review agents per runtime-policy.json",
+    "Closed invalidation reruns do not change review_pipeline_by_tier reviewer membership for any tier",
+    "Max PLAN_REVIEW iterations match max_iterations_by_tier values in runtime-policy.json"
+  ]
+}

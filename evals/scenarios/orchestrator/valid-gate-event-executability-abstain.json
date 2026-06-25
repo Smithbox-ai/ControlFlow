@@ -1,0 +1,20 @@
+{
+  "_target_schema": "orchestrator.gate-event.schema.json",
+  "_fixture_type": "schema",
+  "_expected_validation": "pass",
+
+  "schema_version": "1.1.0",
+  "agent": "Orchestrator",
+  "event_type": "PHASE_REVIEW_GATE",
+  "workflow_state": "REVIEWING",
+  "phase_id": 2,
+  "decision": "GO",
+  "confidence": 0.88,
+  "requires_human_approval": false,
+  "reason": "Phase 2 implementation complete; ExecutabilityVerifier abstained due to insufficient project context.",
+  "next_action": "Dispatch CodeReviewer-subagent for Phase 2 review.",
+  "trace_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "iteration_index": 0,
+  "max_iterations": 3,
+  "executability_verifier_status": "ABSTAIN"
+}

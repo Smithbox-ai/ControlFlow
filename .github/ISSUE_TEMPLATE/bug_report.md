@@ -8,11 +8,11 @@ labels: bug
 ## Describe the Bug
 A clear description of what went wrong.
 
-## Component Involved
-Which ControlFlow component exhibited the issue? (e.g., `@controlflow-planner` agent, or the `controlflow-plan` / `controlflow-verify` / `controlflow-review` skill)
+## Agent Involved
+Which agent(s) exhibited the issue? (e.g., Planner, CoreImplementer-subagent, Orchestrator)
 
 ## Steps to Reproduce
-1. Invoked `@controlflow-planner` (or ran a ControlFlow skill) with: "..."
+1. Invoked `@AgentName` with: "..."
 2. ...
 3. Observed: ...
 

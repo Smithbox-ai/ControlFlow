@@ -1,7 +1,7 @@
 {
   "name": "controlflow-codex",
-  "version": "1.0.0",
-  "description": "Lightweight standalone ControlFlow plugin for Codex: high-quality plan generation in the shared ControlFlow format, inline adversarial plan verification (zero subagents), and evidence-backed review layered over the native Codex toolset. 3 skills, 0 subagents.",
+  "version": "0.6.0",
+  "description": "On-demand ControlFlow workflow skills for non-trivial Codex tasks: spec capture, planning, plan review, orchestration, review, and memory hygiene.",
   "author": {
     "name": "Local Workspace",
     "email": "local@example.invalid",
@@ -13,19 +13,22 @@
   "keywords": [
     "controlflow",
     "codex",
-    "planning",
-    "plan-verification",
-    "adversarial-verification",
-    "review",
-    "evidence-backed",
     "workflow",
-    "standalone"
+    "spec",
+    "planning",
+    "plan-audit",
+    "assumption-verifier",
+    "executability-verifier",
+    "router",
+    "review",
+    "orchestration",
+    "memory"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "ControlFlow for Codex",
-    "shortDescription": "Slim 3-skill ControlFlow for Codex: plan, verify, review",
-    "longDescription": "Brings the portable parts of ControlFlow into Codex when extra discipline is worth the overhead: schema-sourced plan generation, inline adversarial plan verification (zero subagents), and evidence-backed review layered over native Codex. 3 skills, 0 subagents — no orchestration, router, plan-audit, or verifier subagents.",
+    "shortDescription": "On-demand workflow skills for non-trivial Codex tasks",
+    "longDescription": "Bring the portable and practical parts of ControlFlow into Codex when extra discipline is worth the overhead: spec-before-plan capture, strict plan validation, tier-aware review artifacts, phased orchestration, context refresh, bounded retries, evidence-backed final review, semantic risk checks, and memory hygiene.",
     "developerName": "Local Workspace",
     "category": "Coding",
     "capabilities": [
@@ -37,10 +40,10 @@
     "privacyPolicyURL": "https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement",
     "termsOfServiceURL": "https://docs.github.com/en/site-policy/github-terms/github-terms-of-service",
     "defaultPrompt": [
-      "Use ControlFlow for Codex to plan this non-trivial repository task.",
-      "Generate a ControlFlow plan for this change and save it under plans/.",
-      "Verify this saved ControlFlow plan inline before implementation.",
-      "Review the implementation diff against the approved ControlFlow plan."
+      "Use ControlFlow for Codex strict workflow for this repository task.",
+      "Capture a spec before planning this ambiguous repository change.",
+      "Run the full ControlFlow-Codex plan review chain on this saved plan.",
+      "Help me execute this approved plan with explicit gates and reviews."
     ],
     "brandColor": "#0F766E",
     "composerIcon": "./assets/controlflow-codex-small.svg",

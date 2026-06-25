@@ -1,46 +1,36 @@
 # ControlFlow for Cursor
 
-**Version:** 1.0.0
+**Version:** 0.1.0
 
-This is the slim, standalone ControlFlow plugin for [Cursor IDE](https://cursor.com). It
-brings ControlFlow's planning, inline plan-verification, and review discipline to Cursor
-**without** the token cost of dedicated verifier subagents. All verification runs inline, in
-the main context, with adversarial framing built into the skill.
+Portable ControlFlow workflow for [Cursor IDE](https://cursor.com): strict planning, tiered plan review, phased orchestration, evidence-backed review, and memory hygiene — without VS Code Copilot or `agent/runSubagent`.
 
-This plugin is generated from `plugins/controlflow-shared-source/skills/` (which mirrors the
-canonical `.github/skills/` surface). The Claude Code sibling is hand-maintained; this one is
-generator-managed.
+## What This Package Provides
 
-## Design Principles
-
-- **3 skills, 0 verifier subagents.** One skill (`controlflow-verify`) runs structural audit,
-  assumption/mirage check, and executability cold-start inline.
-- **One planner agent.** Cursor requires a plugin `agents/` directory, so the
-  `@controlflow-planner` agent is shipped under `agents/`. It produces a saved plan artifact
-  and hands execution off to the native Cursor agent. There is no orchestration or verifier
-  subagent roster.
-- **Native-tool coexistence.** `controlflow-review` is a thin layer over native Cursor
-  review, adding plan-vs-implementation scope drift, evidence discipline, and proactive
-  vulnerability/error search.
-- **Schema-sourced planning.** `controlflow-plan` reads the shared
-  `schemas/planner.plan.schema.json` and `plans/templates/plan-document-template.md` at
-  invoke time, so it tracks the canonical format without a frozen copy.
+- **10 workflow skills** under `skills/` (synced from `plugins/controlflow-shared-source/`)
+- **11 subagent definitions** under `agents/` (installed to `.cursor/agents/`)
+- **Report templates** under `templates/`
+- **Install script** for arbitrary repositories
 
 ## Skills
 
-| Skill | Invocation | Purpose |
-| --- | --- | --- |
-| controlflow-plan | `/controlflow-plan` | Generate a high-quality plan in the shared ControlFlow format (schema-sourced, tier-gated) |
-| controlflow-verify | `/controlflow-verify` | Inline adversarial verification: structural audit + assumption/mirage check + executability cold-start (zero subagents); writes `plans/artifacts/<task-slug>/verify-verdict.md` |
-| controlflow-review | `/controlflow-review` | Evidence-backed implementation review: a thin layer over native Cursor review, adding plan-vs-implementation scope drift and proactive vulnerability/error search |
+| Skill | ControlFlow role |
+| ----- | ---------------- |
+| `controlflow-router` | Entry dispatcher |
+| `controlflow-spec` | Spec-before-plan |
+| `controlflow-strict-workflow` | Full workflow entry |
+| `controlflow-planning` | Planner |
+| `controlflow-plan-audit` | PlanAuditor (inline) |
+| `controlflow-assumption-verifier` | AssumptionVerifier (inline) |
+| `controlflow-executability-verifier` | ExecutabilityVerifier (inline) |
+| `controlflow-orchestration` | Orchestrator |
+| `controlflow-review` | CodeReviewer (inline) |
+| `controlflow-memory-hygiene` | Memory hygiene |
 
-## Agent
+In Cursor Agent mode: `Follow the controlflow-strict-workflow skill for this task.`
 
-`agents/controlflow-planner.agent.md` — the single planner agent. Invoke in Cursor Agent
-mode: `Follow the controlflow-plan skill for this task.` It writes the plan to
-`plans/<task-slug>-plan.md` and hands off execution to the native Cursor agent.
+## Subagents
 
-Routing for MEDIUM/LARGE tasks is defined in the repo `CLAUDE.md`: plan → verify → review.
+Installed to `.cursor/agents/` — invoke via Task when available. See [USAGE.md](USAGE.md).
 
 ## Install Into Another Repo
 
@@ -48,29 +38,38 @@ Routing for MEDIUM/LARGE tasks is defined in the repo `CLAUDE.md`: plan → veri
 powershell -ExecutionPolicy Bypass -File plugins/controlflow-cursor/scripts/install-project.ps1 -TargetRepo C:\path\to\app
 ```
 
-The installer copies `skills/` and `agents/` into `<target>/.cursor/` and scaffolds
-`plans/artifacts/`.
+## Validate Strict Plan Artifacts
+
+```powershell
+powershell -ExecutionPolicy Bypass -File plugins/controlflow-cursor/scripts/validate-strict-artifacts.ps1 `
+  -RepoRoot . `
+  -PlanPath plans/my-task-plan.md `
+  -RequirePlanAudit
+```
 
 ## Sync From Shared Source
 
-Canonical one-step sync for this repository (shared source → plugin `skills/`):
+Canonical one-step sync for this repository (shared source → plugin → `.cursor/`, strips Codex `openai.yaml`):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File plugins/controlflow-cursor/scripts/sync-to-dotcursor.ps1 -RepoRoot . -Force
+```
+
+Manual alternative:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File plugins/controlflow-shared-source/scripts/sync-plugin-assets.ps1 -RepoRoot . -Host cursor -Write
+# Then run sync-to-dotcursor.ps1 or copy skills/agents yourself; do not ship agents/openai.yaml under Cursor trees.
 ```
 
-The cursor `agents/` directory is hand-maintained from
-`plugins/controlflow-shared-source/host-overrides/cursor/agents/` (it is not wired through
-the generation manifest, because the slim Codex plugin ships no `agents/` directory).
+## Differences From VS Code
 
-## Selective Core Parity
-
-ControlFlow-Cursor follows a machine-checked selective portability contract in
-[`../controlflow-shared-source/core-portability-matrix.json`](../controlflow-shared-source/core-portability-matrix.json).
-Intentional divergences include `model_unavailable`, VS Code model routing, tool grants, the
-fixed agent roster, session telemetry, compaction, and budget enforcement — all remain
-core-only.
+- No `@Planner` / `@Orchestrator` or `runSubagent`.
+- Markdown artifacts instead of JSON gate-events in chat.
+- Model routing is guidance only (`model: inherit` on subagents).
+- Task tool may be unavailable — skills provide fallback.
 
 ## References
 
+- [docs/agent-engineering/CURSOR-SUPPORT.md](../../docs/agent-engineering/CURSOR-SUPPORT.md)
 - [Main README — ControlFlow for Cursor](../../README.md#controlflow-for-cursor)

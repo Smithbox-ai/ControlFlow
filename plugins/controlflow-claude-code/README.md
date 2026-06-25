@@ -1,6 +1,6 @@
 # ControlFlow for Claude Code
 
-Version: 1.0.0
+Version: 0.2.0
 
 ControlFlow is a portable workflow system for non-trivial coding tasks. This is the
 **standalone, hand-maintained** Claude Code plugin: a deliberately lightweight surface that

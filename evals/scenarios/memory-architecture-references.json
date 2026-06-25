@@ -1,15 +1,26 @@
 {
   "id": "memory-architecture-references",
-  "target_agent": "controlflow-planner",
+  "target_agent": "Orchestrator",
   "category": "structural",
-  "goal": "Canonical memory architecture doc docs/agent-engineering/MEMORY-ARCHITECTURE.md exists and is referenced by the surviving slim memory-aware surfaces (the Copilot stub + the repo-memory-hygiene pattern). Phase 3 re-anchor: the original 13 P.A.R.T. agents that referenced it via their Archive Agentic Memory subsections are retired; the slim @controlflow-planner Copilot agent has no ## Resources section, so the surviving reference set is the .github/copilot-instructions.md stub and the skills/patterns/repo-memory-hygiene.md pattern. Equivalent-or-stronger per the Phase 2 re-anchoring clause (b): the invariant's intent (canonical memory doc referenced by the live memory-aware surfaces) is preserved over the retired 13-agent roster.",
+  "goal": "Canonical memory architecture doc docs/agent-engineering/MEMORY-ARCHITECTURE.md exists and is referenced by every agent file via its Archive Agentic Memory subsection.",
   "input": {
     "canonical_doc": "docs/agent-engineering/MEMORY-ARCHITECTURE.md",
     "reference_required_in": [
-      ".github/copilot-instructions.md",
-      "skills/patterns/repo-memory-hygiene.md"
+      "AssumptionVerifier-subagent.agent.md",
+      "BrowserTester-subagent.agent.md",
+      "CodeMapper-subagent.agent.md",
+      "CodeReviewer-subagent.agent.md",
+      "CoreImplementer-subagent.agent.md",
+      "ExecutabilityVerifier-subagent.agent.md",
+      "Orchestrator.agent.md",
+      "PlanAuditor-subagent.agent.md",
+      "Planner.agent.md",
+      "PlatformEngineer-subagent.agent.md",
+      "Researcher-subagent.agent.md",
+      "TechnicalWriter-subagent.agent.md",
+      "UIImplementer-subagent.agent.md"
     ],
-    "minimum_agents_referencing": 2
+    "minimum_agents_referencing": 13
   },
   "expected": {
     "canonical_doc_exists": true,

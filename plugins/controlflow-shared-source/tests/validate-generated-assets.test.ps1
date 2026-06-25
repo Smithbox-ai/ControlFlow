@@ -8,7 +8,7 @@ $ErrorActionPreference = "Continue"
 $repoRootResolved = (Resolve-Path $RepoRoot).Path
 $validatorPath = Join-Path $repoRootResolved "plugins\controlflow-shared-source\scripts\validate-generated-assets.ps1"
 $syncPath = Join-Path $repoRootResolved "plugins\controlflow-shared-source\scripts\sync-plugin-assets.ps1"
-$driftTarget = Join-Path $repoRootResolved "plugins\controlflow-codex\skills\controlflow-plan\SKILL.md"
+$driftTarget = Join-Path $repoRootResolved "plugins\controlflow-codex\templates\plan-audit-report-template.md"
 
 $passedCount = 0
 $failedCount = 0
@@ -81,7 +81,7 @@ try {
 # TEST 3: Write mode must not delete unmanaged files.
 # ---------------------------------------------------------------------------
 Write-Output "TEST 3: Write mode must preserve unmanaged files"
-$unmanagedPath = Join-Path $repoRootResolved "plugins\controlflow-codex\skills\.shared-source-unmanaged-test.tmp"
+$unmanagedPath = Join-Path $repoRootResolved "plugins\controlflow-codex\templates\.shared-source-unmanaged-test.tmp"
 try {
     Set-Content -Path $unmanagedPath -Value "unmanaged" -NoNewline
     $output = powershell.exe -ExecutionPolicy Bypass -NoProfile -File $syncPath -RepoRoot $RepoRoot -Host codex -Write 2>&1

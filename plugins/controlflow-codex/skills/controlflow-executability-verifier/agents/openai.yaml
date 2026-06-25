@@ -1,0 +1,4 @@
+interface:
+  display_name: "ControlFlow Executability Verifier"
+  short_description: "Simulate plan execution before writing code"
+  default_prompt: "Use $controlflow-executability-verifier to test whether this saved plan is executable from a cold start."

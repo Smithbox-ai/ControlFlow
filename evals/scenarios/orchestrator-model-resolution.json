@@ -1,0 +1,412 @@
+{
+  "id": "orchestrator-model-resolution",
+  "target_agent": "Orchestrator",
+  "category": "structural",
+  "goal": "Structural reference fixture: documents example model resolution outcomes for Orchestrator dispatches at selected complexity tiers. Offline evals do not execute live runSubagent calls and cannot observe live model parameters, so this scenario is reference-only rather than a behavioral runtime assertion.",
+  "input": {
+    "routing_source": "governance/model-routing.json",
+    "resolution_rule_source": "docs/agent-engineering/MODEL-ROUTING.md",
+    "offline_eval_limitation": "No live agent/runSubagent invocation occurs during offline evals, so the harness cannot verify which model parameter is passed at runtime.",
+    "verified_target_agent_field": "agentName",
+    "verified_target_agent_field_evidence": "VS Code Insiders build 7e4091cc0c, resources/app/out/vs/workbench/api/worker/extensionHostWorkerMain.js ~pos 1502074: RunSubagentTool.getToolData() defines o.agentName={type:'string',description:'Name of the agent to invoke.'} and o.model={type:'string',description:'Optional model for the subagent...'}. Invoke path at ~pos 1502836 extracts x=s.agentName confirming the field name. This is the authoritative source; no guessing of agentName was required.",
+    "dispatch_contract": {
+      "outer_agentName_field": "agentName",
+      "outer_model_field": "model",
+      "outer_model_source": "agent/runSubagent outer tool-call parameter resolved from governance/model-routing.json",
+      "payload_model_field": "model",
+      "payload_runtime_model_mode_field": "runtime_model_mode",
+      "payload_model_purpose": "delegation payload contract, validation, and audit context",
+      "payload_model_is_runtime_enforcement_boundary": false,
+      "frontmatter_model_direct_invocation_fallback": true,
+      "frontmatter_scope": "Direct invocation uses the agent frontmatter model; internal dispatch must pass the resolved outer model explicitly."
+    },
+    "reference_cases": [
+      {
+        "case_id": "capable-implementer-trivial-override",
+        "executor_agent": "CoreImplementer-subagent",
+        "complexity_tier": "TRIVIAL",
+        "role": "capable-implementer",
+        "resolution_mode": "by_tier override",
+        "dispatch_family": "implementation_executor",
+        "reference_expectation": {
+          "resolved_primary_model": "GPT-5.4 mini (copilot)",
+          "resolution_source": "governance/model-routing.json roles.capable-implementer.by_tier.TRIVIAL.primary",
+          "outer_agentName_field": "agentName",
+          "outer_model_field": "model",
+          "payload_model_field": "model",
+          "payload_model_is_runtime_enforcement_boundary": false,
+          "direct_frontmatter_fallback_model": "Claude Sonnet 4.6 (copilot)",
+          "mismatch_if_outer_model_omitted": true,
+          "mismatch_reason": "CoreImplementer direct frontmatter remains Claude Sonnet 4.6, while TRIVIAL internal dispatch resolves to GPT-5.4 mini.",
+          "live_runtime_assertion": false
+        }
+      },
+      {
+        "case_id": "capable-implementer-large-override",
+        "executor_agent": "CoreImplementer-subagent",
+        "complexity_tier": "LARGE",
+        "role": "capable-implementer",
+        "resolution_mode": "by_tier override",
+        "dispatch_family": "implementation_executor",
+        "reference_expectation": {
+          "resolved_primary_model": "GPT-5.5 (copilot)",
+          "resolution_source": "governance/model-routing.json roles.capable-implementer.by_tier.LARGE.primary",
+          "outer_agentName_field": "agentName",
+          "outer_model_field": "model",
+          "payload_model_field": "model",
+          "payload_model_is_runtime_enforcement_boundary": false,
+          "direct_frontmatter_fallback_model": "Claude Sonnet 4.6 (copilot)",
+          "mismatch_if_outer_model_omitted": true,
+          "mismatch_reason": "CoreImplementer direct frontmatter remains Claude Sonnet 4.6, while LARGE internal dispatch resolves to GPT-5.5.",
+          "live_runtime_assertion": false
+        }
+      },
+      {
+        "case_id": "documentation-trivial-override",
+        "executor_agent": "TechnicalWriter-subagent",
+        "complexity_tier": "TRIVIAL",
+        "role": "documentation",
+        "resolution_mode": "by_tier override",
+        "dispatch_family": "implementation_executor",
+        "reference_expectation": {
+          "resolved_primary_model": "GPT-5.4 mini (copilot)",
+          "resolution_source": "governance/model-routing.json roles.documentation.by_tier.TRIVIAL.primary",
+          "outer_agentName_field": "agentName",
+          "outer_model_field": "model",
+          "payload_model_field": "model",
+          "payload_model_is_runtime_enforcement_boundary": false,
+          "direct_frontmatter_fallback_model": "Gemini 3.1 Pro (Preview) (copilot)",
+          "mismatch_if_outer_model_omitted": true,
+          "mismatch_reason": "TechnicalWriter direct frontmatter remains Gemini 3.1 Pro, while TRIVIAL internal dispatch resolves to GPT-5.4 mini.",
+          "live_runtime_assertion": false
+        }
+      },
+      {
+        "case_id": "capable-reviewer-large-inherit-default",
+        "executor_agents": ["CodeReviewer-subagent"],
+        "complexity_tier": "LARGE",
+        "role": "capable-reviewer",
+        "resolution_mode": "inherit_from default",
+        "dispatch_family": "final_code_review",
+        "reference_expectation": {
+          "resolved_primary_model": "Claude Opus 4.8 (copilot)",
+          "resolution_source": "governance/model-routing.json roles.capable-reviewer.by_tier.LARGE (inherit_from default → role default)",
+          "outer_agentName_field": "agentName",
+          "outer_model_field": "model",
+          "payload_model_field": "model",
+          "payload_model_is_runtime_enforcement_boundary": false,
+          "live_runtime_assertion": false
+        }
+      },
+      {
+        "case_id": "capable-reviewer-primary-dispatch",
+        "executor_agents": ["CodeReviewer-subagent", "PlanAuditor-subagent", "AssumptionVerifier-subagent"],
+        "complexity_tier": "MEDIUM",
+        "role": "capable-reviewer",
+        "resolution_mode": "by_tier override",
+        "dispatch_family": "plan_review",
+        "dispatch_context": "Initial dispatch when primary model is available. Effective review tier = MEDIUM (normal plan review, no unresolved HIGH-impact risk). Orchestrator resolves primary from governance/model-routing.json roles.capable-reviewer.by_tier.MEDIUM and calls agent/runSubagent with agentName=<exact-agent-name> and model=<resolved-by-tier primary>.",
+        "reference_expectation": {
+          "resolved_primary_model": "Claude Sonnet 4.6 (copilot)",
+          "effective_review_tier": "MEDIUM",
+          "resolution_source": "governance/model-routing.json roles.capable-reviewer.by_tier.MEDIUM.primary",
+          "agentName_field_used": "agentName",
+          "outer_agentName_field": "agentName",
+          "outer_model_field": "model",
+          "payload_model_field": "model",
+          "payload_model_is_runtime_enforcement_boundary": false,
+          "live_runtime_assertion": false
+        }
+      },
+      {
+        "case_id": "capable-reviewer-model-unavailable-first-retry",
+        "executor_agents": ["CodeReviewer-subagent", "PlanAuditor-subagent", "AssumptionVerifier-subagent"],
+        "complexity_tier": "MEDIUM",
+        "role": "capable-reviewer",
+        "resolution_mode": "model_unavailable first retry — by_tier fallbacks[0]",
+        "dispatch_family": "retry",
+        "dispatch_context": "First retry after primary Claude Sonnet 4.6 (copilot) is unavailable for MEDIUM review. Orchestrator resolves fallbacks[0] from governance/model-routing.json roles.capable-reviewer.by_tier.MEDIUM.fallbacks. Must NOT use any model outside the configured by_tier fallback list for the effective tier.",
+        "reference_expectation": {
+          "first_retry_model": "GPT-5.4 (copilot)",
+          "first_retry_model_source": "governance/model-routing.json roles.capable-reviewer.by_tier.MEDIUM.fallbacks[0]",
+          "must_not_use_unconfigured_model": true,
+          "effective_review_tier": "MEDIUM",
+          "agentName_field_used": "agentName",
+          "outer_agentName_field": "agentName",
+          "outer_model_field": "model",
+          "payload_model_field": "model",
+          "payload_model_is_runtime_enforcement_boundary": false,
+          "live_runtime_assertion": false
+        }
+      },
+      {
+        "case_id": "capable-reviewer-large-high-risk-override",
+        "executor_agents": ["CodeReviewer-subagent", "PlanAuditor-subagent", "AssumptionVerifier-subagent"],
+        "complexity_tier": "MEDIUM",
+        "role": "capable-reviewer",
+        "resolution_mode": "inherit_from default (high-risk LARGE override)",
+        "dispatch_family": "plan_review",
+        "dispatch_context": "Unresolved applicable HIGH-impact risk_review entry forces effective review tier to LARGE regardless of plan complexity_tier. Orchestrator resolves capable-reviewer models using LARGE (inherit_from default), providing premium routing.",
+        "reference_expectation": {
+          "resolved_primary_model": "Claude Opus 4.8 (copilot)",
+          "first_fallback_model": "GPT-5.5 (copilot)",
+          "first_fallback_model_source": "governance/model-routing.json roles.capable-reviewer.fallbacks[0] via LARGE inherit_from default",
+          "effective_review_tier": "LARGE",
+          "override_reason": "unresolved_high_risk",
+          "resolution_source": "governance/model-routing.json roles.capable-reviewer.by_tier.LARGE (inherit_from default → role default)",
+          "agentName_field_used": "agentName",
+          "outer_agentName_field": "agentName",
+          "outer_model_field": "model",
+          "payload_model_field": "model",
+          "payload_model_is_runtime_enforcement_boundary": false,
+          "live_runtime_assertion": false
+        }
+      },
+      {
+        "case_id": "fast-readonly-codemapper-sonnet",
+        "research_agent": "CodeMapper-subagent",
+        "complexity_tier": "MEDIUM",
+        "role": "fast-readonly",
+        "resolution_mode": "inherit_from default",
+        "dispatch_family": "planner_research",
+        "dispatch_context": "Planner or Orchestrator research delegation to CodeMapper resolves through governance/model-routing.json agent_role_index.CodeMapper-subagent -> roles.fast-readonly and must pass the resolved primary model explicitly to agent/runSubagent.",
+        "reference_expectation": {
+          "resolved_primary_model": "Claude Sonnet 4.6 (copilot)",
+          "resolution_source": "governance/model-routing.json roles.fast-readonly.primary",
+          "agentName_field_used": "agentName",
+          "outer_agentName_field": "agentName",
+          "outer_model_field": "model",
+          "payload_model_field": "model",
+          "payload_model_is_runtime_enforcement_boundary": false,
+          "live_runtime_assertion": false
+        }
+      },
+      {
+        "case_id": "researcher-research-capable-large-override",
+        "research_agent": "Researcher-subagent",
+        "complexity_tier": "LARGE",
+        "role": "research-capable",
+        "resolution_mode": "by_tier override",
+        "dispatch_family": "planner_research",
+        "dispatch_context": "Planner research delegation to Researcher resolves through governance/model-routing.json agent_role_index.Researcher-subagent -> roles.research-capable and must pass both outer agentName and outer model explicitly to agent/runSubagent.",
+        "reference_expectation": {
+          "resolved_primary_model": "GPT-5.5 (copilot)",
+          "resolution_source": "governance/model-routing.json roles.research-capable.by_tier.LARGE.primary",
+          "outer_agentName_field": "agentName",
+          "outer_model_field": "model",
+          "payload_model_field": "model",
+          "payload_model_is_runtime_enforcement_boundary": false,
+          "direct_frontmatter_fallback_model": "GPT-5.4 (copilot)",
+          "mismatch_if_outer_model_omitted": true,
+          "mismatch_reason": "Researcher direct frontmatter remains GPT-5.4, while LARGE internal research dispatch resolves to GPT-5.5.",
+          "live_runtime_assertion": false
+        }
+      },
+      {
+        "case_id": "executability-verifier-review-readonly-sonnet",
+        "executor_agent": "ExecutabilityVerifier-subagent",
+        "complexity_tier": "LARGE",
+        "role": "review-readonly",
+        "resolution_mode": "inherit_from default",
+        "dispatch_family": "plan_review",
+        "dispatch_context": "Intentional exception: ExecutabilityVerifier resolves through review-readonly role, not capable-reviewer. Its primary model is Claude Sonnet 4.6 (copilot). This is correct behavior and must be preserved.",
+        "reference_expectation": {
+          "resolved_primary_model": "Claude Sonnet 4.6 (copilot)",
+          "role_is_review_readonly_not_capable_reviewer": true,
+          "agentName_field_used": "agentName",
+          "outer_agentName_field": "agentName",
+          "outer_model_field": "model",
+          "payload_model_field": "model",
+          "payload_model_is_runtime_enforcement_boundary": false,
+          "live_runtime_assertion": false
+        }
+      }
+    ],
+    "negative_cases": [
+      {
+        "case_id": "missing-outer-agentName",
+        "description": "Broken dispatch names the target only in payload/audit context and omits the outer agent/runSubagent agentName field.",
+        "broken_dispatch": {
+          "outer_fields": {
+            "agentName_present": false,
+            "model_present": true,
+            "model": "GPT-5.5 (copilot)"
+          },
+          "payload_fields": {
+            "agentName_present": true,
+            "agentName": "CoreImplementer-subagent",
+            "model_present": true,
+            "model": "GPT-5.5 (copilot)"
+          }
+        },
+        "expected": {
+          "rejected": true,
+          "violates": "missing_outer_agentName",
+          "reason": "The verified runtime target field is the outer agentName parameter; payload/prose target metadata cannot substitute for it.",
+          "offline_detection_scope": "structural_contract",
+          "live_runtime_assertion": false
+        }
+      },
+      {
+        "case_id": "missing-outer-model",
+        "description": "Broken deterministic-mode dispatch supplies the outer agentName but omits the outer model field entirely.",
+        "input_context": {
+          "runtime_model_mode": "deterministic"
+        },
+        "broken_dispatch": {
+          "outer_fields": {
+            "agentName_present": true,
+            "agentName": "CoreImplementer-subagent",
+            "model_present": false
+          },
+          "payload_fields": {
+            "model_present": false
+          }
+        },
+        "expected": {
+          "rejected": true,
+          "violates": "missing_outer_model",
+          "reason": "Deterministic-mode internal dispatch must pass the governance-resolved primary model as the outer model parameter.",
+          "offline_detection_scope": "structural_contract",
+          "live_runtime_assertion": false
+        }
+      },
+      {
+        "case_id": "payload-only-model",
+        "description": "Broken deterministic-mode dispatch carries a payload-level model for audit context but omits the outer model runtime selector.",
+        "input_context": {
+          "runtime_model_mode": "deterministic"
+        },
+        "broken_dispatch": {
+          "outer_fields": {
+            "agentName_present": true,
+            "agentName": "Researcher-subagent",
+            "model_present": false
+          },
+          "payload_fields": {
+            "model_present": true,
+            "model": "GPT-5.5 (copilot)",
+            "model_purpose": "delegation contract and audit context only"
+          }
+        },
+        "expected": {
+          "rejected": true,
+          "violates": "payload_only_model",
+          "reason": "A payload-level model does not by itself override frontmatter or select the runtime model.",
+          "offline_detection_scope": "structural_contract",
+          "live_runtime_assertion": false
+        }
+      },
+      {
+        "case_id": "auto-mode-missing-outer-model-allowed",
+        "description": "Auto mode dispatch intentionally omits outer model so Copilot platform selection chooses the subagent model.",
+        "input_context": {
+          "target_agent": "Researcher-subagent",
+          "runtime_model_mode": "auto"
+        },
+        "broken_dispatch": {
+          "outer_fields": {
+            "agentName_present": true,
+            "agentName": "Researcher-subagent",
+            "model_present": false
+          },
+          "payload_fields": {
+            "runtime_model_mode_present": true,
+            "runtime_model_mode": "auto",
+            "model_present": false
+          }
+        },
+        "expected": {
+          "rejected": false,
+          "resolution_mode": "platform_auto",
+          "runtime_model_mode_marker_required": true,
+          "reason": "In auto mode, omitting the outer model is intentional and allowed; Copilot performs runtime model selection.",
+          "offline_detection_scope": "structural_contract",
+          "live_runtime_assertion": false
+        }
+      },
+      {
+        "case_id": "wrong-effective-review-tier",
+        "description": "Broken review dispatch keeps MEDIUM routing even though unresolved HIGH risk requires LARGE effective review tier.",
+        "input_context": {
+          "target_agent": "PlanAuditor-subagent",
+          "role": "capable-reviewer",
+          "plan_complexity_tier": "MEDIUM",
+          "unresolved_high_risk": true
+        },
+        "broken_resolution": {
+          "effective_review_tier": "MEDIUM",
+          "model": "Claude Sonnet 4.6 (copilot)",
+          "model_source": "governance/model-routing.json roles.capable-reviewer.by_tier.MEDIUM.primary"
+        },
+        "expected": {
+          "rejected": true,
+          "violates": "wrong_effective_review_tier",
+          "effective_review_tier": "LARGE",
+          "resolved_primary_model": "Claude Opus 4.8 (copilot)",
+          "model_source": "governance/model-routing.json roles.capable-reviewer.by_tier.LARGE (inherit_from default -> role default)",
+          "offline_detection_scope": "structural_contract",
+          "live_runtime_assertion": false
+        }
+      },
+      {
+        "case_id": "unconfigured-fallback",
+        "description": "Broken model_unavailable retry chooses a model that is not in the configured fallback list for the effective review tier.",
+        "input_context": {
+          "target_agent": "CodeReviewer-subagent",
+          "role": "capable-reviewer",
+          "effective_review_tier": "MEDIUM",
+          "primary_unavailable": true
+        },
+        "broken_retry": {
+          "model": "Claude Opus 4.8 (copilot)",
+          "configured_fallbacks_source": "governance/model-routing.json roles.capable-reviewer.by_tier.MEDIUM.fallbacks",
+          "configured_fallbacks": ["GPT-5.4 (copilot)", "GPT-5.5 (copilot)"]
+        },
+        "expected": {
+          "rejected": true,
+          "violates": "unconfigured_fallback",
+          "configured_fallbacks_only": true,
+          "reason": "Retries may use only the configured fallbacks for the same effective tier, in order.",
+          "offline_detection_scope": "structural_contract",
+          "live_runtime_assertion": false
+        }
+      },
+      {
+        "case_id": "omitted-model-due-missing-tier-context",
+        "description": "Broken deterministic-mode dispatch omits model because no complexity_tier is available yet instead of using the target role top-level primary.",
+        "input_context": {
+          "target_agent": "Planner",
+          "role": "capable-planner",
+          "runtime_model_mode": "deterministic",
+          "complexity_tier_present": false,
+          "dispatch_family": "initial_planner_dispatch"
+        },
+        "broken_dispatch": {
+          "outer_fields": {
+            "agentName_present": true,
+            "agentName": "Planner",
+            "model_present": false
+          }
+        },
+        "expected": {
+          "rejected": true,
+          "violates": "omitted_model_missing_tier_context",
+          "resolution_when_tier_missing": "top_level_primary",
+          "resolved_primary_model": "GPT-5.5 (copilot)",
+          "reason": "In deterministic mode, missing tier context changes the resolution source, not the requirement to pass an outer model field.",
+          "offline_detection_scope": "structural_contract",
+          "live_runtime_assertion": false
+        }
+      }
+    ]
+  },
+  "expected": {
+    "fixture_type": "structural-reference-only",
+    "offline_harness_observes_live_runSubagent_model_parameters": false,
+    "live_runtime_behavior_out_of_scope": true,
+    "behavioral_runtime_assertions_present": false,
+    "reference_cases_documented": 10,
+    "negative_cases_documented": 7
+  }
+}

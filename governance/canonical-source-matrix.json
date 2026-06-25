@@ -10,12 +10,12 @@
     {
       "concern": "Review pipeline roster",
       "authoritative_file": "governance/project-context-registry.json",
-      "notes": "Defines the 3 review-only roles performed inline by controlflow-verify."
+      "notes": "Defines PLAN_REVIEW-only auditing agents and their routing roles."
     },
     {
       "concern": "Agent role matrix",
       "authoritative_file": "governance/project-context-registry.json",
-      "notes": "Defines schema outputs, tool profiles, and delegation sources for project roles."
+      "notes": "Defines schema outputs, tool profiles, and delegation sources for project agents."
     },
     {
       "concern": "Complexity tiers",
@@ -28,14 +28,29 @@
       "notes": "Defines the 7 risk categories evaluated during planning."
     },
     {
-      "concern": "Runtime policy",
+      "concern": "Review routing",
       "authoritative_file": "governance/runtime-policy.json",
-      "notes": "Slimmed policy: review_pipeline_by_tier (tier-gated verify/review depth), semantic_risk_policy (7 categories + override), verdict_routing (verify verdicts + confidence thresholds)."
+      "notes": "Active rules for PLAN_REVIEW and Completion Gate execution."
+    },
+    {
+      "concern": "Retry budgets",
+      "authoritative_file": "governance/runtime-policy.json",
+      "notes": "Exact numeric limits, backoffs, and escalation thresholds."
     },
     {
       "concern": "Shared evidence discipline",
       "authoritative_file": "docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md",
-      "notes": "Mandates evidence citations for claims across all roles."
+      "notes": "Mandates evidence citations for claims across all agents."
+    },
+    {
+      "concern": "Gate-event contract",
+      "authoritative_file": "docs/agent-engineering/RELIABILITY-GATES.md",
+      "notes": "Governs PreFlect, Completion, and validation structural rules."
+    },
+    {
+      "concern": "Cursor IDE support policy",
+      "authoritative_file": "docs/agent-engineering/CURSOR-SUPPORT.md",
+      "notes": "Rule inventory, activation guidance, limitations, and validation commands for Cursor IDE integration. Does not alter VS Code tool grants, agent grants, or executor rosters."
     }
   ]
 }
