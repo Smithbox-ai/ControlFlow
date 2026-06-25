@@ -2,92 +2,133 @@
 
 ## Why this chapter
 
-Understand **which governance files regulate the pipeline** in the slim model and how to change them safely without breaking the system. Governance is slim: four files, three policy blocks, and no tool/model grant surfaces.
+Understand **which governance files regulate agent behavior** and how to change them safely without breaking the system.
 
 ## Key Concepts
 
-- **Governance** — four configuration files in `governance/` that define the pipeline policy, the role roster, the canonical-source matrix, and the rename allowlist.
-- **Three policy blocks** — the surviving runtime policy: `review_pipeline_by_tier`, `semantic_risk_policy`, `verdict_routing`.
-- **Delegated to native Copilot** — tool access, model selection, subagent governance. The legacy model-selection routing file, tool-access grants file, and subagent grants file are retired and no longer in `governance/`.
-- **"Canonical source beats prose"** — when a tutorial, an agent prompt, and a governance file disagree, the governance file (or its named canonical source) wins. The contract-drift eval suite asserts alignment.
+- **Governance** — a set of configuration files in `governance/` that define agent permissions, model routing, retry budgets, and approval policies.
+- **"Governance beats prompt"** — if the prompt and a governance file conflict, the governance file wins. Agents reference governance files in their Resources section.
+- **Just-in-time access** — agents load governance files on demand, not upfront.
 
-## Governance Files (the slim four)
+## Governance Files
 
 | File | Purpose |
 | --- | --- |
-| `runtime-policy.json` | Three surviving policy blocks: tier-gated verify/review depth, semantic-risk policy, verdict routing plus confidence thresholds |
-| `project-context-registry.json` | The authoritative role roster (eight executor roles + three inline verify roles) and the agent role matrix (schema outputs, tool profiles, delegation sources) |
-| `canonical-source-matrix.json` | The canonical-source matrix: which file is authoritative for which concern |
-| `rename-allowlist.json` | Permitted file renames (anti-drift protection) |
+| `agent-grants.json` | Which agents can access which tools |
+| `tool-grants.json` | Which tools are exposed and their properties |
+| `runtime-policy.json` | Operational knobs: retry budgets, tier routing, approval policies |
+| `model-routing.json` | Model selection by task type and tier |
+| `rename-allowlist.json` | Allowed file renames (anti-drift protection) |
 
-Retired (no longer in `governance/`): the model-selection routing file, the tool-access grants file, and the subagent grants file. Their concerns — model selection, tool access, subagent governance — are delegated to native Copilot. The slim `governance/` directory contains exactly the four files above.
+## agent-grants.json and tool-grants.json — Two Sides of One Medal
 
-## runtime-policy.json — the three surviving blocks
+These files are the **authorization layer** for tool access.
 
-The most important governance file. The `controlflow-verify` and `controlflow-review` skills read it as the **authoritative source** for tier-gated pipeline depth and verdict semantics. The slim model dropped the retired blocks (approval lists, per-tier iteration caps, retry budgets, stagnation detection, plan-review trigger conditions, final-review gate, memory hygiene) — retry budgets, wave execution, compaction, stagnation detection, and max-iterations knobs are delegated to the native Copilot runtime. Memory hygiene lives in `skills/patterns/repo-memory-hygiene.md` and `evals/validate.mjs` Pass 7, not in `runtime-policy.json`.
+- **`agent-grants.json`** — lists which tools are allowed for each agent. Example: `CoreImplementer-subagent` has `["read_file", "write_file", "run_terminal"]`.
+- **`tool-grants.json`** — defines properties for each tool: `allowed_callers`, `max_calls_per_phase`, `requires_approval`.
 
-### Block 1 — `review_pipeline_by_tier`
+**Rule:** when adding a new tool to an agent, both files must be updated. If they conflict, the stricter wins.
 
-Which verify phases run for each tier (plus `code_review: true` on all tiers):
-
-```text
-TRIVIAL: { plan_auditor: false, assumption_verifier: false, executability_verifier: false, code_review: true }
-SMALL:   { plan_auditor: true,  assumption_verifier: false, executability_verifier: false, code_review: true }
-MEDIUM:  { plan_auditor: true,  assumption_verifier: true,  executability_verifier: false, code_review: true }
-LARGE:   { plan_auditor: true,  assumption_verifier: true,  executability_verifier: true,  code_review: true }
+```mermaid
+flowchart LR
+    Agent -->|calls tool| ToolGrant[tool-grants.json\nIs this caller allowed?]
+    ToolGrant -->|yes| AgentGrant[agent-grants.json\nIs this tool in the agent's allowlist?]
+    AgentGrant -->|yes| Execute[Execute tool]
+    AgentGrant -->|no| Deny[Access denied]
+    ToolGrant -->|no| Deny
 ```
 
-`plan_auditor` is verify phase 1 (structural audit), `assumption_verifier` is phase 2 (mirage detection), `executability_verifier` is phase 3 (executability cold-start). TRIVIAL skips all three but still runs native Copilot code review for the change.
+## runtime-policy.json — Operational Knobs
 
-### Block 2 — `semantic_risk_policy`
+The most important governance file. Orchestrator reads it as the **authoritative source** for all operational decisions.
 
-The seven mandatory categories every non-TRIVIAL plan must include exactly once: `data_volume`, `performance`, `concurrency`, `access_control`, `migration_rollback`, `dependency`, `operability`. If a category is not applicable, set `not_applicable` with justification — never skip a row. The override rule: any unresolved `HIGH`-impact applicable entry forces `LARGE` (all three verify phases) regardless of file count.
+### Key Sections
 
-The allowed values are pinned by the policy: `applicability_values` (`applicable`, `not_applicable`, `uncertain`), `impact_values` (`HIGH`, `MEDIUM`, `LOW`, `UNKNOWN`), `disposition_values` (`resolved`, `open_question`, `research_phase_added`, `not_applicable`).
+**`approval_actions`** — which operations require user approval before execution:
 
-### Block 3 — `verdict_routing`
+```text
+["delete_file", "drop_table", "git_push_force", "git_reset_hard", "run_destructive_migration"]
+```
 
-Verdicts emitted by `controlflow-verify` and what each means:
+**`review_pipeline_by_tier`** — which reviewers run for each tier:
 
-- `APPROVED` — all checks pass, Phase 1 actionable, criteria measurable. Proceed to implementation.
-- `NEEDS_REVISION` — ambiguous Phase 1, no rollback on destructive change, unverified paths, or vague criteria. List each finding with the exact section reference; re-audit after fix.
-- `REJECTED` — structural flaw; scope not deliverable as authored. Explain blockers; ask the user for direction; do not start coding.
+```text
+TRIVIAL: []
+SMALL: [PlanAuditor]
+MEDIUM: [PlanAuditor, AssumptionVerifier]
+LARGE: [PlanAuditor, AssumptionVerifier, ExecutabilityVerifier]
+```
 
-Confidence thresholds:
-- `ready_for_execution_min`: 0.9 (below this, the plan is not `READY_FOR_EXECUTION`)
-- `uncertain_count_cap`: 0.85
-- `high_impact_open_question_cap`: 0.7
+(plus `code_review: always` on all tiers)
 
-## project-context-registry.json — the role roster
+**`max_iterations_by_tier`** — review loop iteration cap:
 
-The **authoritative** source for the role taxonomy. The `executor_agent` enum in `schemas/planner.plan.schema.json` and the mirror tables in `plans/project-context.md` are validated against this registry row-for-row by the Pass 14 drift check (`validateProjectContextRegistryMirror`). Do not hand-edit the mirror tables independently — update the registry first, then mirror.
+```text
+TRIVIAL: 0, SMALL: 2, MEDIUM: 5, LARGE: 5
+```
 
-It defines:
-- The eight executor roles (`CodeMapper-subagent`, `Researcher-subagent`, `CoreImplementer-subagent`, `UIImplementer-subagent`, `PlatformEngineer-subagent`, `TechnicalWriter-subagent`, `BrowserTester-subagent`, `CodeReviewer-subagent`) available for `executor_agent` assignment.
-- The three inline verify roles (`PlanAuditor-subagent`, `AssumptionVerifier-subagent`, `ExecutabilityVerifier-subagent`) performed by `controlflow-verify` — strictly read-only; must not appear as `executor_agent`.
-- The agent role matrix (schema output, tools profile, delegation source) for each role.
+**`retry_budgets`** — cumulative retry limit per phase and ceiling on consecutive identical failures:
 
-The `Model Routing Role` column in the registry is a **conceptual capability tier** the Copilot Auto model picker targets when the Planner describes a role. There is no model-selection routing surface in the slim model.
+```text
+per_phase: 5
+same_classification_ceiling: 3
+```
 
-## canonical-source-matrix.json
+**`stagnation_detection`** — when to call a review loop "stuck":
 
-Maps each concern to its authoritative file, so when two files disagree the canonical source wins. Key rows:
+```text
+min_iterations_before_check: 3
+min_improvement_percentage: 5
+```
 
-| Concern | Authoritative File |
-| --- | --- |
-| Executor roster | `governance/project-context-registry.json` |
-| Review pipeline roster | `governance/project-context-registry.json` |
-| Agent role matrix | `governance/project-context-registry.json` |
-| Complexity tiers | `plans/project-context.md` |
-| Semantic-risk taxonomy | `docs/agent-engineering/RISK-TAXONOMY.md` |
-| Runtime policy | `governance/runtime-policy.json` |
-| Shared evidence discipline | `docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md` |
+**`plan_review_gate_trigger_conditions`** — PLAN_REVIEW activation conditions:
+
+```text
+min_phases: 3
+confidence_threshold: 0.8
+destructive_operations: true
+unresolved_high_risks: true
+```
+
+**`final_review_gate`** — optional final CodeReviewer pass:
+
+```text
+enabled_by_default: true / false
+auto_trigger_tiers: ["LARGE"]
+max_fix_cycles: 1
+```
+
+### memory_hygiene
+
+Controls memory quality enforcement thresholds and content standards:
+
+| Key | Value | Purpose |
+| --- | --- | --- |
+| `notes_md_max_lines` | 20 | NOTES.md size cap (CI-enforced by Pass 7) |
+| `archive_completed_plans_threshold_days` | 14 | Days before a closed plan is eligible for archival |
+| `archive_eligible_statuses` | `["DONE","SUPERSEDED","DEFERRED"]` | Plan statuses eligible for auto-archive |
+| `repo_memory_dedup_required` | `true` | Gate: require running repo-memory-hygiene.md before any `/memories/repo/` write |
+| `memory_content_types` | `["user","feedback","project","reference"]` | Canonical taxonomy types for repo-memory entries |
+| `session_notes_template_path` | `"plans/templates/session-notes-template.md"` | Path to the session notes template referenced by MEMORY-ARCHITECTURE.md |
+| `stale_memory_freshness_days` | 1 | Age threshold after which repo-memory entries about specific code locations should be re-verified |
+
+## model-routing.json
+
+Defines which LLM model handles which type of task. Does **not** contain API keys — only model names / capabilities.
+
+**Typical sections:**
+
+- `roles` — by role ID (e.g. `capable-planner`, `capable-implementer`), explicitly handling complexity tiers.
+- `by_tier` — explicit capability overrides for routing models dynamically by complexity tier.
+- `agent_role_index` — reverse-mapping index from agent name to active model role.
+
+**Who uses it:** Orchestrator and Planner actively read `model-routing.json` for internal dispatch resolution (e.g. `agent/runSubagent`) to pass the resolved model as an outer tool-call parameter overriding the fallback frontmatter. See [docs/agent-engineering/MODEL-ROUTING.md](../agent-engineering/MODEL-ROUTING.md).
 
 ## rename-allowlist.json
 
-Permitted file renames. Prevents accidental drift: if a change tries to rename a file not on the allowlist, the drift check fails.
+Contains permitted file renames. Prevents accidental drift: if an agent tries to rename a file not on the allowlist — the drift check fails.
 
-Typical structure:
+**Typical structure:**
 
 ```json
 [{"from": "old-name.md", "to": "new-name.md", "reason": "..."}]
@@ -95,53 +136,41 @@ Typical structure:
 
 After adding an entry here, run `cd evals && npm test` to verify the drift check accepts the new allowlist entry.
 
-## Principle: Canonical Source Beats Prose
+## Principle: Governance Beats Prompt
 
-A tutorial, an agent prompt, and a governance file may disagree on a tier boundary or a role name. Which wins?
+The Orchestrator prompt says "retry up to 3 times" — but `runtime-policy.json` says `per_phase: 5`. Which applies?
 
-The governance file (or its named canonical source) wins. Agent prompts and tutorials are **prose defaults**; the registry and the runtime policy **override** them. The contract-drift eval suite (see chapter 14) asserts the alignment holds across files.
+`runtime-policy.json` is authoritative. Agent prompts are **default behavior**; governance files **override** it. When they conflict, the governance value wins.
 
-**Why this matters:** changing behavior doesn't require editing every agent prompt. You edit `governance/runtime-policy.json` or `governance/project-context-registry.json`, and the change propagates to every consumer automatically — at the cost of each file reference being verified by the eval suite.
+**Why this matters:** changing behavior doesn't require editing agent prompts. You edit `governance/runtime-policy.json`, and the change propagates to all consuming agents automatically — at the cost of each file reference being verified.
 
-## Safe Governance Change Flow
+## Safe Governance Change Flowchart
 
 ```mermaid
 flowchart TD
-    Change[Plan a change] --> Read[Read the consumers:\nwhich skills/prompts reference this file?]
+    Change[Plan a change] --> Read[Read the consumers:\nwhich agents reference this file?]
     Read --> Impact[Assess impact:\nwhich behaviors change?]
     Impact --> Update[Edit the governance file]
-    Update --> Mirror[Update mirror tables\nin plans/project-context.md\nif the registry changed]
-    Mirror --> Eval[cd evals && npm test]
+    Update --> Agent[Update agent prompts\nif knob semantics change]
+    Agent --> Schema[Update schemas\nif field types change]
+    Schema --> Eval[cd evals && npm test]
     Eval -->|passed| Done[Change accepted]
     Eval -->|failed| Fix[Fix the issue]
     Fix --> Eval
 ```
 
-## What Is NOT in Governance Anymore
-
-| Retired surface | Where it went |
-| --- | --- |
-| Model-selection routing | Model selection delegated to native Copilot (Auto model picker) |
-| Tool-access grants | Tool access delegated to native Copilot |
-| Subagent grants | Subagent governance delegated to native Copilot |
-| Approval-action list | Human approval is the pipeline's stopping rules (see chapter 05); no separate governance list |
-| Retry budgets / iteration caps / stagnation detection | Retry routing, parallelism, and iteration caps delegated to native Copilot |
-| Memory-hygiene thresholds | Live in `evals/validate.mjs` Pass 7 plus `skills/patterns/repo-memory-hygiene.md` |
-
 ## Knowledge Location Table
 
 | Question | Where to look |
 | --- | --- |
-| Which verify phases run for MEDIUM? | `governance/runtime-policy.json → review_pipeline_by_tier` |
-| What are the seven semantic-risk categories? | `governance/runtime-policy.json → semantic_risk_policy.categories` |
-| What does the APPROVED verdict mean? | `governance/runtime-policy.json → verdict_routing.verdicts.APPROVED` |
-| What is the confidence threshold for READY_FOR_EXECUTION? | `governance/runtime-policy.json → verdict_routing.confidence_thresholds.ready_for_execution_min` |
-| Which roles can be `executor_agent`? | `governance/project-context-registry.json` (eight executor roles) |
-| Which roles must NOT be `executor_agent`? | `governance/project-context-registry.json` (three inline verify roles) |
-| Which file is canonical for tier definitions? | `governance/canonical-source-matrix.json` → `plans/project-context.md` |
-| Can a file be renamed? | `governance/rename-allowlist.json` |
-| Which model should a role use? | Native Copilot (Auto model picker). There is no governance file for this. |
-| Which tools can an agent use? | The `tools:` frontmatter in the agent file; delegated to native Copilot. No governance file. |
+| Which tools can an agent use? | `agent-grants.json` |
+| Which callers can use a tool? | `tool-grants.json` |
+| How many retries are allowed? | `runtime-policy.json → retry_budgets` |
+| When does PLAN_REVIEW fire? | `runtime-policy.json → plan_review_gate_trigger_conditions` |
+| Which model to use for which tier? | `model-routing.json` |
+| Can a file be renamed? | `rename-allowlist.json` |
+| What approval is required? | `runtime-policy.json → approval_actions` |
+| What taxonomy types does repo memory use? | `runtime-policy.json → memory_hygiene.memory_content_types` |
 
 ## Additional Governance Docs
 
@@ -149,43 +178,44 @@ Authoritative policy documents in `docs/agent-engineering/`:
 
 | Document | Content |
 | --- | --- |
-| `NATIVE-DELEGATION-BOUNDARY.md` | The canonical native-vs-ControlFlow delegation boundary (table + audit checklist) |
-| `RISK-TAXONOMY.md` | The seven semantic-risk categories |
-| `CLARIFICATION-POLICY.md` | When to ask the user vs record a bounded assumption |
+| `CLARIFICATION-POLICY.md` | When to call `vscode/askQuestions` vs NEEDS_INPUT |
+| `TOOL-ROUTING.md` | External tool routing rules (web/fetch, githubRepo, MCP) |
 | `SCORING-SPEC.md` | Quantitative scoring formula |
+| `PART-SPEC.md` | P.A.R.T. section order specification |
+| `RELIABILITY-GATES.md` | Verification gate requirements |
 | `MEMORY-ARCHITECTURE.md` | Three-layer memory model |
-| `PROMPT-BEHAVIOR-CONTRACT.md` | Behavioral invariants across skills and roles |
+| `PROMPT-BEHAVIOR-CONTRACT.md` | Behavioral invariants supplementing P.A.R.T. |
+| `MIGRATION-CORE-FIRST.md` | Backbone pattern and consolidation exit criteria |
+| `OBSERVABILITY.md` | Gate event format and NDJSON log |
 
 ## Common Mistakes
 
-- **Editing `runtime-policy.json` without running evals.** The contract-drift check may break.
-- **Looking for a model-selection routing file or tool-access grants file in `governance/`.** Both retired — model selection and tool access are native Copilot's job.
-- **Hand-editing the mirror tables in `plans/project-context.md` without updating `governance/project-context-registry.json` first.** The registry is the single source of truth; the mirror is validated against it.
-- **Treating `governance/` as internal agent files.** They are public contracts checked into the repo.
-- **Trying to override governance with an agent prompt.** The registry and runtime policy win.
-- **Expecting a memory-hygiene block in `runtime-policy.json`.** It is not there — memory hygiene lives in `skills/patterns/repo-memory-hygiene.md` and `evals/validate.mjs` Pass 7.
+- **Editing `runtime-policy.json` without running evals.** The drift check may break.
+- **Changing a knob name without updating agent prompts that reference it.** Agents will read a non-existent field.
+- **Treating `governance/` as internal agent files.** No — they are checked into the repo and are public contracts.
+- **Trying to override governance with a prompt.** Governance always wins.
+- **Adding a new tool without updating both `agent-grants.json` AND `tool-grants.json`.** Auth will fail.
 
 ## Exercises
 
-1. **(beginner)** Open `governance/runtime-policy.json`. Find `review_pipeline_by_tier`. Which verify phases are active for `MEDIUM`?
-2. **(beginner)** Open `governance/project-context-registry.json`. List the eight executor roles and the three inline verify roles. Confirm the three verify roles are marked read-only.
-3. **(intermediate)** You want to add a new semantic-risk category. Which files must change, in what order, to keep the contract-drift eval green?
-4. **(intermediate)** In `runtime-policy.json → review_pipeline_by_tier`, the TRIVIAL pipeline has all three verify phases set to `false` but `code_review: true`. Does this mean code review runs for TRIVIAL? Explain where the actual code review happens.
-5. **(advanced)** Name every file that must reference `governance/runtime-policy.json` or be validated against it. Verify your answer against the contract-drift eval scenarios in `evals/`.
+1. **(beginner)** Open `governance/runtime-policy.json` and find `max_iterations_by_tier`. What is the value for MEDIUM?
+2. **(beginner)** Open `governance/agent-grants.json`. How many tools does `PlanAuditor-subagent` have in its allowlist?
+3. **(intermediate)** You need to change `per_phase` retry budget from 5 to 7. Which files must be updated?
+4. **(intermediate)** In `runtime-policy.json` → `review_pipeline_by_tier` you see the TRIVIAL pipeline is empty (`[]`). Does this mean code review is skipped for TRIVIAL? Explain.
+5. **(advanced)** Name all agents that must reference `runtime-policy.json` in their Resources section. Verify your answer against the actual agent files.
 
 ## Review Questions
 
-1. Name the four governance files in the slim model.
-2. Name the three surviving policy blocks in `runtime-policy.json`.
-3. Which file is the authoritative source for the role taxonomy, and which mirror is validated against it?
-4. Why are the model-selection, tool-access, and subagent-governance surfaces retired, and where did their concerns go?
-5. What does "canonical source beats prose" mean, and which eval check enforces it?
+1. Name the 7 governance files.
+2. What does "governance beats prompt" mean?
+3. Which file controls PLAN_REVIEW trigger conditions?
+4. Which file controls tool access?
+5. What must you do after adding a new tool to an agent?
 
 ## See Also
 
-- [Chapter 05 — The plan → verify → review pipeline](05-orchestration.md)
+- [Chapter 05 — Orchestration](05-orchestration.md)
 - [Chapter 07 — Review Pipeline](07-review-pipeline.md)
 - [Chapter 08 — Execution Pipeline](08-execution-pipeline.md)
-- [Chapter 14 — Eval Harness](14-evals.md)
 - [governance/](../../governance/)
 - [docs/agent-engineering/](../agent-engineering/)

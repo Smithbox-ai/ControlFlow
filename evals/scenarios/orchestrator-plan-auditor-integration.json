@@ -1,0 +1,213 @@
+{
+  "scenario_id": "orchestrator-plan-auditor-integration",
+  "title": "Orchestrator PlanAuditor Integration",
+  "description": "Validates that Orchestrator correctly routes plans to PlanAuditor for adversarial review based on trigger conditions",
+  "agent": "Orchestrator",
+  "category": "orchestration",
+  "inputs": [
+    {
+      "label": "complex-plan-triggers-challenger",
+      "description": "A 5-phase plan should trigger PlanAuditor review",
+      "input": {
+        "plan": {
+          "phase_count": 5,
+          "confidence": 0.85,
+          "has_destructive_ops": false
+        }
+      },
+      "expected_behavior": {
+        "plan_auditor_invoked": true,
+        "trigger_reason": "phase_count >= 3",
+        "delegation_includes": [
+          "plan_path",
+          "plan_summary"
+        ]
+      }
+    },
+    {
+      "label": "low-confidence-triggers-challenger",
+      "description": "A 2-phase plan with confidence 0.7 should trigger PlanAuditor review",
+      "input": {
+        "plan": {
+          "phase_count": 2,
+          "confidence": 0.7,
+          "has_destructive_ops": false
+        }
+      },
+      "expected_behavior": {
+        "plan_auditor_invoked": true,
+        "trigger_reason": "confidence < 0.9",
+        "delegation_includes": [
+          "plan_path"
+        ]
+      }
+    },
+    {
+      "label": "simple-plan-skips-challenger",
+      "description": "A 2-phase plan with high confidence should skip PlanAuditor",
+      "input": {
+        "plan": {
+          "phase_count": 2,
+          "confidence": 0.95,
+          "has_destructive_ops": false
+        }
+      },
+      "expected_behavior": {
+        "plan_auditor_invoked": false,
+        "proceeds_to": "ACTING"
+      }
+    },
+    {
+      "label": "destructive-plan-triggers-challenger",
+      "description": "A 2-phase plan with destructive operations should trigger PlanAuditor review",
+      "input": {
+        "plan": {
+          "phase_count": 2,
+          "confidence": 0.95,
+          "has_destructive_ops": true
+        }
+      },
+      "expected_behavior": {
+        "plan_auditor_invoked": true,
+        "trigger_reason": "destructive_scope",
+        "delegation_includes": [
+          "plan_path"
+        ]
+      }
+    },
+    {
+      "label": "plan-auditor-rejected-escalates",
+      "description": "When PlanAuditor returns REJECTED, Orchestrator must escalate to user",
+      "input": {
+        "plan_auditor_response": {
+          "status": "REJECTED",
+          "failure_classification": "needs_replan",
+          "findings": [
+            {
+              "severity": "CRITICAL",
+              "category": "security"
+            }
+          ]
+        }
+      },
+      "expected_behavior": {
+        "state_transition": "WAITING_APPROVAL",
+        "user_sees_findings": true
+      }
+    },
+    {
+      "label": "plan-auditor-needs-revision-routes-to-planner",
+      "description": "When PlanAuditor returns NEEDS_REVISION, Orchestrator routes back to Planner",
+      "input": {
+        "plan_auditor_response": {
+          "status": "NEEDS_REVISION",
+          "failure_classification": "fixable",
+          "findings": [
+            {
+              "severity": "MAJOR",
+              "category": "test_coverage"
+            }
+          ]
+        }
+      },
+      "expected_behavior": {
+        "routes_to": "Planner",
+        "max_iterations": 2
+      }
+    },
+    {
+      "label": "semantic-risk-high-data-volume-triggers-challenger",
+      "description": "A 2-phase, high-confidence, non-destructive plan with applicable HIGH data_volume risk must trigger PlanAuditor",
+      "input": {
+        "plan": {
+          "phase_count": 2,
+          "confidence": 0.95,
+          "has_destructive_ops": false,
+          "risk_review": [
+            {
+              "category": "data_volume",
+              "applicability": "applicable",
+              "impact": "HIGH",
+              "disposition": "open_question"
+            }
+          ]
+        }
+      },
+      "expected_behavior": {
+        "plan_auditor_invoked": true,
+        "trigger_reason": "semantic_risk_high_impact_unresolved",
+        "delegation_includes": [
+          "plan_path",
+          "plan_summary",
+          "focus_areas"
+        ],
+        "focus_areas_must_include": [
+          "performance"
+        ]
+      }
+    },
+    {
+      "label": "semantic-risk-resolved-skips-challenger",
+      "description": "A 2-phase, high-confidence plan with applicable HIGH data_volume risk that is resolved must skip PlanAuditor",
+      "input": {
+        "plan": {
+          "phase_count": 2,
+          "confidence": 0.95,
+          "has_destructive_ops": false,
+          "risk_review": [
+            {
+              "category": "data_volume",
+              "applicability": "applicable",
+              "impact": "HIGH",
+              "disposition": "resolved"
+            }
+          ]
+        }
+      },
+      "expected_behavior": {
+        "plan_auditor_invoked": false,
+        "proceeds_to": "ACTING"
+      }
+    },
+    {
+      "label": "required-plan-review-abstain-escalates",
+      "description": "When PLAN_REVIEW is required by tier (LARGE) and PlanAuditor returns ABSTAIN, Orchestrator must retry once then escalate to user — not silently proceed",
+      "input": {
+        "plan": {
+          "phase_count": 5,
+          "confidence": 0.92,
+          "has_destructive_ops": false,
+          "complexity_tier": "LARGE"
+        },
+        "plan_auditor_response": {
+          "status": "ABSTAIN",
+          "reasons": ["Insufficient context to evaluate plan correctness"]
+        }
+      },
+      "expected_behavior": {
+        "abstain_treated_as_fixable": true,
+        "retry_once": true,
+        "on_repeated_abstain_escalates": true,
+        "state_transition_on_repeated_abstain": "WAITING_APPROVAL",
+        "does_not_silently_proceed": true
+      }
+    }
+  ],
+  "assertions": [
+    "PlanAuditor is invoked for plans with 3+ phases",
+    "PlanAuditor is invoked for plans with confidence < 0.9",
+    "PlanAuditor is invoked for plans with destructive operations",
+    "PlanAuditor is NOT invoked for simple plans (< 3 phases, high confidence, non-destructive, no unresolved HIGH-impact risk_review entries)",
+    "Orchestrator passes plan_path (not inline plan) to PlanAuditor",
+    "governance/runtime-policy.json remains the authoritative source for PLAN_REVIEW trigger thresholds and tier-specific iteration caps",
+    "REJECTED status transitions to WAITING_APPROVAL",
+    "NEEDS_REVISION routes back to Planner (max iterations per complexity tier: SMALL=2, MEDIUM/LARGE=5)",
+    "ABSTAIN from PlanAuditor does not block pipeline for optional PLAN_REVIEW triggers (tier-skipped or conditions not met)",
+    "ABSTAIN from PlanAuditor on required PLAN_REVIEW (required by tier, confidence, or HIGH-risk) retries once and escalates to user if retry also returns ABSTAIN — does not silently proceed",
+    "PlanAuditor is invoked for plans with any risk_review entry applicability=applicable AND impact=HIGH AND disposition != resolved",
+    "When triggered by semantic risk, Orchestrator derives focus_areas from risk category mapping and includes them in delegation",
+    "PLAN_REVIEW reruns default to full rerun for sensitive or ambiguous changes, including prompts, policy surfaces, routing, commands, contracts, and orchestration handoff tests/scenarios",
+    "Selective rerun is allowed only for reviewer-local summary wording or evidence-citation text with no plan/prompt/policy/test/routing/command changes",
+    "Selective rerun never bypasses ExecutabilityVerifier when current tier or risk override keeps it in scope"
+  ]
+}

@@ -1,0 +1,91 @@
+{
+  "scenario_id": "orchestrator-high-risk-review-override-01",
+  "target_agent": "Orchestrator",
+  "goal": "Verify that an applicable, unresolved HIGH-impact risk_review entry forces the full reviewer pipeline regardless of complexity tier, and that a resolved HIGH-risk entry does not trigger the override",
+  "description": "When a plan contains any applicable, unresolved HIGH-impact risk_review entry, Orchestrator must override the normal complexity-tier routing and dispatch PlanAuditor + AssumptionVerifier + ExecutabilityVerifier regardless of the plan's complexity_tier. A resolved HIGH-impact entry must not trigger the override. This ensures the full pipeline is required only when an applicable HIGH-impact risk remains unresolved.",
+  "inputs": [
+    {
+      "label": "TRIVIAL tier with HIGH-risk access_control override",
+      "input": {
+        "complexity_tier": "TRIVIAL",
+        "risk_review": [
+          {
+            "category": "access_control",
+            "applicability": "applicable",
+            "impact": "HIGH",
+            "disposition": "open_question"
+          }
+        ]
+      },
+      "expected": {
+        "plan_auditor_dispatched": true,
+        "assumption_verifier_dispatched": true,
+        "executability_verifier_dispatched": true,
+        "override_triggered": true,
+        "override_reason": "risk_review_HIGH_applicable"
+      }
+    },
+    {
+      "label": "SMALL tier with HIGH-risk migration_rollback override",
+      "input": {
+        "complexity_tier": "SMALL",
+        "risk_review": [
+          {
+            "category": "migration_rollback",
+            "applicability": "applicable",
+            "impact": "HIGH",
+            "disposition": "research_phase_added"
+          }
+        ]
+      },
+      "expected": {
+        "plan_auditor_dispatched": true,
+        "assumption_verifier_dispatched": true,
+        "executability_verifier_dispatched": true,
+        "override_triggered": true,
+        "override_reason": "risk_review_HIGH_applicable"
+      }
+    },
+    {
+      "label": "MEDIUM tier with no HIGH-risk entry — normal routing applies",
+      "input": {
+        "complexity_tier": "MEDIUM",
+        "risk_review": [
+          {
+            "category": "performance",
+            "applicability": "applicable",
+            "impact": "MEDIUM",
+            "disposition": "resolved"
+          }
+        ]
+      },
+      "expected": {
+        "plan_auditor_dispatched": true,
+        "assumption_verifier_dispatched": true,
+        "executability_verifier_dispatched": false,
+        "override_triggered": false
+      }
+    },
+    {
+      "label": "TRIVIAL tier with resolved HIGH-risk entry — no override",
+      "input": {
+        "complexity_tier": "TRIVIAL",
+        "risk_review": [
+          {
+            "category": "access_control",
+            "applicability": "applicable",
+            "impact": "HIGH",
+            "disposition": "resolved"
+          }
+        ]
+      },
+      "expected": {
+        "plan_auditor_dispatched": false,
+        "assumption_verifier_dispatched": false,
+        "executability_verifier_dispatched": false,
+        "override_triggered": false,
+        "plan_review_skipped": true
+      }
+    }
+  ]
+}

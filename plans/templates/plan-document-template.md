@@ -46,7 +46,7 @@ Mandatory for all plans. Record explicit answers to each dimension before phase 
 #### Phase 1 — {Phase Title}
 
 - **Objective:** What this phase accomplishes.
-- **Executor Agent:** The conceptual executor role for this phase. Must match the supported executor set in `plans/project-context.md`. Native Copilot executes the phase inline; the field is authoritative.
+- **Executor Agent:** Primary subagent Orchestrator must dispatch for this phase. Required in the JSON plan and must match the supported executor set in `plans/project-context.md`.
 - **Wave:** Execution wave number (phases in the same wave run in parallel).
 - **Dependencies:** Prerequisites (files, decisions, prior phases by ID).
 - **Files:** Files to create/modify.
@@ -111,23 +111,23 @@ Mandatory checklist — evaluate every category. Non-applicable entries must sti
 
 ### Handoff
 
-Required for `READY_FOR_EXECUTION` plans. Maps to the top-level `handoff` field in `schemas/planner.plan.schema.json`. The handoff is artifact-first: Planner saves the plan and points to the artifact path; it never inlines the plan in chat.
+Required for `READY_FOR_EXECUTION` plans. Maps to the top-level `handoff` field in `schemas/planner.plan.schema.json`.
 
-- **Target Agent:** The `controlflow-verify` skill that reviews the plan before execution. The handoff goes to the review gate, not to an executor — native Copilot executes phases only after `controlflow-verify` returns `APPROVED`.
-- **Prompt:** Concise handoff prompt pointing to the saved plan artifact path and requesting verification. Do NOT inline the plan content here.
+- **Target Agent:** The agent receiving the plan for review and execution (typically `Orchestrator`).
+- **Prompt:** Concise handoff prompt pointing to the saved plan artifact path and requesting execution start. Do NOT inline the plan content here.
 
 Example:
 
 ```yaml
-target_agent: controlflow-verify
-prompt: "Plan saved at plans/my-task-plan.md. Run controlflow-verify on it; do not begin execution until it returns APPROVED."
+target_agent: Orchestrator
+prompt: "Plan saved at plans/my-task-plan.md. Please begin PLAN_REVIEW and dispatch Phase 1 when ready."
 ```
 
-### Execution Notes
+### Notes for Orchestrator
 
 - Recommended execution order and parallelization opportunities.
 - Wave assignments and dependency graph.
-- `executor_agent` is the authoritative per-phase routing field. Optional delegation notes may name supporting roles, but must not conflict with the declared primary executor.
+- `executor_agent` is the authoritative per-phase routing field. Optional delegation notes may name supporting agents, but must not conflict with the declared primary executor.
 - Max parallel agents recommendation (default: 10, reduce if resource-intensive phases).
 - Failure expectations summary per wave.
 
@@ -166,7 +166,7 @@ Every plan must satisfy all 11 standards (apply judgment on TRIVIAL plans):
 4. **Testable** — Success criteria are objectively verifiable.
 5. **Practical** — Phase count is 3–10; decompose further if exceeding 10.
 6. **Parallelizable** — Phases that can run independently MUST be assigned the same wave number. Sequential-only when there is a real data dependency.
-7. **Routable** — Every phase MUST specify exactly one `executor_agent` so native Copilot can execute it without inference.
+7. **Routable** — Every phase MUST specify exactly one `executor_agent` so Orchestrator can dispatch it without inference.
 8. **Visualized** — Plans with 3+ phases MUST include a phase dependency DAG. MEDIUM plans with non-trivial orchestration flow also include a `sequenceDiagram`. LARGE plans always include a `sequenceDiagram`.
 9. **Failure-aware** — Each phase includes failure expectations with classification and mitigation strategies.
 10. **Executable** — Each phase MUST specify concrete file paths, input/output contracts, verification commands, test specifics, and the owning `executor_agent`.
@@ -179,7 +179,7 @@ When revising an active plan, adhere to the hybrid editing policy:
 - **Revision Modes**: Specify `revision_mode: in_place_update` for minor adjustments (progress updates, typo fixes), or `revision_mode: new_artifact_supersession` for major architectural pivots or unrecoverable cascaded failures.
 - **Supersession**: If using `new_artifact_supersession`, create a new document. The new document MUST include `revision_of` pointing to the original superseded plan.
 - **Revision Log**: Maintain an active revision-log (e.g., `### Revision Log`) documenting the changes, iteration index, and `trace_id` for each update.
-- **Artifact-First Handoff**: Planner authors/edits the plan document directly to disk and then hands off the artifact path to a read-only reviewer (`controlflow-verify`). Ensure `controlflow-verify` is provided with the `trace_id` and iteration metadata in the handoff.
+- **Artifact-First Handoff**: Planner authors/edits the plan document directly to disk and then hands off the artifact path to a read-only reviewer (Orchestrator). Ensure Orchestrator is provided with the `trace_id` and iteration metadata in the handoff.
 - **No Fenced Code Blocks**: Planners are strictly prohibited from embedding fenced raw code blocks inside plan artifacts or templates to prevent context window bloat. Use descriptive prose instead.
 
 ## Living-Document and Restartability Guidance (Recommended)

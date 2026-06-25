@@ -1,0 +1,23 @@
+{
+  "Orchestrator.agent.md": [
+    "Planner",
+    "CodeMapper-subagent",
+    "Researcher-subagent",
+    "CoreImplementer-subagent",
+    "UIImplementer-subagent",
+    "PlatformEngineer-subagent",
+    "TechnicalWriter-subagent",
+    "BrowserTester-subagent",
+    "CodeReviewer-subagent",
+    "PlanAuditor-subagent",
+    "AssumptionVerifier-subagent",
+    "ExecutabilityVerifier-subagent"
+  ],
+  "Planner.agent.md": [
+    "CodeMapper-subagent",
+    "Researcher-subagent"
+  ],
+  "Researcher-subagent.agent.md": [
+    "CodeMapper-subagent"
+  ]
+}

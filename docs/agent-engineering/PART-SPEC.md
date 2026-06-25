@@ -1,107 +1,125 @@
-# Agent Prompt Structure (Guidance)
+# P.A.R.T Specification (Core)
 
 ## Purpose
+This specification defines deterministic instruction architecture for ControlFlow agents.
 
-This document is guidance for writing a good custom agent prompt for `.github/agents/` — not a mandatory template enforced on shipped surfaces. The slim ControlFlow model ships exactly one agent (`.github/agents/controlflow-planner.agent.md`); any additional agents you add under `.github/agents/` are native Copilot custom agents and should follow the discipline below.
+P.A.R.T is mandatory for all core agents:
+- `Orchestrator.agent.md`
+- `Planner.agent.md`
+- `Researcher-subagent.agent.md`
+- `CodeMapper-subagent.agent.md`
+- `CodeReviewer-subagent.agent.md`
+- `PlanAuditor-subagent.agent.md`
 
-### Historical note: P.A.R.T. (retired)
+P.A.R.T is mandatory for all implementation agents:
+- `CoreImplementer-subagent.agent.md`
+- `UIImplementer-subagent.agent.md`
+- `PlatformEngineer-subagent.agent.md`
+- `TechnicalWriter-subagent.agent.md`
+- `BrowserTester-subagent.agent.md`
 
-The legacy ControlFlow model enforced a mandatory four-section structure on every `*.agent.md` file: **Prompt → Archive → Resources → Tools** (P.A.R.T.). That mandatory structure is **retired**. The retired model's root `*.agent.md` files (Orchestrator, Planner, and the specialized subagents) were deleted when the slim model shipped, and P.A.R.T. is no longer enforced by any gate. The discipline behind those four sections still informs how a good custom agent prompt is written, so it is preserved below as informative guidance — not as a contract.
+## Section Order (MANDATORY)
+1. `## Prompt`
+2. `## Archive`
+3. `## Resources`
+4. `## Tools`
 
-## The slim shipped agent (worked example)
+Agents must keep this exact order. Missing or reordered sections are non-compliant.
 
-The sole shipped ControlFlow agent is `.github/agents/controlflow-planner.agent.md`. Its frontmatter is minimal Copilot agent frontmatter:
+## 1) Prompt
+Required content:
+- Role and objective in one paragraph.
+- Explicit scope boundaries (`IN` and `OUT`).
+- Hard behavior constraints (what the agent must never do).
+- Plan vs Act rule:
+  - Planning phase: no execution actions.
+  - Acting phase: no replanning except controlled `replan` transition.
+- Abstention rule:
+  - If confidence is below threshold or evidence is insufficient, agent must return `ABSTAIN`.
+- Output contract reference:
+  - Agent must name the schema file it uses under `schemas/`.
 
-```yaml
----
-description: "ControlFlow Planner — produces a saved, schema-conforming ControlFlow plan artifact in plans/ before implementation. ..."
-name: controlflow-planner
-tools: ["read", "search", "edit"]
----
-```
+## 2) Archive
+Required content:
+- Long-horizon continuity policy.
+- Compaction policy with trigger conditions:
+  - Trigger when token/context budget reaches configured threshold.
+  - Preserve only durable architectural decisions, active constraints, unresolved risks.
+- Memory notes policy:
+  - Notes must be persisted in deterministic structure.
+  - Remove stale notes when superseded.
+- PreFlect policy:
+  - Before acting, agent must compare intended plan against known failure patterns.
 
-Notable choices, which generalize to any custom agent you add:
+**Shared policy rule:** Generic Continuity, Failure Classification enum, and NOTES.md baseline structure are defined in `.github/copilot-instructions.md` (workspace instructions). Agent files must include ONLY domain-specific Archive content: custom PreFlect risks, custom compaction rules, custom memory fields, and any unique protocols (e.g., Health-First Gate, State Tracking, Idempotency Mandate).
 
-- **No `model:` frontmatter.** The Copilot Auto model picker selects the model. Pin a model only if the role genuinely demands it.
-- **`tools:` lists the tools the agent may call.** Copilot enforces tool access natively; there is no ControlFlow tool-grants surface.
-- **The prompt body is prose.** Role, scope, contracts, and handoff are written as short prose sections, not as a rigid four-section template.
+## 3) Resources
+Required content:
+- Domain references used by the agent (repo files, docs, schemas).
+- Project conventions source (`plans/project-context.md` when present).
+- Reliability gate source (`docs/agent-engineering/RELIABILITY-GATES.md`).
+- Safety policy source (human approval gates and destructive action policy).
 
-Read `.github/agents/controlflow-planner.agent.md` before authoring a new agent; it is the canonical worked example.
+## 4) Tools
+Required content:
+- Allowed tools grouped by category.
+- Disallowed tool categories for that role.
+- Deterministic tool selection rules:
+  - Prefer read-only discovery before edits.
+  - Prefer just-in-time retrieval over bulk loading.
+- Human approval gate triggers for high-risk actions.
 
-## Guidance: how to write a good custom agent prompt
+## 5) Clarification Triggers (NEW)
+Required for agents with `askQuestions` or user-interaction tools:
+- Positive trigger list: enumerate ambiguity classes that REQUIRE user clarification.
+- Threshold rule: clarification is mandatory only when ambiguity would materially change the output.
+- Do not frame clarification as a pre-ABSTAIN fallback only.
 
-### 1. Frontmatter
+Required for agents WITHOUT user-interaction tools:
+- Explicit statement that clarification is delegated to the conductor via structured `NEEDS_INPUT` status.
 
-- `name` — the `@-mention` identifier and the filename stem.
-- `description` — one paragraph: what the agent does, when to use it, and what it hands off. Copilot uses this for routing and the agents dropdown.
-- `tools` — the minimal tool list the role needs. Prefer read-only tools for read-only roles. Do not add a `model:` key unless pinning is required.
+**Reference rule:** Clarification policy content (mandatory classes, trigger logic, format) belongs in `docs/agent-engineering/CLARIFICATION-POLICY.md`. Agent files must use short pointers to the canonical doc, not verbatim repetitions of policy content.
 
-### 2. Role and objective (prose)
+## 6) Tool Routing Rules (NEW)
+Required when agent has access to external knowledge tools (fetch, githubRepo, Context7/MCP):
+- Deterministic routing rules for when to use local search vs external sources.
+- Explicit statement of which tools are mandatory, optional, or disallowed for the agent's role.
+- If MCP tools are granted in frontmatter, body instructions must reference them with usage rules.
 
-One paragraph: the role, the single observable outcome the agent produces, and what it does **not** do. For the planner, the single outcome is "a saved, schema-conforming plan artifact in `plans/`." State the scope boundary explicitly (in-scope vs. out-of-scope).
-
-### 3. Contracts as prose
-
-Name the contract files the agent must conform to — schemas, templates, governance — as prose pointers, not as a mandatory `## Resources` section. Example: "The artifact must conform to `schemas/planner.plan.schema.json` and `plans/templates/plan-document-template.md`." Schemas in `schemas/` serve as contract documentation and eval fixture references; they are not runtime-validated inter-agent messages in the slim model.
-
-### 4. Behavior constraints (prose)
-
-Hard rules the agent must never violate, written as gate-style preconditions:
-
-- Plan vs. act split (a planner does not write code; an implementer does not replan).
-- Abstention: if evidence is insufficient for a confident output, return `ABSTAIN` or `REPLAN_REQUIRED` with reasons — do not force a result past the evidence.
-- Human approval for destructive or irreversible actions (delegated to native Copilot approvals).
-- Evidence over assertion: cite file paths, commands, or repo evidence for claims.
-
-### 5. Handoff (prose)
-
-How the agent hands off to the next step. The planner hands off in prose: name the plan artifact path and the first phase to execute. There is no dispatch protocol — native Copilot executes inline, using the plan's `executor_agent` field as a per-phase role label, not a spawned agent.
-
-### 6. Optional: resources the agent should load
-
-If the role benefits from value-add patterns, list them as a short pointer block (the retired `## Resources` section, but optional):
-
-```text
-## Resources
-- skills/patterns/tdd-patterns.md
-- skills/patterns/debugging-discipline.md
-```
-
-The pattern files carry the reusable discipline; the agent file carries the persona. See `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md` §5 for the full recreation recipe.
-
-## Prompt altitude rules (preserved from P.A.R.T.)
-
-- Avoid vague directives (e.g., "do your best").
+## Prompt Altitude Rules
+- Avoid vague directives (e.g., “do your best”).
 - Avoid brittle micro-steps tied to one exact environment.
-- Use stable gate-style rules: preconditions, allowed transitions, required evidence, failure mode (`ABSTAIN` / `NEEDS_REVISION` / `FAILED`).
+- Use stable gate-style rules:
+  - Preconditions
+  - Allowed transitions
+  - Required evidence
+  - Failure mode (`ABSTAIN` / `NEEDS_REVISION` / `FAILED`)
 
-## Deterministic status enums (reference)
+## Deterministic Status Enums
+The following statuses form the baseline vocabulary. Individual schemas may define richer or stricter subsets for their role:
+- `APPROVED` / `NEEDS_REVISION` — plan-level review outcomes (PlanAuditor)
+- `COMPLETE` / `ABSTAIN` — research and discovery outcomes (Researcher, CodeMapper, AssumptionVerifier)
+- `PASS` / `FAIL` / `WARN` — verification outcomes (ExecutabilityVerifier, BrowserTester)
+- `READY_FOR_EXECUTION` / `REPLAN_REQUIRED` — planning outcomes (Planner)
+- `FAILED` — general execution failure (implementation agents)
+- `NEEDS_INPUT` — acting agents only; triggers user clarification routing via Orchestrator
 
-The slim model uses these status values across plan lifecycle sections and verify verdicts. Individual schemas may define richer or stricter subsets.
+The authoritative enum for each agent is its schema contract in `schemas/`. PART-SPEC vocabulary is a reference summary only.
 
-- `APPROVED` / `NEEDS_REVISION` / `REJECTED` — `controlflow-verify` verdicts.
-- `READY_FOR_EXECUTION` / `ABSTAIN` / `REPLAN_REQUIRED` — Planner plan status.
-- `COMPLETE` / `FAILED` — phase execution outcomes (recorded in plan lifecycle sections).
-- `transient` / `fixable` / `needs_replan` / `escalate` / `model_unavailable` — failure classification enum (recorded in plan lifecycle sections; retry routing is native Copilot's job).
+## Human-in-the-loop Gate
+Any destructive or irreversible action must be blocked until explicit user confirmation.
+Examples:
+- File deletion outside temporary/eval artifacts
+- Bulk refactors with contract breaks
+- External side effects (financial, production, or data-destructive operations)
 
-The authoritative enum for any contract is its schema in `schemas/`. This vocabulary is a reference summary only.
-
-## Human-in-the-loop gate
-
-Any destructive or irreversible action must be blocked until explicit user confirmation. Examples: file deletion outside temporary/eval artifacts, bulk refactors with contract breaks, external side effects (financial, production, or data-destructive operations). Use native Copilot approvals.
-
-## Compliance checklist (guidance, not enforced)
-
-- [ ] Frontmatter has `name`, `description`, `tools`; no `model:` unless pinning is required.
-- [ ] Role and single observable outcome stated in one paragraph.
-- [ ] Scope boundary (in-scope vs. out-of-scope) explicit.
-- [ ] Contract files named as prose pointers.
-- [ ] Abstention rule present.
-- [ ] Human approval gate for destructive actions present (or marked N/A with reason).
-- [ ] Handoff stated in prose (no dispatch protocol).
-
-## See also
-
-- [`NATIVE-DELEGATION-BOUNDARY.md`](NATIVE-DELEGATION-BOUNDARY.md) — §5, the specialized-agent recreation recipe.
-- [`PROMPT-BEHAVIOR-CONTRACT.md`](PROMPT-BEHAVIOR-CONTRACT.md) — behavioral invariants complementing this guidance.
-- `.github/agents/controlflow-planner.agent.md` — the canonical worked example.
+## Compliance Checklist
+- [ ] P.A.R.T section order is exact
+- [ ] Plan/Act split enforced
+- [ ] PreFlect checkpoint exists
+- [ ] Compaction and memory policies exist
+- [ ] Schema-governed output is mandatory
+- [ ] Abstention rule implemented
+- [ ] Human approval gates implemented (or explicitly stated as N/A with reason)
+- [ ] Clarification triggers defined (positive triggers for askQuestions; or NEEDS_INPUT delegation stated)
+- [ ] Tool routing rules defined for all granted external-knowledge tools

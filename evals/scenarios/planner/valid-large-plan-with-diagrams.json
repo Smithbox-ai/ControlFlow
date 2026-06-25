@@ -85,8 +85,8 @@
     }
   ],
   "handoff": {
-    "target_agent": "controlflow-verify",
-    "prompt": "LARGE-tier plan ready. Run controlflow-verify phases 1–3 (structural audit, mirage detection, executability cold-start) before execution."
+    "target_agent": "Orchestrator",
+    "prompt": "LARGE-tier plan ready. Dispatch Phase 1 to CoreImplementer-subagent. Run PlanAuditor and ExecutabilityVerifier before execution."
   },
   "iteration_budget": 3,
   "revision_mode": "initial_create"

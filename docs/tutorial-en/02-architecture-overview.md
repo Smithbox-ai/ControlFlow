@@ -2,16 +2,16 @@
 
 ## Why this chapter
 
-Build a mental model of the entire system: what ControlFlow ships, what it delegates to native Copilot, and how the plan → verify → review pipeline ties the pieces together. After this chapter you could sketch the ControlFlow architecture on a whiteboard in five minutes — and point to exactly where native Copilot takes over.
+Build a mental model of the entire system: what groups of agents exist, how control flows between them, and which subsystems connect them. After this chapter you could sketch the ControlFlow architecture on a whiteboard in five minutes.
 
 ## Key Concepts
 
-- **Slim surface** — the entire shipped ControlFlow artifact set for VS Code Copilot: one agent (`@controlflow-planner`) plus three skills (`controlflow-plan`, `controlflow-verify`, `controlflow-review`) plus a routing stub. Everything else is delegated to native Copilot.
-- **Conceptual role** — a labeled responsibility (e.g. `CoreImplementer-subagent`, `PlanAuditor-subagent`) the Planner assigns in plan phases and native Copilot executes inline. _Not_ a shipped agent file.
-- **Pipeline** — plan → verify → review over native Copilot. The Planner produces the artifact; `controlflow-verify` gates it before execution; native Copilot executes the phases; `controlflow-review` gates the result.
-- **Tier-gated policy** — `TRIVIAL` / `SMALL` / `MEDIUM` / `LARGE` decide whether plan, verify, and review run at all and how deep verify goes.
-- **Delegation boundary** — the rule that ControlFlow ships no surface duplicating a native Copilot capability. The canonical record is `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md`.
-- **Contract (schema)** — a JSON schema in `schemas/` documenting a role's output shape and anchoring an eval fixture. Schemas are contract documentation + eval fixture references in the slim model, not runtime-validated inter-agent messages.
+- **Agent** — a Markdown file with YAML frontmatter describing a role for an LLM. Not a process, not a service.
+- **Subagent** — an agent that is invoked _from another agent_ rather than directly by the user. Convention: `*-subagent.agent.md`.
+- **Orchestrator** — the single "conductor". Delegates rather than implements.
+- **Wave** — a group of plan phases executed in parallel. Wave N+1 waits for wave N to complete.
+- **Gate** — a control point that evaluates a condition and yields GO / REPLAN / ABSTAIN.
+- **Contract (schema)** — a JSON schema that the output of an agent must conform to.
 
 ## Top-Level Architecture
 
@@ -19,160 +19,191 @@ Build a mental model of the entire system: what ControlFlow ships, what it deleg
 flowchart TB
     User([User])
 
-    subgraph CF["ControlFlow slim surface (shipped)"]
-        direction TB
-        Planner["@controlflow-planner<br/>.github/agents/controlflow-planner.agent.md"]
-        PlanSkill["controlflow-plan<br/>.github/skills/controlflow-plan/"]
-        VerifySkill["controlflow-verify<br/>.github/skills/controlflow-verify/"]
-        ReviewSkill["controlflow-review<br/>.github/skills/controlflow-review/"]
-        Stub["copilot-instructions.md<br/>routing stub"]
-    end
-
-    subgraph Roles["Conceptual roles (NOT shipped files)"]
+    subgraph Entry["Entry Points"]
         direction LR
-        Exec[8 executor roles]
-        Verify[3 inline verify roles]
+        Planner
+        Orch[Orchestrator]
+        Researcher[Researcher-subagent]
+        CM[CodeMapper-subagent]
     end
 
-    subgraph Native["Native Copilot (provides)"]
+    subgraph Review["Adversarial Plan Review"]
         direction LR
-        Dispatch[Subagent dispatch + parallelism]
-        PlanMode[/plan mode]
-        CodeReview[Agentic code review]
-        Models[Model selection + approvals + MCP]
+        PA[PlanAuditor-subagent]
+        AV[AssumptionVerifier-subagent]
+        EV[ExecutabilityVerifier-subagent]
     end
 
-    User -->|prompt| Planner
-    Planner --> PlanSkill
-    PlanSkill -->|plan artifact in plans/| VerifySkill
-    VerifySkill -->|APPROVED| Native
-    Native -->|executes phases<br/>(executor roles)| ReviewSkill
-    ReviewSkill -->|verdict| User
-    Planner -.->|assigns| Roles
-    Roles -.->|executed by| Native
-    Stub -.->|routes| PlanSkill
-    Stub -.->|routes| VerifySkill
-    Stub -.->|routes| ReviewSkill
+    subgraph Exec["Executors"]
+        direction LR
+        Core[CoreImplementer-subagent]
+        UI[UIImplementer-subagent]
+        Plat[PlatformEngineer-subagent]
+        Tech[TechnicalWriter-subagent]
+        BT[BrowserTester-subagent]
+    end
+
+    subgraph PostReview["Post-Review"]
+        CR[CodeReviewer-subagent]
+    end
+
+    User -->|vague goal| Planner
+    User -->|ready plan| Orch
+    User -->|research| Researcher
+    User -->|codebase exploration| CM
+
+    Planner -->|handoff| Orch
+    Orch --> Review
+    Review --> Orch
+    Orch --> Exec
+    Exec --> CR
+    CR --> Orch
+    Orch -->|approval gate| User
+
+    Planner -.->|context| Researcher
+    Planner -.->|context| CM
+    Orch -.->|context| Researcher
+    Orch -.->|context| CM
 ```
 
-## The Slim Surface and Its Roles
+## Agent Groups and Their Roles
 
-ControlFlow ships **one agent and three skills** over native Copilot. There are **no shipped subagents**.
+ControlFlow contains **13 agents** in 5 functional groups.
 
-| Surface | Path | Role |
-|---------|------|------|
-| `@controlflow-planner` agent | `.github/agents/controlflow-planner.agent.md` | The sole shipped agent. Runs the plan skill + Idea Interview; hands execution to native Copilot. Uses the Copilot Auto model picker (no `model:` frontmatter). |
-| `controlflow-plan` skill | `.github/skills/controlflow-plan/` | Produces a schema-anchored plan artifact in `plans/`. Single-sources the format from `schemas/planner.plan.schema.json` and `plans/templates/plan-document-template.md`. |
-| `controlflow-verify` skill | `.github/skills/controlflow-verify/` | Inline adversarial verification (zero subagents). Tier-gated phases: structural audit, mirage detection, executability cold-start. Emits a verdict. |
-| `controlflow-review` skill | `.github/skills/controlflow-review/` | Evidence-backed review layered over native Copilot code review. Adds plan-vs-implementation scope-drift comparison. |
-| Routing stub | `.github/copilot-instructions.md` | Shared policies; ties plan → verify → review together. |
+### 1. Entry Points
 
-The role labels in plans — the eight executor roles and the three inline verify roles — are **conceptual roles** the Planner assigns in plan phases and native Copilot executes inline. They are not shipped agent files. See chapter 03 for the full taxonomy and `plans/project-context.md` for the authoritative mirror tables.
+These agents are invoked **directly** by the user.
 
-### What native Copilot provides (delegated)
+| Agent | When to invoke |
+|-------|---------------|
+| **Planner** | The task is vague or needs decomposition. Output is a plan. |
+| **Orchestrator** | You have a concrete task or a ready plan from Planner. |
+| **Researcher-subagent** | Deep investigation of a question with cited evidence. |
+| **CodeMapper-subagent** | Quick exploration: "where in the codebase is this logic?" |
 
-| Native capability | Status | ControlFlow delegation |
-|-------------------|--------|------------------------|
-| Custom agents (`@-mention`, `.agent.md`) | GA (Feb 2026) | ControlFlow's `.agent.md` is already a Copilot agent |
-| Subagent dispatch + parallelism | GA (Feb 2026) | Drop the legacy dispatch state machine; native Copilot runs executor phases |
-| Plan mode (`/plan`) | GA | Layer over — keep the CF plan _format_; use native discovery |
-| Agentic code review | GA (Mar 2026) | Delegate the mechanical pass; keep the CF scope-drift + evidence layer |
-| Skills library (`.github/skills/`) | GA (portable) | Ship ControlFlow as skills |
-| MCP, model selection, approvals, custom instructions | GA | Delegate |
+**Researcher** and **CodeMapper** are also entry points despite the `subagent` suffix. They are autonomous enough for direct invocation — an exception to the naming convention.
 
-### What ControlFlow keeps (Copilot does not provide natively)
+### 2. Adversarial Plan Review
 
-1. The schema-enforced plan format (YAML header, ten sections, seven-category semantic risk, Mermaid per tier) anchored by `schemas/planner.plan.schema.json`.
-2. Adversarial inline verification (`controlflow-verify`: structural audit, mirage detection, executability cold-start → `APPROVED` / `NEEDS_REVISION` / `REJECTED`).
-3. The tier-gated workflow policy (`TRIVIAL` / `SMALL` / `MEDIUM` / `LARGE` with verify-phase depth).
-4. Plan-vs-implementation scope-drift review (`controlflow-review`, layered over native Copilot code review).
-5. The contract-drift eval suite (`evals/`).
+These agents **only read** artifacts, and **only during PLAN_REVIEW**. They never write code and never appear as `executor_agent` in plan phases.
 
-The canonical record is `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md` — read it; cite it; do not restate it at length.
+| Agent | What it looks for |
+|-------|-----------------|
+| **PlanAuditor-subagent** | Architecture problems, security issues, missing rollback. |
+| **AssumptionVerifier-subagent** | "Mirages" — plan claims not supported by the codebase. 17 patterns. |
+| **ExecutabilityVerifier-subagent** | Cold-start simulation of the first 3 tasks: can an executor start without clarification? |
 
-## Key Flow: Idea → Code
+### 3. Executors
+
+These agents **create and modify files**. They are invoked by the Orchestrator via the `executor_agent` field of a plan phase.
+
+| Agent | Domain |
+|-------|--------|
+| **CoreImplementer-subagent** | Backend code, tests, any non-UI implementation. **Canonical backbone.** |
+| **UIImplementer-subagent** | Frontend: components, styles, accessibility, responsive. |
+| **PlatformEngineer-subagent** | CI/CD, containers, infrastructure, deployments with rollback. |
+| **TechnicalWriter-subagent** | Documentation, diagrams, code–doc parity. |
+| **BrowserTester-subagent** | E2E browser tests, accessibility audit. |
+
+### 4. Post-Review
+
+| Agent | When invoked |
+|-------|-------------|
+| **CodeReviewer-subagent** | After every execution phase; optionally at the final gate for LARGE tasks. |
+
+### 5. Conductor
+
+**Orchestrator** — the only agent with a full view of the process. It makes all delegation, review, and escalation decisions.
+
+## Key Flows
+
+### Flow 1. From Idea to Code
 
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant P as "@controlflow-planner"
-    participant V as controlflow-verify
-    participant N as Native Copilot
-    participant R as controlflow-review
+    participant P as Planner
+    participant O as Orchestrator
+    participant R as Reviewers
+    participant E as Executor
+    participant CR as CodeReviewer
 
     U->>P: vague idea
-    P->>P: Idea Interview (if vague)
-    P->>P: read repo + assign tier + 7 risk categories
-    P-->>U: plan artifact path (plans/<task-slug>-plan.md)
-    U->>V: /controlflow-verify (tier-gated phases)
-    V-->>U: APPROVED | NEEDS_REVISION | REJECTED
-    alt APPROVED
-        U->>N: implement phases (executor roles assigned by Planner)
-        N-->>U: implementation
-        U->>R: /controlflow-review (scope-drift + evidence layer)
-        R-->>U: review verdict
-    else NEEDS_REVISION
-        U->>P: revise plan (re-invoke Planner)
-    else REJECTED
-        U->>P: replan from scratch
+    P->>P: idea interview (if needed)
+    P->>U: askQuestions on ambiguity
+    P->>P: research → design → planning
+    P->>O: handoff (plan_path)
+    O->>R: PLAN_REVIEW (by tier)
+    R-->>O: verdicts
+    O->>U: approval gate
+    U-->>O: approved
+    loop per phase
+        O->>E: delegate phase
+        E-->>O: execution report
+        O->>CR: review phase
+        CR-->>O: verdict
+        O->>U: phase approval
     end
+    O->>U: completion summary
 ```
 
-The pipeline has three gates, not a state machine: the Planner produces an artifact; `controlflow-verify` gates it before execution; native Copilot executes; `controlflow-review` gates after. Between gates, native Copilot runs the show — including mid-execution clarification and retry routing (see chapter 05).
+### Flow 2. Mid-Process Clarification
 
-## Subsystems
+When a subagent hits an ambiguity during execution, it returns `NEEDS_INPUT` with a `clarification_request`. The Orchestrator presents options to the user via `vscode/askQuestions`, receives an answer, and **retries the same task** with added context. → [Chapter 05](05-orchestration.md)
+
+### Flow 3. Failure and Retry
+
+Every failure receives a `failure_classification` (`transient` / `fixable` / `needs_replan` / `escalate`). The Orchestrator routes automatically per the table in [Chapter 13](13-failure-taxonomy.md): retry, retry with hint, replan, or escalate to the user.
+
+## Subsystems Connecting Agents
 
 | Subsystem | Location | Purpose |
 |-----------|----------|---------|
-| **Schemas** | `schemas/*.json` | Twenty JSON schemas — contract documentation + eval fixture references. The plan format anchor is `schemas/planner.plan.schema.json`. |
-| **Governance** | `governance/*.json` | Four files: `runtime-policy.json`, `project-context-registry.json`, `canonical-source-matrix.json`, `rename-allowlist.json`. No model routing or tool grant surfaces. |
-| **Skills** | `.github/skills/controlflow-{plan,verify,review}/` + `skills/patterns/` | Three workflow skills (shipped) and nineteen value-add patterns (Planner-injected, ≤3 per phase via `skill_references`). |
-| **Memory** | `NOTES.md`, `plans/artifacts/`, `/memories/repo/` | Three-layer model: session / task-episodic / repo-persistent. |
-| **Plans** | `plans/` | Plan artifacts + `plans/project-context.md` (the authoritative role taxonomy) + `plans/templates/`. |
-| **Eval harness** | `evals/` | Offline quality checks for the entire system (see chapter 14). |
+| **Schemas** | `schemas/*.json` | Inter-agent contracts; basis for eval checks. |
+| **Governance** | `governance/*.json` | Tool permissions, retry policies, model routing. |
+| **Skills** | `skills/patterns/*.md` | Reusable domain expertise selected by Planner. |
+| **Memory** | `NOTES.md`, `plans/artifacts/`, `/memories/` | Three-layer model: session / task-episodic / repo-persistent. |
+| **Eval harness** | `evals/` | Offline quality checks for the entire system. |
 
 Each is covered in a dedicated chapter (09–14).
 
 ## Architecture Principles
 
-1. **Planning / execution separation.** The Planner produces the plan and does not write code. Native Copilot executes phases and does not change the design.
-2. **Adversarial verification before execution.** `controlflow-verify` tries to refute the plan before any code is touched. Finding a problem in a plan is cheaper than finding it in code.
-3. **Contracts over trust.** The plan format is anchored by `schemas/planner.plan.schema.json`; role output shapes are documented in `schemas/` and verified by the eval suite.
-4. **Human approval gates.** The user confirms the plan before execution begins and the review verdict before the change ships.
-5. **Explicit failure taxonomy.** Every failure recorded in a plan lifecycle section is classified into one of five classes (`transient`, `fixable`, `needs_replan`, `escalate`, `model_unavailable`). Retry routing and parallelism are native Copilot's job.
-6. **Fail-loud, abstain-safe.** When evidence is insufficient, the Planner returns `ABSTAIN` rather than guessing.
-7. **Least privilege — delegated.** Tool access and model selection are delegated to native Copilot. There is no `governance/tool-grants.json` in the slim model.
-8. **Structured text output.** Plans and verdicts are written to artifacts in `plans/` and presented as structured text — never raw JSON dumped to chat.
-9. **Non-duplication.** ControlFlow ships no surface that duplicates a native Copilot capability. The delegation boundary is audited (see `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md`).
+1. **Planning / execution separation.** Planner does not write code. CoreImplementer does not change design.
+2. **Adversarial review before execution.** Finding a problem in a plan is cheaper than finding it in code.
+3. **Contracts over trust.** Every inter-agent message is JSON validated against a schema.
+4. **Human approval gates.** The user confirms at phase and wave boundaries.
+5. **Explicit failure taxonomy.** Every failure is classified into one of 4 classes and routed deterministically.
+6. **Fail-loud, abstain-safe.** When uncertain, an agent returns ABSTAIN rather than guessing.
+7. **Least privilege.** Each agent has exactly the tools it needs (`governance/agent-grants.json`).
+8. **Structured text output.** Agents do not dump raw JSON to chat — that wastes context tokens.
 
 ## Common Misconceptions
 
-- **"The executor role names are shipped agent files."** No — `CodeMapper-subagent`, `CoreImplementer-subagent`, and the other seven are _conceptual role labels_ the Planner assigns in plan phases. Native Copilot executes them inline. The only shipped agent file is `.github/agents/controlflow-planner.agent.md`.
-- **"`controlflow-verify` spawns verifier subagents."** No — the three verify roles (`PlanAuditor-subagent`, `AssumptionVerifier-subagent`, `ExecutabilityVerifier-subagent`) are phases of the verify skill performed inline in the main context. Zero subagents.
-- **"ControlFlow has an Orchestrator that dispatches phases."** The Orchestrator is the _retired_ conceptual conductor role; it is not shipped. The Planner + native Copilot cover orchestration. The legacy state machine, dispatch, waves, and gates are gone.
-- **"You can invoke an executor role directly from ControlFlow."** There is no ControlFlow surface to invoke. The Planner assigns the role in a plan phase; you then run the phase with native Copilot (or recreate the persona as a native Copilot custom agent — see `NATIVE-DELEGATION-BOUNDARY.md §5`).
-- **"Schemas validate inter-agent messages at runtime."** In the slim model, schemas are contract documentation + eval fixture references. The plan format is enforced at planning time by the `controlflow-plan` skill conforming to `schemas/planner.plan.schema.json`, and the contract-drift eval suite asserts the format, role taxonomy, and governance stay aligned.
+- **"A subagent is an agent that runs a subtask."** No — it is just a naming convention. `*-subagent` agents are typically invoked from another agent rather than directly by the user.
+- **"PlanAuditor executes phases."** No — it is exclusively a read-only reviewer and never appears in `executor_agent`.
+- **"The Orchestrator writes code."** No — it only coordinates. If it starts writing code, that is a contract violation.
+- **"You can invoke any executor directly."** Technically yes, but they are designed to be called from the Orchestrator with a fully prepared phase context.
 
 ## Exercises
 
-1. **(beginner)** Draw on paper the slim surface (one agent, three skills, routing stub) over native Copilot. Compare with the diagram above.
-2. **(beginner)** Open `plans/project-context.md` and find the Phase Executor Agents table. Confirm the eight executor role names match the ones listed in chapter 03.
-3. **(intermediate)** Which three roles **cannot** appear in the `executor_agent` field of a plan phase, and why? (Hint: they are the inline verify roles, performed by `controlflow-verify`.)
-4. **(intermediate)** Open `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md` §1. List the five "Keep" rows — the things Copilot does not provide natively and ControlFlow keeps.
-5. **(advanced)** Explain in your own words why the Orchestrator state machine was retired rather than slimmed. What native Copilot capability replaced dispatch + waves + gates?
+1. **(beginner)** Draw on paper a diagram of all 13 agents grouped into the 5 categories. Compare with the diagram above.
+2. **(beginner)** Open `plans/project-context.md` and find the Phase Executor Agents table. Does it match the Executors section above?
+3. **(intermediate)** Which three agents **cannot** appear in the `executor_agent` field of a plan phase, and why?
+4. **(intermediate)** Open any three agent files. Find the `Tools → Allowed` section in each. Do read-only agents have a noticeably smaller tool surface?
+5. **(advanced)** Explain why `Researcher-subagent` and `CodeMapper-subagent` can be invoked as entry points even though their names include `subagent`.
 
 ## Review Questions
 
-1. Name the shipped ControlFlow surface for VS Code Copilot (one agent, three skills, one stub).
-2. What is the difference between a _conceptual role_ and a _shipped agent file_?
-3. List the three pipeline gates in order.
-4. Which subsystem anchors the plan format as a contract?
-5. Why is there no model routing or tool grant JSON file in the slim model governance directory?
+1. List the 5 functional groups of agents.
+2. Which agent is the "canonical backbone" for executors?
+3. What does PLAN_REVIEW do and who participates?
+4. Why can the Orchestrator not simultaneously be an executor?
+5. Which subsystem connects agents through formal contracts?
 
 ## See Also
 
-- [Chapter 03 — Role Taxonomy](03-agent-roster.md)
-- [Chapter 05 — The plan → verify → review pipeline](05-orchestration.md)
+- [Chapter 03 — Agent Roster](03-agent-roster.md)
+- [Chapter 05 — Orchestration](05-orchestration.md)
 - [Chapter 07 — Review Pipeline](07-review-pipeline.md)
-- [docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md](../agent-engineering/NATIVE-DELEGATION-BOUNDARY.md)
 - [plans/project-context.md](../../plans/project-context.md)

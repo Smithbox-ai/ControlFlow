@@ -1,0 +1,35 @@
+{
+  "_target_schema": "code-reviewer.verdict.schema.json",
+  "_fixture_type": "schema",
+  "_expected_validation": "fail",
+
+  "schema_version": "1.2.0",
+  "agent": "CodeReviewer-subagent",
+  "status": "APPROVED",
+  "summary": "Issue marked as rejected but the required rejection_reason field is absent.",
+  "confidence": 0.85,
+  "abstain": { "is_abstaining": false, "reasons": [] },
+  "issues": [
+    {
+      "severity": "MAJOR",
+      "description": "Suspected insecure direct object reference in GET /users/:id.",
+      "file": "src/routes/users.js",
+      "validation_status": "rejected"
+    }
+  ],
+  "validated_blocking_issues": [],
+  "verification_gates": {
+    "build": { "state": "PASS" },
+    "tests": { "state": "PASS" },
+    "lint_problems": { "state": "PASS" }
+  },
+  "security_checks": {
+    "injection": "PASS",
+    "auth": "PASS",
+    "secrets": "PASS",
+    "input_validation": "PASS",
+    "data_exposure": "PASS",
+    "dependencies": "PASS"
+  },
+  "next_steps": ["No further action required."]
+}

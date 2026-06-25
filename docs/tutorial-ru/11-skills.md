@@ -1,228 +1,226 @@
-# Глава 11 — Skills
+# Глава 11 — Skills (паттерны)
 
 ## Зачем эта глава
 
-В slim-модели у ControlFlow **две skill-поверхности**, и их легко перепутать. Эта глава объясняет, что такое каждая, где она живёт, кто её загружает и как Planner инжектит value-add паттерны в фазы плана. После этой главы вы сможете указать на любой `SKILL.md` или `skills/patterns/*.md` файл и сказать, к какой поверхности он относится и как вызывается.
+Понять, **что такое skills**, как Planner их выбирает и зачем они нужны имплементерам. Skills — это переиспользуемые экспертные знания, **выгружаемые точечно** в момент работы.
 
-Главное переосмысление для читателей legacy-туториала: **19 value-add паттернов больше не привязаны статически к retired специализированным агентам**. Они Planner-injected, не более трёх на фазу, через `skill_references`. Переиспользуемая дисциплина, которую воплощали retired 13 специализированных агентов, survives в `skills/patterns/`; сами персоны ушли (см. `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md §5` для mapping'а retired-persona → patterns).
+## Что такое skill
 
-## Ключевые понятия
+Skill — это Markdown-файл с **паттерном** в `skills/patterns/`, описывающий best practices в конкретном домене. Не пример кода и не туториал, а **инструкция для агента**, как правильно действовать.
 
-- **Workflow skill** — один из трёх поставляемых ControlFlow skill'ов в `.github/skills/controlflow-{plan,verify,review}/`. Каждый — это директория с `SKILL.md` плюс деревом `references/`, загружаемая нативной skills-библиотекой Copilot, когда пользователь вызывает `/controlflow-plan`, `/controlflow-verify` или `/controlflow-review`.
-- **Value-add pattern** — переиспользуемый Markdown-файл дисциплины в `skills/patterns/`. Не workflow skill, не исполняемый код. Даёт домен-специфичное руководство (тестирование, дебаггинг, безопасность, memory hygiene и т.д.).
-- **Pattern index** — `skills/index.md`, реестр, из которого `@controlflow-planner` выбирает ≤3 паттернов на фазу плана.
-- **Planner-injected** — режим привязки для каждого паттерна в slim-модели. `@controlflow-planner` выбирает релевантные паттерны во время планирования и записывает их в массив `skill_references[]` фазы; роль-исполнитель (концептуальная role-метка, исполняемая inline нативным Copilot) загружает указанные pattern-файлы до начала работы.
-- **Не библиотека кода** — обе поверхности Markdown. Они несут руководство и дисциплину, не runtime-код.
-- **Концептуальная роль, не поставляемый агент** — колонка «Applicable Agents» в `skills/index.md` перечисляет preserved 8 имён ролей исполнителей + 3 inline verify role-имени. Это routing-подсказки, какая концептуальная роль вероятно потребляет паттерн при инжекции; это не поставляемые файлы агентов.
+**Примеры доменов:** TDD, error handling, security, performance, completeness, integration, idea-to-prompt, LLM behavior, PreFlect, reflection loop, budget tracking.
 
-## Две skill-поверхности
+## Зачем skills
 
-```mermaid
-flowchart TD
-    subgraph WS["Workflow skills (поставляются, .github/skills/)"]
-        direction LR
-        Plan["controlflow-plan<br/>SKILL.md + references/"]
-        Verify["controlflow-verify<br/>SKILL.md + references/"]
-        Review["controlflow-review<br/>SKILL.md + references/"]
-    end
-    subgraph VP["Value-add patterns (skills/patterns/)"]
-        direction LR
-        P1["tdd-patterns.md"]
-        P2["debugging-discipline.md"]
-        P3["...19 паттернов всего"]
-        P4["repo-memory-hygiene.md"]
-    end
-    User([Пользователь]) -->|"/controlflow-plan"| Plan
-    User -->|"/controlflow-verify"| Verify
-    User -->|"/controlflow-review"| Review
-    Planner["@controlflow-planner"] -.->|"читает skills/index.md,<br/>выбирает ≤3 на фазу"| VP
-    VP -.->|"skill_references[] в фазе"| Exec["Роль-исполнитель<br/>(нативный Copilot inline)"]
-```
+Без skills:
+- Каждый имплементер «изобретает заново» best practices.
+- Промпты агентов раздуваются попытками покрыть все домены.
+- Стиль работы рассинхронизируется между агентами.
 
-| Поверхность | Расположение | Кол-во | Кто загружает | Как |
-|-------------|--------------|--------|---------------|-----|
-| Workflow skills | `.github/skills/controlflow-{plan,verify,review}/` | 3 | Нативная skills-библиотека Copilot | Пользователь вызывает slash-команду |
-| Value-add patterns | `skills/patterns/` | 19 | `@controlflow-planner` выбирает; роль-исполнитель (нативный Copilot) загружает | Planner-injected через `skill_references[]` (≤3 на фазу) |
+Со skills:
+- Каждый skill — единый источник истины для домена.
+- Агент подгружает skill **точно когда нужно** (just-in-time).
+- Контекст-бюджет агента не тратится на нерелевантные домены.
 
-Workflow skills — это пайплайн (см. главу 05). Value-add patterns — переиспользуемая дисциплина, которую Planner инжектит в фазы плана. Поверхности не пересекаются: workflow skill — поставляемая ControlFlow поверхность; pattern — Planner-injected guidance-файл.
+## Каталог skills
 
-## Workflow Skills (три)
+Источник: [skills/index.md](../../skills/index.md).
 
-Каждый workflow skill — это директория под `.github/skills/`, содержащая `SKILL.md` (skill-промпт, который Copilot загружает при вызове) плюс дерево `references/` (lazily-loaded reference-документы, которые skill читает, когда нужен формат-деталь).
+| # | Файл | Домен | Применимые агенты |
+|---|------|-------|-------------------|
+| 1 | `tdd-patterns.md` | Testing | CoreImplementer, UIImplementer, CodeReviewer |
+| 2 | `error-handling-patterns.md` | Error Handling | CoreImplementer, UIImplementer, PlatformEngineer |
+| 3 | `security-patterns.md` | Security | CoreImplementer, UIImplementer, CodeReviewer, PlanAuditor |
+| 4 | `performance-patterns.md` | Performance | CoreImplementer, UIImplementer, CodeReviewer, PlanAuditor |
+| 5 | `completeness-traceability.md` | Completeness | Planner, PlanAuditor, CodeReviewer |
+| 6 | `integration-validator.md` | Integration | Planner, PlanAuditor, CoreImplementer |
+| 7 | `idea-to-prompt.md` | Idea-to-Prompt | Planner |
+| 8 | `llm-behavior-guidelines.md` | LLM Behavior | CoreImplementer, UIImplementer, CodeReviewer, Planner, PlatformEngineer |
+| 9 | `preflect-core.md` | PreFlect | All agents |
+| 10 | `reflection-loop.md` | Reflection Loop | Orchestrator, CoreImplementer, UIImplementer, PlatformEngineer |
+| 11 | `budget-tracking.md` | Budget Tracking | Orchestrator, Planner, CoreImplementer, UIImplementer, PlatformEngineer |
+| 12 | `repo-memory-hygiene.md` | Memory Hygiene | Orchestrator, Planner |
 
-| Skill | Путь | Что делает |
-|-------|------|------------|
-| `controlflow-plan` | `.github/skills/controlflow-plan/SKILL.md` | Производит schema-anchored артефакт плана в `plans/`. Single-sources формат из `schemas/planner.plan.schema.json` и `plans/templates/plan-document-template.md`. Запускается `@controlflow-planner`. |
-| `controlflow-verify` | `.github/skills/controlflow-verify/SKILL.md` | Inline адверсариальная pre-execution верификация (ноль сабагентов). Tier-gated фазы: structural audit, mirage detection, executability cold-start. Эмиттит `APPROVED` / `NEEDS_REVISION` / `REJECTED`. |
-| `controlflow-review` | `.github/skills/controlflow-review/SKILL.md` | Evidence-backed ревью, слой поверх нативного Copilot code review. Добавляет сравнение plan-vs-implementation на scope drift и проактивный поиск уязвимостей/ошибок. |
+## Discovery protocol
 
-Эти три skill'а — вся поставляемая ControlFlow workflow-поверхность (плюс агент `@controlflow-planner` и routing stub `.github/copilot-instructions.md` — см. главу 02). Они вызываются пользователем, не Planner'ом.
+Planner на шаге 5 своего workflow:
 
-## Value-Add Patterns (девятнадцать)
+1. Читает `skills/index.md`.
+2. Для каждой фазы плана — keyword-матчит задачу против Domain Mapping.
+3. Выбирает **≤3** наиболее релевантных skill-паттерна.
+4. Записывает их пути в `skill_references` фазы.
 
-Value-add patterns живут в `skills/patterns/` и зарегистрированы в `skills/index.md`. Planner читает индекс во время планирования (Step 8 workflow'а в главе 06) и выбирает ≤3 паттернов на фазу по домен-ключевым словам. Выбор записывается в массив `skill_references[]` фазы; роль-исполнитель (нативный Copilot inline) читает указанные pattern-файлы перед исполнением фазы.
+**Лимит ≤3** — не случайный. Больше ≈ сигнал, что задача недостаточно сфокусирована, или фаза перегружена.
 
-### Domain mapping (authoritative в `skills/index.md`)
-
-Полная таблица domain mapping — в `skills/index.md`, и это единственный источник истины. Сжатый вид:
-
-| Домен | Файл | Вероятные потребители при инжекции (концептуальные роли) |
-|-------|------|----------------------------------------------------------|
-| Testing | `skills/patterns/tdd-patterns.md` | CoreImplementer-subagent, UIImplementer-subagent, CodeReviewer-subagent |
-| Spec-Driven Development | `skills/patterns/spec-driven-development.md` | CoreImplementer-subagent, UIImplementer-subagent |
-| Debugging Discipline | `skills/patterns/debugging-discipline.md` | CoreImplementer-subagent, UIImplementer-subagent, PlatformEngineer-subagent, BrowserTester-subagent |
-| Code Simplification | `skills/patterns/code-simplification.md` | CoreImplementer-subagent, UIImplementer-subagent, CodeReviewer-subagent |
-| Error Handling | `skills/patterns/error-handling-patterns.md` | CoreImplementer-subagent, UIImplementer-subagent, PlatformEngineer-subagent |
-| Security | `skills/patterns/security-patterns.md` | CoreImplementer-subagent, UIImplementer-subagent, CodeReviewer-subagent, PlanAuditor-subagent |
-| Performance | `skills/patterns/performance-patterns.md` | CoreImplementer-subagent, UIImplementer-subagent, CodeReviewer-subagent, PlanAuditor-subagent |
-| Completeness | `skills/patterns/completeness-traceability.md` | controlflow-planner, PlanAuditor-subagent, CodeReviewer-subagent |
-| Integration | `skills/patterns/integration-validator.md` | controlflow-planner, PlanAuditor-subagent, CoreImplementer-subagent |
-| Idea-to-Prompt | `skills/patterns/idea-to-prompt.md` | controlflow-planner |
-| LLM Behavior | `skills/patterns/llm-behavior-guidelines.md` | CoreImplementer-subagent, UIImplementer-subagent, CodeReviewer-subagent, controlflow-planner |
-| PreFlect | `skills/patterns/preflect-core.md` | controlflow-planner (все концептуальные роли) |
-| Reflection Loop | `skills/patterns/reflection-loop.md` | controlflow-planner, CoreImplementer-subagent, UIImplementer-subagent, PlatformEngineer-subagent |
-| Budget Tracking | `skills/patterns/budget-tracking.md` | controlflow-planner, CoreImplementer-subagent, UIImplementer-subagent, PlatformEngineer-subagent |
-| Memory Hygiene | `skills/patterns/repo-memory-hygiene.md` | controlflow-planner, CodeReviewer-subagent, PlanAuditor-subagent |
-| Memory Promotion | `skills/patterns/memory-promotion-candidates.md` | controlflow-planner |
-| Security Review Discipline | `skills/patterns/security-review-discipline.md` | CodeReviewer-subagent |
-| Source Grounding | `skills/patterns/source-grounding.md` | Researcher-subagent; controlflow-planner (consider) |
-| Decision Challenge | `skills/patterns/decision-challenge.md` | PlanAuditor-subagent, CodeReviewer-subagent |
-
-> Колонка «Applicable Agents» — это **routing-подсказка, не статическая привязка**. В slim-модели ни одна поставляемая ControlFlow поверхность статически не цитирует pattern-файл; каждый паттерн PLANNER-INJECTED. Перечисленные роли указывают вероятного потребителя при инжекции — концептуальную роль, исполняющую фазу, — а не поставляемых агентов, загружающих паттерн безусловно. См. binding-легенду вверху `skills/index.md`.
-
-### Паттерны vs документация
-
-| Паттерны | Документация |
-|----------|--------------|
-| Загружаются ролью-исполнителем во время исполнения | Читаются человеком заранее |
-| Выбираются на фазу Planner'ом (≤3) | Всегда доступны |
-| Содержат протестированную дисциплину (чек-листы, decision-правила) | Содержат политики и объяснения |
-| Зарегистрированы в `skills/index.md` | Не зарегистрированы |
-
-## Planner Discovery Protocol
-
-Planner выбирает паттерны на **Step 8** своего planning-workflow (см. главу 06):
-
-1. Прочитать `skills/index.md` после complexity gate.
-2. Сматчить домен-ключевые слова задачи против колонки Domain.
-3. Выбрать ≤3 наиболее релевантных паттернов по контексту задачи.
-4. Включить пути выбранных pattern-файлов в массив `skill_references[]` каждой применимой фазы.
-
-**Правило: ≤3 паттернов на фазу.** Больше паттернов увеличивают context-overhead и размывают фокус. Если фаза вроде требует больше, декомпозируйте её на две.
-
-## Just-in-Time Loading
+## Loading protocol
 
 ```mermaid
 sequenceDiagram
-    participant P as "@controlflow-planner"
-    participant SI as skills/index.md
-    participant SC as skills/patterns/*.md
-    participant N as Нативный Copilot (роль-исполнитель)
+    participant P as Planner
+    participant Plan as Plan
+    participant Idx as skills/index.md
+    participant E as Executor
+    participant Skill as skills/patterns/<x>.md
 
-    P->>SI: читает индекс, выбирает ≤3 паттерна для фазы
-    P->>P: пишет skill_references[] в фазу
-    P-->>U: артефакт плана (plans/<task-slug>-plan.md)
-    Note over N: исполнение начинается после verify APPROVED
-    N->>SC: загружает указанные pattern-файлы
-    N->>N: применяет паттерны inline
+    P->>Idx: read index
+    P->>Plan: write skill_references
+    Plan-->>E: phase context
+    E->>Skill: read each referenced skill
+    Skill-->>E: domain patterns
+    E->>E: apply patterns during work
 ```
 
-**Почему just in time?** Паттерны добавляют контекст в промпт исполнителя. Загрузка всех девятнадцати upfront тратит токены и создаёт шум. Грузите только то, что нужно текущей фазе.
+**Critical rule:** Implementation agent должен прочитать все referenced skills **до** начала работы, не во время.
 
-## Что несут паттерны (дисциплина retired-персон)
+## Разбор ключевых skills
 
-13 специализированных `*.agent.md` файлов были retired в Phase 3. Их **персоны** не потеряны — value-add дисциплина, которую они воплощали, осталась в `skills/patterns/`. Mapping записан в `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md §5`; сжатый вид:
+### preflect-core.md
 
-| Retired персона | Value-add patterns, surviving в `skills/patterns/` |
-|-----------------|----------------------------------------------------|
-| BrowserTester-subagent | `tdd-patterns`, `debugging-discipline`, `error-handling-patterns` |
-| UIImplementer-subagent | `tdd-patterns`, `code-simplification`, `error-handling-patterns` |
-| PlatformEngineer-subagent | `error-handling-patterns`, `debugging-discipline`, `integration-validator` |
-| Researcher-subagent | `source-grounding`, `completeness-traceability` |
-| CodeMapper-subagent | `completeness-traceability`, `code-simplification` |
-| TechnicalWriter-subagent | `completeness-traceability`, `llm-behavior-guidelines` |
-| CodeReviewer-subagent | `security-review-discipline`, `decision-challenge`, `llm-behavior-guidelines` |
+**Универсальный** — применим всеми агентами. Описывает **4 канонических risk-класса** для pre-action gate:
 
-Если вы хотите вернуть специализированную персону, воссоздайте её как **native Copilot custom agent** под `.github/agents/` и пусть `@controlflow-planner` назначает её как `executor_agent` фазы. Pattern-файлы несут переиспользуемую дисциплину; новый agent-файл несёт персону. Полный recipe — в `NATIVE-DELEGATION-BOUNDARY.md §5`.
+1. **Scope drift** — выходим ли за рамки задачи?
+2. **Schema/contract drift** — нарушим ли контракт?
+3. **Missing evidence** — есть ли доказательства?
+4. **Safety/destructive** — нужна ли авторизация?
 
-Три inline verify роли (`PlanAuditor-subagent`, `AssumptionVerifier-subagent`, `ExecutabilityVerifier-subagent`) **не** воссоздаются как агенты — это inline-фазы skill'а `controlflow-verify`, и в этом состоит non-native value-add.
+**Decision output:** GO / REPLAN / ABSTAIN.
 
-## Несколько паттернов подробно
+> «Silent GO with unresolved risk is a contract violation.»
 
-### preflect-core
+### llm-behavior-guidelines.md
 
-Pre-action gate: классифицирует предстоящее действие в один из 4 risk-классов (high-risk-destructive, scope-drift, assumption, dependency) и эмиттит `GO` / `PAUSE` / `ABORT`. Planner-injected, когда фаза трогает деструктивные или необратимые операции.
+**Антипаттерны** для LLM-имплементеров:
+- Scope drift (расширение скоупа без надобности).
+- Over-abstraction (преждевременные helpers).
+- Silent assumptions (угадывание вместо вопроса).
+- Weak success criteria (нет измеримости).
+- Premature optimization.
 
-### llm-behavior-guidelines
+CoreImplementer, UIImplementer, CodeReviewer, Planner, PlatformEngineer обязаны загружать на нетривиальных задачах.
 
-Мета-паттерн для предотвращения системных agent anti-patterns: scope drift prevention, weak success criteria detection, over-abstraction detection, silent assumption detection. Вероятно потребляется CoreImplementer, UIImplementer, CodeReviewer и Planner при инжекции.
+### tdd-patterns.md
 
-### tdd-patterns
+Test-Driven Development паттерны: red-green-refactor, test boundaries, fixture management, что не тестировать.
 
-Дисциплина тестирования: пишите тесты до имплементации, тестируйте контракт, а не имплементацию, различайте unit / integration / e2e уровни. Вероятно потребляется CoreImplementer и UIImplementer при инжекции.
+### completeness-traceability.md
 
-### completeness-traceability
+Для Planner / PlanAuditor / CodeReviewer:
+- Requirements traceability matrix (RTM).
+- Coverage анализ.
+- Поиск orphan-требований.
+- Поиск scope creep.
 
-Каждый публичный интерфейс должен иметь документ; каждый документ — кодовую цитату; диаграммы должны быть Mermaid; parity-проверка при изменении кода. Вероятно потребляется Planner, PlanAuditor и CodeReviewer при инжекции.
+### integration-validator.md
 
-### repo-memory-hygiene
+Для проверки контрактов между фазами:
+- Dependency graph validation.
+- Interface compatibility.
+- Wave ordering correctness.
+- Collision detection.
 
-Обязателен перед любой записью в `/memories/repo/` или обновлением `NOTES.md`. Четыре чек-листа: (A) дедуп перед записью новой записи; (B) прунинг для вытеснения устаревших записей; (C) phase-boundary promotion (классификация → scope-проверка → проверка near-duplicate → верификация обязательных полей); (D) периодический read-only аудит. См. главу 12.
+### reflection-loop.md
 
-### idea-to-prompt
+Для имплементеров после неудачной попытки:
+- Pre-retry анализ.
+- Извлечение fix hint.
+- Root cause vs surface.
+- Когда сдаваться и эскалировать.
 
-Для Idea Interview Planner'а: преобразует расплывчатые идеи пользователя в конкретные требования, задаёт clarifying-вопросы по одному, мапит на категории `risk_review`, не пропускает semantic risk taxonomy. См. главу 06.
+### budget-tracking.md
 
-## `skill_references` в схеме
+Token/wall-clock budget:
+- Раннее завершение при cap.
+- Сигналы исчерпания.
+- Resource accounting.
 
-Каждая фаза в `schemas/planner.plan.schema.json` имеет поле `skill_references[]`:
+### idea-to-prompt.md
 
-```json
-"skill_references": [
-  "skills/patterns/tdd-patterns.md",
-  "skills/patterns/llm-behavior-guidelines.md"
-]
+Только для Planner. Преобразование расплывчатой идеи в конкретный prompt:
+- Структурное интервью.
+- Disambiguation questions.
+- Goal extraction.
+
+### repo-memory-hygiene.md
+
+Для Orchestrator и Planner — обязателен перед любой записью в `/memories/repo/` или обновлением `NOTES.md`:
+- **Checklist A** — дедуп перед записью новой записи.
+- **Checklist B** — прунинг для вытеснения устаревших записей.
+- **Checklist C — Phase-Boundary Promotion** — 4-шаговая процедура на каждой границе фазы: классификация факта по таксономии → scope-проверка (cross-plan или task-specific?) → проверка near-duplicate → верификация всех 5 обязательных полей перед записью.
+- **Checklist D — Periodic Memory Audit** — read-only диагностика: поиск near-duplicate групп → spot-check staleness цитат → Audit Report. Удаление невозможно (только supersede-запись и natural decay).
+
+Типы таксономии для Checklist C описаны в `docs/agent-engineering/MEMORY-ARCHITECTURE.md → Memory Content Taxonomy`.
+
+## Где skills цитируются в плане
+
+Из `schemas/planner.plan.schema.json`:
+
+```jsonc
+"phases": {
+  "items": {
+    "properties": {
+      "skill_references": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "File paths to relevant skill patterns from the skills library."
+      }
+    }
+  }
+}
 ```
 
-Значение = путь к pattern-файлу. Роль-исполнитель (нативный Copilot inline) читает эти файлы перед исполнением фазы. Массив ограничен ≤3 элементами на фазу.
+Пример из реального плана (фаза «security review»):
+```yaml
+skill_references:
+  - skills/patterns/security-patterns.md
+  - skills/patterns/completeness-traceability.md
+```
 
-## Добавление нового паттерна
+## Skills vs Documentation
 
-1. Создать `skills/patterns/<name>.md`.
-2. Добавить запись в таблицу Domain Mapping в `skills/index.md` с: домен, файл, применимые концептуальные роли (routing-подсказка), ключевые слова.
-3. Запустить `cd evals && npm test` — skill-discoverability suite валидирует, что каждый `skills/patterns/` файл зарегистрирован в индексе и каждая запись индекса разрешается в реальный файл.
+| Аспект | Skill | Документация |
+|--------|-------|--------------|
+| Аудитория | LLM-агент | Человек |
+| Стиль | Инструктивный | Объяснительный |
+| Длина | Компактная | Может быть длинной |
+| Загрузка | Just-in-time | По мере чтения |
+| Хранится | `skills/patterns/` | `docs/`, `README.md` |
+
+## Добавление нового skill
+
+Из `skills/index.md`:
+
+1. Создать новый pattern-файл в `skills/patterns/`.
+2. Добавить запись в Domain Mapping таблицу `skills/index.md`.
+3. Обновить агентов, у которых добавился применимый домен.
+4. Запустить `evals/validate.mjs`.
 
 ## Типичные ошибки
 
-- **Путать две skill-поверхности.** Три workflow skill'а в `.github/skills/` — это пайплайн; девятнадцать паттернов в `skills/patterns/` — Planner-injected дисциплина. Разное расположение, разный загрузчик, разное количество.
-- **Трактовать колонку «Applicable Agents» как статическую привязку.** Это routing-подсказка. Каждый паттерн PLANNER-INJECTED в slim-модели; ни одна поставляемая поверхность статически не цитирует паттерн.
-- **Трактовать паттерны как runtime-код.** Паттерны — Markdown, они дают руководство, не исполнение.
-- **Грузить все паттерны заранее.** Только just-in-time — иначе токены тратятся впустую. Planner выбирает ≤3 на фазу.
-- **Выбирать > 3 паттернов на одну фазу.** Если фаза требует больше, декомпозируйте.
-- **Забыть обновить `skills/index.md` при добавлении паттерна.** Skill-discoverability eval упадёт.
-- **Путать `skill_references[]` со ссылками на документацию.** Они указывают на загружаемые паттерны, а не на читаемые ссылки.
+- **Создать skill «на всякий случай»** без чёткого домена. Skills — для узких доменов.
+- **Подгрузить >3 skills** на фазу. Лимит из дизайна.
+- **Считать skill = пример кода**. Это паттерн поведения, не template.
+- **Дублировать skill в P.A.R.T. секции Resources**. Resources — список используемых, не embedding содержимого.
+- **Загрузить skill после написания кода**. Должно быть **до**.
 
 ## Упражнения
 
-1. **(новичок)** Откройте `skills/index.md` и посчитайте паттерны, зарегистрированные в таблице Domain Mapping. Подтвердите, что количество совпадает с файлами в `skills/patterns/`.
-2. **(новичок)** Какие три workflow skill'а живут в `.github/skills/`? Назовите slash-команду для каждого.
-3. **(средний)** Фаза планирует: написать backend, написать тесты и обновить доку. Какие ≤3 паттерна вы инжектнете через `skill_references[]`?
-4. **(средний)** Откройте `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md §5`. Какие паттерны survive от retired персоны BrowserTester-subagent?
-5. **(продвинутый)** Опишите, как добавление нового паттерна влияет на eval-харнесс. Какой тест-файл защищает index↔file bidirectional-проверку?
+1. **(новичок)** Сколько skill-паттернов в `skills/patterns/`?
+2. **(новичок)** Какой skill применим **всеми** агентами?
+3. **(средний)** Задача: «Добавить пагинацию в endpoint /v1/orders». Какие 3 skills выбрали бы для CoreImplementer?
+4. **(средний)** Откройте `skills/patterns/preflect-core.md` и найдите 4 risk-класса. Сравните с decision output.
+5. **(продвинутый)** Когда `idea-to-prompt.md` неприменим? (подсказка: только Planner, и только при определённом условии)
 
 ## Контрольные вопросы
 
-1. Назовите две skill-поверхности в slim-модели и где каждая живёт.
-2. Сколько паттернов может быть в `skill_references[]` на фазу и кто их выбирает?
-3. В чём разница между workflow skill и value-add pattern?
-4. Где поддерживается authoritative pattern domain mapping?
-5. Куда смотреть, чтобы найти, какие паттерны воплощала retired специализированная персона?
+1. Сколько максимум skills на одну фазу?
+2. Кто и когда читает `skill_references`?
+3. Чем skill отличается от документации?
+4. Какой skill — meta-skill про антипаттерны LLM?
+5. Где зарегистрирован каждый skill?
 
 ## См. также
 
-- [Глава 02 — Архитектурный обзор](02-architecture-overview.md)
 - [Глава 06 — Планирование](06-planning.md)
-- [Глава 07 — Ревью-пайплайн](07-review-pipeline.md)
 - [skills/index.md](../../skills/index.md)
-- [skills/patterns/](../../skills/patterns/)
-- [docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md](../agent-engineering/NATIVE-DELEGATION-BOUNDARY.md)
+- [skills/README.md](../../skills/README.md)
+- [skills/patterns/preflect-core.md](../../skills/patterns/preflect-core.md)

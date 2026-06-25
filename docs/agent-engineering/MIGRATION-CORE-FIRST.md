@@ -1,60 +1,158 @@
 # Core-first Migration Guide
 
-This document is the canonical reference for the "ship the slim surface first, then layer patterns" migration pattern, followed by the historical migration record from the retired 13-agent / Orchestrator model.
+This document remains the canonical reference for the shared implementation backbone and external-consolidation exit criteria. The phase sections below also remain as the historical migration record.
 
-## Slim-model pattern: ship the slim surface first
+## Scope (Completed)
 
-The current migration discipline is the inverse of the retired model's "land 13 agents, then converge." The rule is: **ship the smallest non-duplicating surface first, then layer value-add patterns on top.**
+Core agents:
 
-1. **Ship the slim surface.** One agent — `.github/agents/controlflow-planner.agent.md` — and three skills — `.github/skills/controlflow-plan/`, `.github/skills/controlflow-verify/`, `.github/skills/controlflow-review/` — over native Copilot. Plus the routing stub at `.github/copilot-instructions.md`. Nothing else ships as a ControlFlow surface.
-2. **Delegate everything Copilot does natively.** Subagent dispatch, parallelism, model selection, tool access, approvals, Plan mode discovery, and agentic code review are all native Copilot capabilities (see `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md`). ControlFlow does not re-implement them.
-3. **Layer the non-native disciplines.** The schema-enforced plan format (anchored by `schemas/planner.plan.schema.json`), adversarial verify, the tier-gated policy, plan-vs-implementation scope-drift review, and the contract-drift eval suite are the five things Copilot does not provide natively. They are the irreducible value-add.
-4. **Add patterns, not agents.** Reusable domain discipline (TDD, error handling, security review, source grounding, etc.) lives in `skills/patterns/` as Planner-injected value-add patterns (at most three per phase via `skill_references`), not as shipped specialized agents. If a specialized persona is genuinely needed, recreate it as a native Copilot custom agent under `.github/agents/` per `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md` §5.
-5. **Gate with the eval suite.** `cd evals && npm test` is the offline contract-drift gate. Delete `evals/.cache/` before trusting a green run.
+- `Orchestrator.agent.md`
+- `Planner.agent.md`
+- `Researcher-subagent.agent.md`
+- `CodeMapper-subagent.agent.md`
+- `CodeReviewer-subagent.agent.md`
 
-There is no Orchestrator, no dispatch state machine, no wave execution, no Completion Gate, and no tool-grants / model-routing / agent-grants surface in the slim model. Orchestration is the plan → verify → review pipeline over native Copilot.
+Implementation agents:
 
-## Required artifacts (slim model)
+- `CoreImplementer-subagent.agent.md`
+- `UIImplementer-subagent.agent.md`
 
-- `.github/agents/controlflow-planner.agent.md` — the sole shipped agent.
-- `.github/skills/controlflow-{plan,verify,review}/` — the three workflow skills.
-- `.github/copilot-instructions.md` — the routing stub.
-- `schemas/planner.plan.schema.json` — the immutable plan format contract.
-- `plans/project-context.md` — the role taxonomy + tier definitions + canonical-source matrix.
-- `governance/runtime-policy.json`, `governance/project-context-registry.json`, `governance/canonical-source-matrix.json`, `governance/rename-allowlist.json` — the four governance files.
-- `evals/` — the offline contract-drift suite.
+## Phase 2: Ecosystem Expansion (Completed)
 
-## Rollout sequence (slim model)
+New specialized agents:
 
-1. Land the slim `.github/` surface (agent + three skills + routing stub).
-2. Land the schemas and governance files the skills single-source from.
-3. Land the `skills/patterns/` library and `skills/index.md`.
-4. Run `cd evals && npm test` and iterate until green.
-5. Update `README.md` and the tutorials to the slim surface.
+- `PlatformEngineer-subagent.agent.md` — CI/CD, containers, infrastructure deployment.
+- `TechnicalWriter-subagent.agent.md` — Documentation, diagrams, code-doc parity.
+- `BrowserTester-subagent.agent.md` — scripted E2E browser testing and accessibility audits through provided harnesses.
 
-## Historical migration record (retired model)
+Cross-cutting enhancements:
 
-The sections below are the historical migration record from the retired 13-agent / Orchestrator model. They describe a surface that no longer ships and are kept for traceability. The retired files (the root `*.agent.md` roster, governance/model-routing.json, governance/tool-grants.json, governance/agent-grants.json, and the former RELIABILITY-GATES.md, TOOL-ROUTING.md, MODEL-ROUTING.md, OBSERVABILITY.md) are not part of the slim surface.
+- Failure taxonomy (`transient`, `fixable`, `needs_replan`, `escalate`) added to all agents during the initial expansion. Current routing also includes `model_unavailable` where admitted by each agent schema.
+- Wave-aware parallel execution added to Orchestrator.
+- Inter-phase contracts and failure expectations added to Planner plan template.
+- External delegation protocol schema (`schemas/orchestrator.delegation-protocol.schema.json`) added to reduce Orchestrator context bloat.
+- Batch approval mechanism added to Orchestrator. Current behavior uses one approval per ordinary wave, with per-phase approval retained for destructive/high-risk or FAILED/BLOCKED phases.
 
-### Phase 1–2: Core agents and ecosystem expansion (retired)
+## Breaking Change Policy
 
-The retired model landed a 13-agent roster (Planner, Orchestrator, and 11 specialized subagents) with P.A.R.T.-structured `*.agent.md` files, schema-governed outputs, wave-aware parallel execution, and an inter-phase delegation protocol. This surface was retired in Phase 3 when Copilot gained native subagent dispatch, parallelism, model selection, and tool access. The role names survive only as conceptual labels the Planner assigns in plan phases and native Copilot executes inline (see `plans/project-context.md`).
+Controlled breaking changes were applied during migration.
 
-### Phase 3: Modernization (retired, 2026-04-04)
+Implications:
 
-Added `AssumptionVerifier-subagent` and `ExecutabilityVerifier-subagent` as shipped agents, a scoring spec, plan templates, the skills library, and governance/tool-grants.json / `governance/runtime-policy.json` knobs for the Orchestrator. In the slim model, the two verifiers are inline phases of `controlflow-verify` (not shipped agents); governance/tool-grants.json is retired; `governance/runtime-policy.json` survives with three blocks (`review_pipeline_by_tier`, `semantic_risk_policy`, `verdict_routing`).
+- Core agents now require strict schema-governed outputs.
+- Legacy free-form outputs are non-compliant for core workflows.
 
-### Phase 4: Implementer rationalization (retired, 2026-04-05)
+## Required Artifacts
 
-An internal convergence of the CoreImplementer / UIImplementer / PlatformEngineer trio that preserved the 13-agent roster externally. In the slim model the three implementers are conceptual executor roles (the `executor_agent` enum in `schemas/planner.plan.schema.json`), executed by native Copilot — there are no shipped implementer agent files to converge. The shared implementation backbone (read standards → PreFlect → execute → verify gates → emit structured report) survives as the discipline carried by `skills/patterns/` files, Planner-injected per phase.
+- `docs/agent-engineering/PART-SPEC.md`
+- `docs/agent-engineering/RELIABILITY-GATES.md`
+- `schemas/*.schema.json` for each core output contract
+- `schemas/core-implementer.execution-report.schema.json`
+- `schemas/ui-implementer.execution-report.schema.json`
+- `schemas/platform-engineer.execution-report.schema.json`
+- `schemas/technical-writer.execution-report.schema.json`
+- `schemas/browser-tester.execution-report.schema.json`
+- `schemas/orchestrator.delegation-protocol.schema.json`
+- `evals/scenarios/*` fixtures for deterministic checks
 
-## Quality gates before merge (slim model)
+## Rollout Sequence
 
-- `cd evals && npm test` exits 0 (delete `evals/.cache/` first).
-- The slim `.github/` surface contains exactly one agent and three skills.
-- No shipped ControlFlow surface duplicates a native Copilot capability (audit checklist in `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md`).
-- The plan format, role taxonomy, and governance config stay aligned across files (Pass 14 drift check).
+1. Land schemas and governance docs.
+2. Refactor core agents to P.A.R.T + schema references.
+3. Refactor implementation agents to P.A.R.T + schema references.
+4. Run scenario checks (schema compliance, abstention, safety gates).
+5. Update README architecture and usage guidance.
 
-## Backward compatibility
+## Backward Compatibility Strategy
 
-Not guaranteed for the retired 13-agent output shape. The slim model is a clean break: the retired root `*.agent.md` roster, the Orchestrator dispatch state machine, and the tool-grants / model-routing / agent-grants knobs are gone. Plans produced under the slim model conform to `schemas/planner.plan.schema.json` and use the 8 `executor_agent` role labels as conceptual roles, not shipped agents.
+Not guaranteed for core output shape.
+
+Mitigation:
+
+- Keep human-readable summaries in addition to schema objects where possible.
+- Document exact schema file per agent.
+- Keep status enums stable across agents.
+
+## Quality Gates Before Merge
+
+- Schema files parse as valid JSON.
+- Each agent references one primary schema contract.
+- Human approval gate is explicit in Orchestrator and CodeReviewer paths.
+- Predictability path (`ABSTAIN`) is present in all agents.
+
+## Phase 3: Modernization (Completed, 2026-04-04)
+
+Comprehensive bishx-inspired upgrade across 9 implementation phases.
+
+**New agents (2):**
+
+- `AssumptionVerifier-subagent.agent.md` — mirage detection with 17 patterns, quantitative scoring.
+- `ExecutabilityVerifier-subagent.agent.md` — cold-start plan executability simulation.
+
+**New infrastructure:**
+
+- `docs/agent-engineering/SCORING-SPEC.md` — single source of truth for 7-dimension weighted scoring, cross-validated ceilings, and regression tracking.
+- `plans/templates/` — externalized plan, phase-completion, plan-completion, and verified-items templates.
+- `skills/` — skill library with index and 7 domain pattern files (TDD, error handling, security, performance, completeness, integration, idea-to-prompt).
+- `governance/tool-grants.json` — canonical machine-readable tool policy for validator enforcement.
+- `governance/runtime-policy.json` — Orchestrator operational knobs (review routing, retry budgets, stagnation thresholds).
+
+**Agent enhancements:**
+
+- Orchestrator: PLAN_REVIEW loop extended to 5 iterations with complexity-adaptive routing, convergence detection, regression tracking, trace_id observability.
+- Planner: Complexity Gate (TRIVIAL/SMALL/MEDIUM/LARGE), Skill Selection step, Semantic Risk Discovery Gate.
+- PlanAuditor: 7-dimension scoring, focus-area routing, validated blocking findings.
+- CodeReviewer: 5-dimension weighted scoring, per-issue validation protocol.
+
+**Eval coverage at that point:** 29 → 35 eval scenarios (Phase 3). Schema count: 13 → 15. Later hardening expanded coverage; use `evals/README.md` and `evals/package.json` for the current suite composition.
+
+Full implementation details: plans/archive/atlas-modernization-plan.md (archived).
+
+## Phase 4: Implementer Rationalization (2026-04-05)
+
+Executor-preserving internal convergence of the implementation trio.
+
+**Decision:** Keep 13-agent roster. Preserve all external executor identities, schema contracts, and tool grants. Internal convergence only.
+
+**Evidence baseline:** Phase 1 research confirmed 6 no-go conditions for external consolidation:
+
+1. Three distinct delegation payloads in `schemas/orchestrator.delegation-protocol.schema.json`.
+2. Non-identical tool grants — Core has extra `agent` grant.
+3. Different required schema output fields (UI: accessibility/responsive; Platform: health_checks/rollback).
+4. Different eval assertions across the three contract fixtures.
+5. Different Definition of Done semantics bound to external identity.
+6. Executor set in `plans/project-context.md` still routes to three distinct roles.
+
+**Shared Implementation Backbone:**
+
+All three implementer agents follow the same structural rhythm:
+
+1. Read standards → PreFlect risk evaluation → Execute domain work → Verify gates → Emit structured report.
+2. Deterministic Contracts: schema-governed output, shared status enum, shared failure classification.
+3. Planning vs Acting Split: execute-only, no global replan, targeted clarification routing.
+4. Archive: context compaction + NOTES.md updates with scope-specific fields.
+5. Non-Negotiable Rules: no out-of-scope files, no fabricated evidence, ABSTAIN on uncertainty.
+6. Uncertainty Protocol: `NEEDS_INPUT` with `clarification_request` per `CLARIFICATION-POLICY.md`.
+
+CoreImplementer-subagent is the canonical backbone reference. UIImplementer-subagent and PlatformEngineer-subagent extend it with domain-specific sections:
+
+- **UIImplementer additions:** accessibility gates, responsive checks, design-system compliance, Frontend Best Practices Checklist.
+- **PlatformEngineer additions:** approval gates, idempotency mandate, rollback protocol, health checks, environment prerequisites.
+
+**Eval hardening:**
+
+- Added `evals/scenarios/code-reviewer-contract.json` — direct CodeReviewer contract fixture.
+- Added `evals/scenarios/code-mapper-contract.json` — direct CodeMapper contract fixture.
+- Added `evals/scenarios/implementer-role-differentiation.json` — guards against accidental role collapse.
+- Eval count: 37 → 40 (Phase 4). Validator at that point: 161/161 passing.
+
+**Future exit criteria for external consolidation:**
+
+External consolidation (reducing implementer count) is not planned but remains possible if ALL of these conditions are intentionally satisfied in a future migration:
+
+1. Single canonical delegation payload envelope in `schemas/orchestrator.delegation-protocol.schema.json`.
+2. Single canonical tool grant profile in `governance/tool-grants.json`.
+3. Single or composed execution-report schema covering UI and platform evidence surfaces.
+4. Rewritten eval fixtures testing one executor against the full evidence set.
+5. Role-specific DoD gates moved from external identity into task metadata.
+6. Executor set and role matrix updated in `plans/project-context.md`.

@@ -1,6 +1,18 @@
 {
   "_expected_validation": "pass",
-  "_comment": "Slim Copilot-first runtime policy. Only 3 blocks: review_pipeline_by_tier + semantic_risk_policy + verdict_routing. The 13 retired governance knobs (approval_required_actions, max_iterations_by_tier, retry_budgets, stagnation_detection, session_telemetry, tool_output_policy, plan_review_gate_trigger_conditions, batch_approval, budget_defaults, final_review_gate, memory_hygiene, compaction, task_cache) are delegated to the native Copilot runtime and are no longer required.",
+  "_comment": "Orchestrator operational knobs only. Scoring thresholds live in docs/agent-engineering/SCORING-SPEC.md. File-count complexity boundaries live in plans/project-context.md.",
+
+  "approval_required_actions": [
+    "destructive_file_delete",
+    "bulk_contract_rewrite",
+    "git_force_push",
+    "git_reset_hard",
+    "drop_table",
+    "rm_rf",
+    "amend_published_commit",
+    "merge_to_protected_branch",
+    "push_to_shared_infrastructure"
+  ],
 
   "review_pipeline_by_tier": {
     "TRIVIAL": {
@@ -29,34 +41,124 @@
     }
   },
 
-  "semantic_risk_policy": {
-    "_comment": "Every non-TRIVIAL plan MUST include all 7 categories exactly once. If a category is not applicable, set not_applicable with justification — never skip a row.",
-    "categories": [
-      "data_volume",
-      "performance",
-      "concurrency",
-      "access_control",
-      "migration_rollback",
-      "dependency",
-      "operability"
-    ],
-    "applicability_values": ["applicable", "not_applicable", "uncertain"],
-    "impact_values": ["HIGH", "MEDIUM", "LOW", "UNKNOWN"],
-    "disposition_values": ["resolved", "open_question", "research_phase_added", "not_applicable"],
-    "override_rule": "Any unresolved HIGH-impact semantic risk forces LARGE discipline (all three verify phases) regardless of file count."
+  "max_iterations_by_tier": {
+    "TRIVIAL": 2,
+    "SMALL": 2,
+    "MEDIUM": 5,
+    "LARGE": 5
   },
 
-  "verdict_routing": {
-    "_comment": "Verdict emitted by controlflow-verify. Routing determines the next action.",
-    "verdicts": {
-      "APPROVED": "All checks pass, Phase 1 actionable, criteria measurable. Proceed to implementation.",
-      "NEEDS_REVISION": "Ambiguous Phase 1, no rollback on destructive change, unverified paths, or vague criteria. List each finding with the exact section reference; re-audit after fix.",
-      "REJECTED": "Structural flaw; scope not deliverable as authored. Explain blockers; ask the user for direction; do not start coding."
+  "model_dispatch": {
+    "default_mode": "auto",
+    "auto_mode_allow_outer_model_omission": true,
+    "auto_mode_requires_runtime_marker": true
+  },
+
+  "retry_budgets": {
+    "max_retries_per_phase": 5,
+    "transient_max": 3,
+    "fixable_max": 1,
+    "needs_replan_max": 1,
+    "escalate_max": 0,
+    "model_unavailable_max": 2,
+    "per_wave_transient_reduction_threshold": 2,
+    "per_wave_parallelism_reduction_factor": 0.5
+  },
+
+  "stagnation_detection": {
+    "same_phase_failure_escalation_threshold": 3,
+    "same_classification_repeat_escalation": true
+  },
+
+  "session_telemetry": {
+    "template": "plans/templates/session-outcome-template.md",
+    "log_file": "plans/session-outcomes.md",
+    "write_timing": "before_completion_summary",
+    "archive_threshold_entries": 50
+  },
+
+  "tool_output_policy": {
+    "spill_directory_template": ".cache/tool-output/<task-slug>/",
+    "task_slug_pattern": "^[a-zA-Z0-9_-]+$",
+    "purge_timing": "completion_gate_only",
+    "max_total_mb": null
+  },
+
+  "plan_review_gate_trigger_conditions": {
+    "min_phases": 3,
+    "confidence_threshold": 0.9,
+    "high_risk_scope_triggers_review": true,
+    "applicable_high_impact_risk_triggers_review": true
+  },
+
+  "batch_approval": {
+    "approval_per": "wave",
+    "exception_destructive_phases": "per_phase"
+  },
+
+  "budget_defaults": {
+    "enabled": false,
+    "token_cap": null,
+    "wall_clock_s": null,
+    "cost_usd": null,
+    "enable_reflection": false,
+    "notes": "Orthogonal to retry_budgets. Reaching a budget cap classifies as 'escalate', not a failed attempt."
+  },
+
+  "resource_profiles": {
+    "default": {
+      "max_parallel_agents": 10,
+      "phase_file_limit": null,
+      "max_changed_files_default": null,
+      "context_packet_required_tiers": [],
+      "research_brief_required_for_non_trivial_research": false,
+      "code_context_pack_preferred": false,
+      "require_phase_task_card": false,
+      "budget_exceeded_classification": "needs_replan",
+      "notes": "Baseline behavior; existing plans remain compatible."
     },
-    "confidence_thresholds": {
-      "ready_for_execution_min": 0.9,
-      "uncertain_count_cap": 0.85,
-      "high_impact_open_question_cap": 0.7
+    "small_local": {
+      "max_parallel_agents": 2,
+      "phase_file_limit": 5,
+      "max_changed_files_default": 3,
+      "context_packet_required_tiers": ["SMALL", "MEDIUM", "LARGE"],
+      "research_brief_required_for_non_trivial_research": true,
+      "code_context_pack_preferred": true,
+      "require_phase_task_card": true,
+      "budget_exceeded_classification": "needs_replan",
+      "notes": "Resource-aware profile for local small LLM execution: compact artifacts first, bounded files per phase, and replan before widening scope."
     }
+  },
+
+  "final_review_gate": {
+    "enabled_by_default": false,
+    "auto_trigger_tiers": ["LARGE"],
+    "allow_user_trigger": true,
+    "max_fix_cycles": 1
+  },
+
+  "memory_hygiene": {
+    "_comment": "Memory cleanup enforcement thresholds. notes_md_max_lines aligns with Pass 7 notes_md_line_budget in evals/scenarios/memory-architecture-references.json.",
+    "notes_md_max_lines": 20,
+    "archive_completed_plans_threshold_days": 14,
+    "archive_eligible_statuses": ["DONE", "SUPERSEDED", "DEFERRED"],
+    "repo_memory_dedup_required": true,
+    "memory_content_types": ["user", "feedback", "project", "reference"],
+    "session_notes_template_path": "plans/templates/session-notes-template.md",
+    "stale_memory_freshness_days": 1
+  },
+
+  "compaction": {
+    "max_consecutive_failures": 3,
+    "circuit_breaker_action": "escalate",
+    "_comment": "autoCompact circuit breaker — adapted from prior art; no local source in this repo. Max consecutive autocompact failures = 3."
+  },
+
+  "task_cache": {
+    "_comment": "Pre-wave cache guard knobs. The guard is recommendation-only and cannot auto-complete phases or skip approval gates.",
+    "enabled": true,
+    "lookback_phases": 10,
+    "similarity_scope": "phase_title_and_file_targets",
+    "recommendation_only": true
   }
 }

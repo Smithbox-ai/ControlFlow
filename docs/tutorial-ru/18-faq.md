@@ -1,245 +1,358 @@
 # Глава 18 — FAQ
 
-Часто задаваемые вопросы о slim-модели ControlFlow, сгруппированные по категориям.
+> Сложные вопросы, которые задают чаще всего. Ответы со ссылками на главы и файлы.
 
 ---
 
-## Концептуальные вопросы (1–10)
+## Концептуальные
 
-**Q1. В чём разница между AssumptionVerifier-subagent и PlanAuditor-subagent?**
+### 1. Зачем нужен AssumptionVerifier, если есть PlanAuditor?
 
-`PlanAuditor-subagent` (verify фаза 1) ревьюит **дизайн**: архитектура ли sound, риски ли покрыты, запланирован ли rollback, соответствует ли артефакт схеме? `AssumptionVerifier-subagent` (verify фаза 2) проверяет **фактическую точность**: утверждения плана действительно истинны (указанные files/symbols существуют, предположения bounded)? План может быть архитектурно sound, но содержать ложные утверждения о кодовой базе. Это разные оси, поэтому обе фазы запускаются на тирах MEDIUM+. Обе — inline фазы `controlflow-verify`, не диспатченные сабагенты.
+Они смотрят план под **разными углами** и часто находят разные дефекты:
 
----
+- **PlanAuditor** — adversarial reviewer для **архитектуры, безопасности, риска и completeness**. Спрашивает: «А не проявил ли план слепых пятен в дизайне? Не пропустил ли security-гайдлайн? Покрыты ли все требования?».
+- **AssumptionVerifier** — mirage detector для **assumption-fact confusion**. Спрашивает: «А не выдал ли Planner предположение за установленный факт? Где evidence для этого утверждения?».
 
-**Q2. В чём разница между ABSTAIN и REPLAN_REQUIRED?**
+Они **дополняют** друг друга. PlanAuditor может одобрить план, в котором есть скрытое предположение, что библиотека X поддерживает feature Y — а AssumptionVerifier именно эту mirage-эту найдёт. Поэтому на тире MEDIUM/LARGE они работают **параллельно**.
 
-- **ABSTAIN** (от Planner'а): «Не могу оценить с достаточной уверенностью.» **Не** блокирует пайплайн; записывается как uncertainty.
-- **REPLAN_REQUIRED** (от Planner'а): «Требования противоречивы или отсутствуют; планирование невозможно.» **Блокирует** прогресс — пользователь должен уточнить требования.
-
-ABSTAIN — эпистемический сигнал. REPLAN_REQUIRED — жёсткий блокер.
+→ [Глава 07](07-review-pipeline.md).
 
 ---
 
-**Q3. Почему Planner сам не вызывает `controlflow-verify`?**
+### 2. Когда использовать ABSTAIN, а когда REPLAN_REQUIRED?
 
-Разделение забот. Planner — **planning**-агент: он производит артефакт и handoff'ает. `controlflow-verify` — **адверсариален**: он пытается опровергнуть план. Пользователь запускает verify как отдельный гейт, чтобы Planner не мог одобрить свою же работу. Planner не needs знать tier-gated глубину фаз; он фокусируется на качестве плана.
+Оба — терминальные статусы Planner-а, но **смысл разный**:
 
----
+- **ABSTAIN** = «я не могу безопасно дать план». Уточнения исчерпаны, но всё равно слишком много неизвестного. Обычно идёт назад к пользователю.
+- **REPLAN_REQUIRED** = «план явно нужно переработать». Обычно эмиттится **во время уже исполняющегося плана** (например, после `failure_classification: needs_replan`). Сигнал Planner-у вернуться к фазе с конкретным fix-hint-ом.
 
-**Q4. Почему в slim-модели нет файла агента `Orchestrator`?**
+Простое правило: ABSTAIN — «не знаю как делать», REPLAN_REQUIRED — «знаю, что переделать».
 
-Orchestrator — **retired** как поставляемый агент. Legacy state machine (`PLANNING` / `WAITING_APPROVAL` / `PLAN_REVIEW` / `ACTING` / `REVIEWING` / `COMPLETE`), dispatch, waves и gates ушли. С февраля 2026 Copilot делает всё это нативно: subagent dispatch + parallelism — GA, `/plan` mode — GA, agentic code review — GA, approvals + custom instructions — GA. Держать ControlFlow dispatch state machine поверх этого дублировало бы нативные возможности — именно то, что slim-модель запрещает. Planner + нативный Copilot покрывают оркестрацию; пайплайн plan → verify → review — это то, что теперь значит «оркестрация». См. `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md`.
-
----
-
-**Q5. В чём разница между `failure_classification` и mid-execution clarification?**
-
-- **`failure_classification`** (`transient` / `fixable` / `needs_replan` / `escalate` / `model_unavailable`): описывает **тип сбоя** для routing. Записывается в lifecycle-секциях плана. Retry routing — задача нативного Copilot; `needs_replan` re-входит в пайплайн ControlFlow через Planner.
-- **Mid-execution clarification**: нативная ask-questions-поверхность Copilot показывает вопрос пользователю. Не сбой — вопрос. Если ответ меняет file scope, user-visible поведение, архитектуру или обработку destructive-risk, пользователь re-invoke'ит `@controlflow-planner` для targeted replan.
+→ [Глава 06](06-planning.md), [Глава 13](13-failure-taxonomy.md).
 
 ---
 
-**Q6. Почему «governance бьёт prompt»?**
+### 3. Почему Planner не вызывает ревьюеров сам?
 
-Governance-файлы (`governance/*.json`) — **явные контракты**, check-in'утые в репозиторий. Промпты агентов содержат **поведение по умолчанию** и эвристики. При конфликте governance-файлы побеждают, потому что:
-1. Они versioned и auditable.
-2. Их можно обновлять без правки каждого custom agent prompt.
-3. Они — single source of truth для операционных политик (tier-gated verify depth, semantic-risk policy, verdict routing).
+**Разделение ответственности:**
 
----
+- Planner — **автор**. Его работа — написать лучший возможный план.
+- Orchestrator — **координатор**. Его работа — решать, нужно ли ревью, кому делегировать, как маршрутизировать findings.
 
-**Q7. Почему skill'и — это Markdown-файлы, а не код?**
+Если бы Planner сам вызывал PlanAuditor, он стал бы судьёй своих собственных плановых решений. Это нарушает принцип independence. Также Orchestrator имеет глобальный контекст (тиры, governance, retry-budgets) — Planner не должен дублировать эту логику.
 
-Skill'и предоставляют **guidance и паттерны** для LLM-агента — они часть prompt-контекста, не исполняемый код. Агент читает skill-файл так же, как разработчик читает coding standard: это информирует decision-making. Делать их исполняемым кодом потребовало бы runtime-окружения, которого slim-модель намеренно избегает (ControlFlow — это prompt/governance/eval-слой поверх нативного Copilot, не runtime).
+Принципиально: **Planner authors plans; Orchestrator governs their review and execution**.
 
----
-
-**Q8. Почему ≤3 skill'ов на фазу?**
-
-Больше skill'ов в контексте создают шум и token-overhead. Skill'и наиболее эффективны, когда они laser-focused на конкретном домене текущей фазы. Если фаза, кажется, требует больше трёх — она, скорее всего, слишком широка и её надо декомпозировать на меньшие фазы.
+→ [.github/copilot-instructions.md](../../.github/copilot-instructions.md), [Глава 05](05-orchestration.md).
 
 ---
 
-**Q9. Почему PlanAuditor-subagent и AssumptionVerifier-subagent исключают `transient`?**
+### 4. Почему PLAN_REVIEW нет в `workflow_state` enum?
 
-Потому что их сбои по природе **структурные**. Если `PlanAuditor-subagent` находит проблему, он нашёл реальный изъян плана — не timeout. Если `AssumptionVerifier-subagent` идентифицирует mirage, это реальный фактический пробел — не network error. Retry с тем же scope (transient-логика) дал бы тот же результат. Сбои этих фаз всегда `fixable`, `needs_replan` или `escalate`.
+**PLAN_REVIEW — это лейбл стадии в промпте Orchestrator-а**, а не самостоятельное состояние state machine. Его операционный wire-эквивалент — это серия событий с `event_type: PHASE_REVIEW_GATE`, эмитящихся **во время** `workflow_state: WAITING_APPROVAL` (или промежуточно).
 
----
+Иными словами: «PLAN_REVIEW» — это **что мы делаем**, а `workflow_state` — это **в каком статусе machine находится**. Schema enum зафиксирован как 5 значений (PLANNING/WAITING_APPROVAL/ACTING/REVIEWING/COMPLETE) и это часть стабильного контракта.
 
-**Q10. «Приход плана = implicit approval»?**
-
-**Нет.** Артефакт плана в `plans/<task-slug>-plan.md` — это **reviewable-вход**. Пользователь должен запустить `/controlflow-verify` (на SMALL+ работе) и получить `APPROVED` до начала имплементации. Наличие артефакта плана не обходит verify-гейт.
+→ [Глава 09](09-schemas.md), [`schemas/orchestrator.gate-event.schema.json`](../../schemas/orchestrator.gate-event.schema.json).
 
 ---
 
-## Технические вопросы (11–20)
+### 5. Чем `failure_classification` отличается от `clarification_request`?
 
-**Q11. Какова каноническая команда верификации?**
+Это **разные routing paths**, не варианты одного:
 
-```bash
+- **`failure_classification`** возникает, когда subagent **не смог завершить** (FAILED/NEEDS_REVISION/REJECTED). Routing — через таблицу retry/escalate.
+- **`clarification_request`** возникает, когда subagent **успешно дошёл до развилки и хочет user input** (NEEDS_INPUT). Routing — всегда через `vscode/askQuestions`.
+
+Даже если одновременно присутствует и `failure_classification`, и `clarification_request` — clarification path **первичен**: сначала спросить пользователя, потом смотреть, что делать с failure.
+
+→ [Глава 13](13-failure-taxonomy.md), [Глава 15](15-case-studies.md).
+
+---
+
+### 6. Что такое «governance побеждает промпт»?
+
+Если в `*.agent.md` написано одно, а в `governance/runtime-policy.json` — другое (по operational параметрам), authoritative — **governance**. Это нужно, потому что:
+- Governance можно менять без переписывания промптов.
+- Промпты могут отстать от обновлённой политики.
+- Eval-харнесс синхронизирует governance с реальным поведением.
+
+Из `Orchestrator.agent.md`: «governance/runtime-policy.json is the authoritative source for trigger thresholds, tier routing, max_iterations, and retry budgets».
+
+→ [Глава 10](10-governance.md).
+
+---
+
+### 7. Почему skill — это не пример кода?
+
+Skill в ControlFlow — это **инструкция для агента**, как правильно действовать в домене. Если бы skill был примером кода, он бы:
+- Приводил к слепому копированию.
+- Устаревал быстрее.
+- Не объяснял **почему**.
+
+Skill объясняет **принципы и паттерны**, чтобы агент мог их применить к **своему** контексту. Например, `tdd-patterns.md` не показывает «вот так выглядит unit test», а описывает «вот как организуется red-green-refactor цикл, что тестировать, а что нет».
+
+→ [Глава 11](11-skills.md).
+
+---
+
+### 8. Почему ≤3 skills на фазу?
+
+Эмпирический лимит. Если фаза требует >3 skills — это сигнал, что:
+- Фаза слишком широкая (нужно разделить).
+- Или skill слишком общий (нужно конкретизировать).
+- Или контекст-окно агента будет перегружено.
+
+3 skill-паттерна — это уже значительный объём чтения для имплементера. Больше — превращает инструктаж в шум.
+
+→ [Глава 11](11-skills.md).
+
+---
+
+### 9. Почему PA и AV не возвращают `transient`?
+
+Их работа — **содержательный** анализ плана. Если PA «упал по timeout-у» — это не классифицируется как «flaky review». Либо PA нашёл проблему, либо нет. Statistically-flaky review подорвал бы всю надёжность ревью-пайплайна.
+
+Поэтому governance запрещает им возвращать transient. Если PA реально не смог выполниться (например, infrastructure issue) — это уже escalate.
+
+→ [Глава 13](13-failure-taxonomy.md).
+
+---
+
+### 10. Что такое «reviewable input vs implicit approval»?
+
+Когда Planner передаёт план через `plan_path`, Orchestrator получает **указание на артефакт**, а не **разрешение на исполнение**. Orchestrator всё равно:
+- Прочитает план.
+- Проверит триггеры PLAN_REVIEW.
+- Соблюдёт complexity-routing.
+- Запросит approval у пользователя.
+
+Если бы plan_path считался implicit approval, LARGE-планы пропустили бы PLAN_REVIEW — что было бы серьёзной дырой.
+
+→ [Глава 05](05-orchestration.md), [Глава 15](15-case-studies.md).
+
+---
+
+## Технические
+
+### 11. Какая каноническая команда верификации?
+
+```sh
 cd evals && npm test
 ```
 
-Должна запускаться из директории `evals/`, **не** из корня репозитория. Запускает оффлайн-проверки: структурную валидацию, prompt-behavior-контракты, drift detection, tutorial parity, skill discoverability, capability matrix, plugin manifest parity, contract-drift и doc-count consistency. Никаких LLM-вызовов, никаких сетевых вызовов.
+Запускает полный оффлайн набор проверок: schemas + behavior + handoff + drift. CI выполняет ровно её. → [Глава 14](14-evals.md).
 
 ---
 
-**Q12. Что происходит, если `executor_agent` пропущен в фазе?**
+### 12. Что произойдёт, если `executor_agent` не указан в фазе?
 
-`controlflow-verify` фаза 1 (structural audit) помечает это как структурный сбой → `NEEDS_REVISION`. План уходит обратно к Planner'у; фаза должна быть переиздана с явным `executor_agent` из enum восьми имён. Silent-infering запрещено.
+Orchestrator **не угадывает**. Из политики: «If a legacy phase omits `executor_agent`, do not infer silently. Route the plan back through `REPLAN` to Planner and stop the implementation batch until the phase is reissued with an explicit executor».
 
----
-
-**Q13. Где живёт taxonomy ролей?**
-
-Single source of truth — `governance/project-context-registry.json`. Человекочитаемое зеркало — в `plans/project-context.md` (таблицы Phase Executor Agents, Review Pipeline Agents и Agent Role Matrix). Drift-проверка Pass 14 (`validateProjectContextRegistryMirror`) сверяет их построчно. Не правьте зеркало независимо от реестра.
+→ [Глава 06](06-planning.md), [Глава 08](08-execution-pipeline.md).
 
 ---
 
-**Q14. Что происходит после `escalate`?**
+### 13. Что такое regression tracking в Plan Review?
 
-Нативный Copilot останавливается и предъявляет пользователю накопленные evidence сбоев. Пользователь принимает одно из решений:
-- Отменить задачу.
-- Дать clarification и разрешить retry.
-- Эскалировать на ручное вмешательство человека.
+На итерации 1 PA verifies некоторые items как «fine». На итерации 2 PA получает этот список как контекст. Если **ранее verified** item теперь fails — это автоматический BLOCKING regression.
 
-Для `escalate` есть **ноль автоматических retry**.
+Профилактика: Planner не должен «ломать» уже одобренные части плана при revision.
 
----
-
-**Q15. В чём разница между per-task и reusable-артефактами?**
-
-- **Per-task** (`plans/artifacts/<task-slug>/`): task-specific история, логи ревизий, deliverables. Не переиспользуется между задачами.
-- **Reusable** (`skills/patterns/`, `schemas/`, `governance/`): разделяется между всеми задачами. Изменения затрагивают всех потребителей.
-
-`NOTES.md` — **active-objective state**, не per-task history.
+→ [Глава 07](07-review-pipeline.md).
 
 ---
 
-**Q16. Какие 4 PreFlect-класса риска?**
+### 14. Что происходит после `escalate`?
 
-1. **High-risk-destructive** — действие уничтожает или необратимо изменяет данные.
-2. **Scope-drift** — действие выходит за scope плана.
-3. **Assumption** — агент действует на непроверенной предпосылке.
-4. **Dependency** — prerequisite для действия ещё не выполнен.
+1. Orchestrator транзит в `WAITING_APPROVAL`.
+2. Эмитит `HIGH_RISK_APPROVAL_GATE` event с findings.
+3. Показывает пользователю накопленные evidence.
+4. Ждёт явного решения. Никаких retry.
 
-Решение: `GO` / `PAUSE` / `ABORT`. Паттерн живёт в `skills/patterns/preflect-core.md`.
-
----
-
-**Q17. Когда срабатывает HIGH-risk override?**
-
-Когда запись `risk_review` имеет `applicability: applicable` AND `impact: HIGH` AND `disposition` не `resolved`, план трактуется как `LARGE` для verify depth независимо от количества файлов — запускаются все три verify-фазы. Правило закодировано в `governance/runtime-policy.json` → `semantic_risk_policy`.
+→ [Глава 05](05-orchestration.md), [Глава 13](13-failure-taxonomy.md).
 
 ---
 
-**Q18. Кто владеет циклом фикса, когда `controlflow-review` находит scope drift?**
+### 15. Где живут per-task артефакты vs повторно-используемые знания?
 
-Всегда **пользователь или новая фаза плана**, никогда `controlflow-review` сам. `controlflow-review` метит findings (severity, confidence, file, line, user impact, validation method); он их не чинит. Если фикс меняет file scope, пользователь re-invoke'ит `@controlflow-planner` для targeted replan; иначе нативный Copilot применяет фикс, а re-review — на усмотрение пользователя.
+| Тип | Где |
+|-----|-----|
+| Plan artifact | `plans/<task-slug>-plan.md` |
+| Plan artifacts (history, observability) | `plans/artifacts/<task-slug>/` |
+| Active objective | `NOTES.md` |
+| Repo conventions, commands | `/memories/repo/` |
+| Skill patterns | `skills/patterns/` |
 
----
-
-**Q19. Почему нет `governance/model-routing.json` или `governance/tool-grants.json`?**
-
-Оба **retired**. Выбор модели делегирован нативному Copilot (Auto model picker; pin модель только если роль требует). Доступ к инструментам объявляется per-agent в `tools:` frontmatter при воссоздании специализированного агента под `.github/agents/`; нет центрального файла tool-access grant для синхронизации. Slim-модель не поставляет поверхность, дублирующую нативную возможность Copilot. См. `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md`.
-
----
-
-**Q20. Почему `additionalProperties: false` во всех схемах?**
-
-Чтобы enforce **закрытый контракт**: любое неизвестное поле — ошибка, не silent-ignored. Это ловит:
-- Опечатки в именах полей.
-- Устаревшие payload (поле удалено, но всё ещё отправляется).
-- Schema drift (агент эмиттит поле, которое не ревьюлось).
-
-В slim-модели схемы — контрактная документация + ссылки на eval-фикстуры; правило closed-contract всё ещё anchor'ит eval-харнесс.
+→ [Глава 12](12-memory.md).
 
 ---
 
-## Операционные вопросы (21–25)
+### 16. Что такое 4 risk-класса PreFlect?
 
-**Q21. Что делать, если CI падает?**
+1. **Scope drift** — выходим ли за рамки задачи?
+2. **Schema/contract drift** — нарушим ли контракт между агентами?
+3. **Missing evidence** — есть ли доказательства для GO?
+4. **Safety/destructive** — нужна ли авторизация для irreversible действий?
 
-1. Запустите `cd evals && npm test` локально (удалите `evals/.cache/` сначала — кэш может маскировать ошибки после структурных правок).
-2. Прочитайте падающий проход и сообщение об ошибке.
-3. Для Pass 15 (doc-count): проверьте, что allowlisted-док указывает количество, не совпадающее с disk truth.
-4. Для Pass 7c (tutorial parity): проверьте heading aliases в `evals/scenarios/tutorial-parity/allowlist.json`.
-5. Для Pass 14 (registry mirror): проверьте `governance/project-context-registry.json` vs `plans/project-context.md`.
-6. Исправьте, перезапустите, подтвердите зелёный.
+Decision output: GO / REPLAN / ABSTAIN.
 
----
-
-**Q22. Как pin модель для конкретного custom agent?**
-
-По умолчанию **не делайте** — опустите строку `model:` в frontmatter файла агента, чтобы Copilot Auto model picker выбирал. Если роль действительно требует pinned модели, добавьте `model:` в frontmatter только этого агента. Центрального model-routing-файла для правки нет. Колонка `Model Routing Role` в taxonomy ролей — концептуальный capability tier, не routing-поверхность.
+→ [Глава 11](11-skills.md), [skills/patterns/preflect-core.md](../../skills/patterns/preflect-core.md).
 
 ---
 
-**Q23. Можно пропустить verdict-гейт?**
+### 17. Когда `final_review_gate` активируется автоматически?
 
-**Нет.** Пропуск verify-гейта (имплементация до `APPROVED`) или review-гейта (публикация до ревью findings) — нарушение контракта. Правила остановки — обязательные паузы: после записи плана, после того как verify вернёт verdict, и после того как review вернёт findings.
+Когда:
+- `enabled_by_default: true` в `governance/runtime-policy.json` **или**
+- `complexity_tier` плана входит в `auto_trigger_tiers` (по умолчанию — LARGE) **или**
+- Пользователь явно запросил.
 
----
+Активация даёт CodeReviewer-у в `review_scope: "final"` агрегированный список изменённых файлов и snapshot фаз.
 
-**Q24. Какие 7 категорий semantic risk?**
-
-Из `schemas/planner.plan.schema.json` → `risk_review.items.properties.category.enum`:
-1. `data_volume`
-2. `performance`
-3. `concurrency`
-4. `access_control`
-5. `migration_rollback`
-6. `dependency`
-7. `operability`
-
-Каждый не-TRIVIAL план должен включать все семь ровно один раз; используйте `not_applicable` с обоснованием, когда категория не релевантна — никогда не пропускайте строку.
+→ [Глава 08](08-execution-pipeline.md).
 
 ---
 
-**Q25. Каков процесс добавления нового специализированного агента?**
+### 18. Кто owns fix-cycle при final review BLOCKING?
 
-Slim-модель поставляет один агент (`@controlflow-planner`). Чтобы добавить специализированную персону, следуйте `docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md §5`:
-1. Создайте новый файл агента под `.github/agents/` с Copilot agent frontmatter (`name`, `description`, `tools`). Без `model:` по умолчанию.
-2. В теле процитируйте файлы `skills/patterns/`, которые персона должна загружать (бывшая static binding теперь Planner-injected).
-3. Напишите дисциплину персоны как prose (abstain when no executable harness is supplied; evidence over assertion; stop-the-line on regression).
-4. Planner теперь может назначать эту роль как `executor_agent` фазы. Исполнение — нативный Copilot.
+CodeReviewer **никогда** не fix-ит. Owner определяется правилом:
 
-Файла tool-access grant или model-routing для обновления нет — эти governance-поверхности retired.
+> **highest phase_id wins**: фаза с наибольшим `phase_id`, в чьём `files[]` встречается affected file, — это executor для fix.
 
----
+Orchestrator dispatchит этого executor-а с targeted scope. Re-run CodeReviewer (final mode), max 1 fix cycle. Если опять blocking — escalate.
 
-## Философские вопросы (26–28)
-
-**Q26. Почему процесс такой строгий, если LLM гибки?**
-
-LLM мощны, но ненадёжны для длинных multi-step задач без структуры. Строгий процесс обеспечивает:
-- **Воспроизводимость** — тот же вход, предсказуемое поведение.
-- **Аудитируемость** — каждый план, verdict и finding — письменный артефакт.
-- **Безопасность** — деструктивные операции требуют human approval.
-- **Отлаживаемость** — когда что-то идёт не так, taxonomy сбоев говорит точно, где и почему.
-
-Гибкость сохраняется там, где это важно (Idea Interview Planner'а, содержание паттернов); структура управляет там, где сбои дороги.
+→ [Глава 08](08-execution-pipeline.md), [Глава 15](15-case-studies.md).
 
 ---
 
-**Q27. Почему нет auto-merge или auto-deploy?**
+### 19. Почему trace_id — UUIDv4?
 
-ControlFlow — это **prompt/governance/eval-слой** поверх нативного Copilot. Нет скомпилированного продукта и нет runtime-деплоя. Коммиты затрагивают агент planner'а, skill'и, схемы и governance — изменения, требующие человеческого ревью. Auto-merge обошёл бы verify- и review-гейты, центральные для safety-модели системы.
+Стандартизованный формат для:
+- Корреляции логов между агентами в одной задаче.
+- Уникальности без центрального генератора.
+- Совместимости с observability-стек tools.
+
+Trace_id создаётся Orchestrator-ом в начале и пробрасывается во **все** gate-events и delegation payloads.
+
+→ [Глава 05](05-orchestration.md), [Глава 12](12-memory.md).
 
 ---
 
-**Q28. Можно использовать ControlFlow вне этого репозитория?**
+### 20. Почему `additionalProperties: false` во всех schemas?
 
-Да. Slim-поверхность (`.github/agents/`, `.github/skills/`, `.github/copilot-instructions.md`) плюс контракты (`schemas/`, `governance/`, `plans/templates/`, `plans/project-context.md`, `skills/`, `evals/`) portable. См. раздел Installation корневого `README.md`. Паттерны (формат плана, taxonomy сбоев, архитектура памяти, verify/review-пайплайн, skill-система) общи и адаптируются к любому Copilot-оснащённому репо. Поскольку slim-модель делегирует исполнение, доступ к инструментам и выбор модели нативному Copilot, per-agent-runtime портировать не нужно.
+Защита от silent контрактных drift. Если агент A начнёт эмиттить лишнее поле X, валидация упадёт — и проблема будет поймана **до** того, как агент B начнёт неявно полагаться на X.
+
+→ [Глава 09](09-schemas.md).
+
+---
+
+## Операционные
+
+### 21. Что делать, если CI упал?
+
+1. Сначала запустить `cd evals && npm test` локально.
+2. Прочитать failure: какой pass / какой файл / какое правило.
+3. Чаще всего — пропущено обновление `tool-grants.json`, `rename-allowlist.json` или дрейф P.A.R.T.
+4. Поправить, перезапустить локально, push.
+
+→ [Глава 14](14-evals.md).
+
+---
+
+### 22. Можно ли поменять модель агента?
+
+Да, но через governance:
+1. Обновить `model:` в frontmatter агента (литеральная строка).
+2. Обновить `model_role:` если меняется логическая роль.
+3. Обновить `governance/model-routing.json` если меняется mapping.
+4. `cd evals && npm test`.
+
+→ [Глава 10](10-governance.md).
+
+---
+
+### 23. Можно ли пропустить approval gate?
+
+**Нет**. Approval gate — non-negotiable правило. Из политики: «No gate skipping». Это включает:
+- Approval после plan.
+- Approval после каждого phase review.
+- Approval перед completion.
+- Approval перед любой destructive операцией.
+
+→ [Глава 05](05-orchestration.md).
+
+---
+
+### 24. Что такое 7 категорий semantic risk?
+
+Из `plans/project-context.md` — Semantic Risk Taxonomy:
+
+1. Cross-cutting consistency
+2. Data integrity / migration
+3. Backward compatibility
+4. Security / authentication / authorization
+5. Performance / scalability
+6. Operational / observability
+7. UX / accessibility
+
+Каждый план в `risk_review[]` явно адресует все 7 со статусом (`addressed` / `not_applicable` / `LOW` / `MEDIUM` / `HIGH`).
+
+→ [Глава 06](06-planning.md), [plans/project-context.md](../../plans/project-context.md).
+
+---
+
+### 25. Можно ли добавить нового агента?
+
+Да, по процессу добавления агента из `CONTRIBUTING.md`. Кратко:
+1. Создать `<NewAgent>.agent.md` с P.A.R.T. структурой.
+2. Создать `schemas/<new-agent>.<output>.schema.json`.
+3. Зарегистрировать в `plans/project-context.md` (если не review-only).
+4. Добавить в governance grants и сценарии в `evals/scenarios/`.
+
+→ [CONTRIBUTING.md](../../CONTRIBUTING.md), [Глава 14](14-evals.md).
+
+---
+
+## Философские
+
+### 26. Почему такой строгий процесс?
+
+Главная цель ControlFlow — **детерминизм и надёжность** multi-agent оркестрации. Хаотичный flow = плохие результаты, дорогие undo, потерянное доверие. Жёсткие гейты, контракты, валидация — всё это плата за **повторяемость**.
+
+→ [Глава 00](00-introduction.md).
+
+---
+
+### 27. Почему нет «авто-merge» или «авто-deploy»?
+
+Approval gate перед completion. Принципы:
+- Никаких silent destructive действий.
+- Никаких speculative success claims.
+- User всегда last gatekeeper.
+
+ControlFlow — **engineering acceleration**, не automation-без-надзора.
+
+→ [Глава 05](05-orchestration.md).
+
+---
+
+### 28. Это можно использовать вне ControlFlow-репо?
+
+ControlFlow сейчас — **prompts/governance/eval репо**, не runtime engine. Чтобы применить к другому проекту, нужно:
+- Скопировать агентские файлы (`*.agent.md`) и схемы.
+- Адаптировать governance под свои тулзы.
+- Настроить eval-харнесс под свой контент.
+
+См. [docs/agent-engineering/AGENT-AS-TOOL.md](../agent-engineering/AGENT-AS-TOOL.md) для будущей MCP-style экспозиции.
+
+→ [Глава 00](00-introduction.md).
 
 ---
 
 ## См. также
 
-- [Глава 00 — Введение](00-introduction.md)
-- [Глава 16 — Упражнения](16-exercises.md)
 - [Глава 17 — Глоссарий](17-glossary.md)
-- [plans/project-context.md](../../plans/project-context.md)
-- [docs/agent-engineering/NATIVE-DELEGATION-BOUNDARY.md](../agent-engineering/NATIVE-DELEGATION-BOUNDARY.md)
+- [Глава 16 — Упражнения](16-exercises.md)
+- [README пособия](README.md)
 - [docs/agent-engineering/](../agent-engineering/)

@@ -1,5 +1,18 @@
 {
   "active_artifacts": [
+    "Orchestrator.agent.md",
+    "Planner.agent.md",
+    "PlanAuditor-subagent.agent.md",
+    "AssumptionVerifier-subagent.agent.md",
+    "ExecutabilityVerifier-subagent.agent.md",
+    "CoreImplementer-subagent.agent.md",
+    "UIImplementer-subagent.agent.md",
+    "PlatformEngineer-subagent.agent.md",
+    "CodeReviewer-subagent.agent.md",
+    "Researcher-subagent.agent.md",
+    "CodeMapper-subagent.agent.md",
+    "TechnicalWriter-subagent.agent.md",
+    "BrowserTester-subagent.agent.md",
     "schemas/orchestrator.gate-event.schema.json",
     "schemas/orchestrator.delegation-protocol.schema.json",
     "schemas/planner.plan.schema.json",
@@ -15,17 +28,19 @@
     "schemas/technical-writer.execution-report.schema.json",
     "schemas/browser-tester.execution-report.schema.json",
     "schemas/clarification-request.schema.json",
+    "governance/tool-grants.json",
     "governance/runtime-policy.json",
+    "governance/agent-grants.json",
     "evals/validate.mjs",
     "evals/scenarios/*.json",
     "README.md",
     ".github/copilot-instructions.md",
-    ".github/agents/controlflow-planner.agent.md",
     "plans/project-context.md",
     "evals/README.md",
     "skills/index.md",
     "skills/README.md",
     "plans/session-outcomes.md",
+    "plans/templates/gate-event-template.md",
     "plans/templates/phase-completion-template.md",
     "plans/templates/plan-document-template.md",
     "plans/templates/session-outcome-template.md",
@@ -34,11 +49,14 @@
     "docs/agent-engineering/CLARIFICATION-POLICY.md",
     "docs/agent-engineering/MIGRATION-CORE-FIRST.md",
     "docs/agent-engineering/PART-SPEC.md",
+    "docs/agent-engineering/RELIABILITY-GATES.md",
     "docs/agent-engineering/SCORING-SPEC.md",
+    "docs/agent-engineering/TOOL-ROUTING.md",
     "docs/agent-engineering/PROMPT-BEHAVIOR-CONTRACT.md",
     "evals/package.json",
     "evals/package-lock.json",
-    "evals/tests/prompt-behavior-contract.test.mjs"
+    "evals/tests/prompt-behavior-contract.test.mjs",
+    "evals/tests/orchestration-handoff-contract.test.mjs"
   ],
   "schema_refs": {
     "schemas/orchestrator.gate-event.schema.json": "schemas/orchestrator.gate-event.schema.json",
@@ -67,6 +85,13 @@
       "reason": "legal|attribution",
       "allowed_names": [
         "Atlas"
+      ]
+    },
+    {
+      "path": "BrowserTester-subagent.agent.md",
+      "reason": "runtime stem preservation",
+      "allowed_names": [
+        "BrowserTester"
       ]
     }
   ]

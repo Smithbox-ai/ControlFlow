@@ -1,0 +1,26 @@
+{
+  "id": "code-mapper-contract",
+  "target_agent": "CodeMapper-subagent",
+  "goal": "Discovery output is schema-compliant, includes minimum 3 search runs, and provides files with key locations",
+  "input": {
+    "task": "Map all files related to executor routing in the orchestration system",
+    "scope": "codebase discovery"
+  },
+  "expected": {
+    "schema": "schemas/code-mapper.discovery.schema.json",
+    "required_status": [
+      "COMPLETE",
+      "ABSTAIN"
+    ],
+    "must_include": [
+      "search_runs",
+      "files",
+      "answer",
+      "scope_in",
+      "scope_out",
+      "next_steps"
+    ],
+    "search_runs_min": 3,
+    "parallel_search_mandate": "CodeMapper must execute 3-10 parallel searches before synthesizing results"
+  }
+}

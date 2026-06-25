@@ -1,0 +1,38 @@
+{
+  "_expected_validation": "fail: mirage_findings contains a BLOCKING severity entry but failure_classification is absent",
+
+  "schema_version": "1.0.0",
+  "agent": "AssumptionVerifier-subagent",
+  "status": "COMPLETE",
+  "confidence": 0.85,
+  "abstain": { "is_abstaining": false, "reasons": [] },
+  "plan_reference": {
+    "plan_path": "plans/example-plan.md",
+    "phase_count": 2,
+    "plan_title": "Example Plan"
+  },
+  "mirage_findings": [
+    {
+      "pattern_id": 1,
+      "pattern_name": "phantom_api",
+      "classification": "PRESENCE_MIRAGE",
+      "severity": "BLOCKING",
+      "claim": "processWidgets() exists in utils/widgets.js",
+      "evidence": "File utils/widgets.js does not exist in the repository.",
+      "verdict": "MIRAGE"
+    }
+  ],
+  "scoring": {
+    "dimensions": [
+      { "name": "assumption_validity", "raw_score": 2, "formula": "1 verified / 2 total × 5 = 2.5 → 2" },
+      { "name": "error_coverage", "raw_score": 4, "formula": "error path evaluated" },
+      { "name": "integration_reality", "raw_score": 3, "formula": "partial integration check" },
+      { "name": "scope_fidelity", "raw_score": 4, "formula": "scope is well-bounded" },
+      { "name": "dependency_accuracy", "raw_score": 3, "formula": "dependencies partially verified" }
+    ],
+    "total_score": 16,
+    "max_possible": 25,
+    "percentage": 64
+  },
+  "recommendation": "Resolve phantom_api mirage before proceeding."
+}
