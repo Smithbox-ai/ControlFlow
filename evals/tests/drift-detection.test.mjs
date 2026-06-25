@@ -53,7 +53,6 @@ import {
   countTextLines,
   scanDocCountMismatches,
   validateDocCountConsistency,
-  validatePluginGenerationParity,
   validatePluginCorePortability,
 } from '../drift-checks.mjs';
 
@@ -1673,77 +1672,6 @@ console.log('\n=== Doc-count consistency (canonical doc totals vs files on disk)
       && wrongRu[0].includes('actual is 18'),
     `errors=${JSON.stringify(wrongRu)}`
   );
-}
-
-// ──────────────────────────────────────────────
-// Plugin generation parity — controlflow-codex matches shared-source (verbatim)
-// ──────────────────────────────────────────────
-console.log('\n=== Plugin generation parity (controlflow-codex == shared-source, no deltas) ===');
-{
-  const PLUGINS_ROOT = join(__dirname, '..', '..', 'plugins');
-
-  // Positive (real repo): codex output is byte-identical (line-ending normalized)
-  // to the shared-source managed file set.
-  const realResult = validatePluginGenerationParity(PLUGINS_ROOT);
-  check(
-    `PP1: real controlflow-codex matches shared-source (checked ${realResult.checked} managed files)`,
-    realResult.ok === true && realResult.checked > 0,
-    realResult.ok ? '' : `errors=${JSON.stringify(realResult.errors)}`
-  );
-
-  // Synthetic positive: matching content with CRLF vs LF → still parity (normalized).
-  const tmpOk = join(tmpdir(), `cf-plugin-parity-ok-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
-  mkdirSync(join(tmpOk, 'controlflow-shared-source', 'skills', 'demo'), { recursive: true });
-  mkdirSync(join(tmpOk, 'controlflow-codex', 'skills', 'demo'), { recursive: true });
-  try {
-    const manifest = {
-      version: '1.0.0',
-      targets: [
-        { source_path: 'skills', host_outputs: { codex: { dest_path: 'skills', allowed_deltas: false } } },
-      ],
-    };
-    writeFileSync(join(tmpOk, 'controlflow-shared-source', 'generation-manifest.json'), JSON.stringify(manifest));
-    writeFileSync(join(tmpOk, 'controlflow-shared-source', 'skills', 'demo', 'SKILL.md'), 'line one\nline two\n');
-    // Same content, CRLF line endings + a codex-only host file that must be ignored.
-    writeFileSync(join(tmpOk, 'controlflow-codex', 'skills', 'demo', 'SKILL.md'), 'line one\r\nline two\r\n');
-    writeFileSync(join(tmpOk, 'controlflow-codex', 'skills', 'demo', 'openai.yaml'), 'host: codex\n');
-    const okRes = validatePluginGenerationParity(tmpOk);
-    check(
-      'PP2: matching content (CRLF vs LF) + codex-only host file → parity holds',
-      okRes.ok === true && okRes.checked === 1,
-      `ok=${okRes.ok}, checked=${okRes.checked}, errors=${JSON.stringify(okRes.errors)}`
-    );
-  } finally {
-    rmSync(tmpOk, { recursive: true, force: true });
-  }
-
-  // Negative (synthetic): mismatching content + a missing managed file → drift caught.
-  // No real plugin files are mutated.
-  const tmpBad = join(tmpdir(), `cf-plugin-parity-bad-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
-  mkdirSync(join(tmpBad, 'controlflow-shared-source', 'skills'), { recursive: true });
-  mkdirSync(join(tmpBad, 'controlflow-codex', 'skills'), { recursive: true });
-  try {
-    const manifest = {
-      version: '1.0.0',
-      targets: [
-        { source_path: 'skills', host_outputs: { codex: { dest_path: 'skills', allowed_deltas: false } } },
-      ],
-    };
-    writeFileSync(join(tmpBad, 'controlflow-shared-source', 'generation-manifest.json'), JSON.stringify(manifest));
-    writeFileSync(join(tmpBad, 'controlflow-shared-source', 'skills', 'a.md'), 'source content\n');
-    writeFileSync(join(tmpBad, 'controlflow-shared-source', 'skills', 'b.md'), 'managed but absent in codex\n');
-    writeFileSync(join(tmpBad, 'controlflow-codex', 'skills', 'a.md'), 'TAMPERED content\n');
-    const badRes = validatePluginGenerationParity(tmpBad);
-    check(
-      'PP3: tampered content + missing managed file → drift caught with relative paths',
-      badRes.ok === false
-        && badRes.errors.some(e => e.includes('skills/a.md') && e.includes('hash mismatch'))
-        && badRes.errors.some(e => e.includes('skills/b.md') && e.includes('missing managed file')),
-      `ok=${badRes.ok}, errors=${JSON.stringify(badRes.errors)}`
-    );
-  } finally {
-    rmSync(tmpBad, { recursive: true, force: true });
-  }
 }
 
 // ──────────────────────────────────────────────

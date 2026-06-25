@@ -27,7 +27,7 @@ Index of governance and engineering policy documents. Each agent loads the relev
 
 The repository contains adaptations of the ControlFlow system for non-VS Code environments and IDE integrations:
 
-- **Codex CLI**: See `plugins/controlflow-codex/README.md` for the portable skills and artifacts adapter.
+- **Codex CLI**: The ControlFlow for Codex plugin now lives in its own repository at `github.com/Smithbox-ai/ControlFlowCodex`.
 - **Claude Code**: See `plugins/controlflow-claude-code/README.md` for the native plugin skills, agents, and local development lifecycle.
 - **Cursor IDE**: See [`CURSOR-SUPPORT.md`](CURSOR-SUPPORT.md) for rules, skills, subagents, and `plugins/controlflow-cursor/`. Optional CI patterns: [`CURSOR-SDK.md`](CURSOR-SDK.md). Cursor support does not alter VS Code tool grants.
 

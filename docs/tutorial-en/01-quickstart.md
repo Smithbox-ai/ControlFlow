@@ -25,7 +25,6 @@ ControlFlow/
 │   └── artifacts/          ← Per-task history
 ├── plugins/
 │   ├── controlflow-claude-code/  ← Portable Claude Code plugin
-│   └── controlflow-codex/        ← Portable Codex CLI plugin
 ├── docs/
 │   └── agent-engineering/  ← Engineering policy docs
 └── NOTES.md                ← Active objective state

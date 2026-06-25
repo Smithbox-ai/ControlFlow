@@ -33,8 +33,7 @@ $repoRoot = (Resolve-Path (Join-Path $pluginRoot "..\..")).Path
 $cfRepoRules = Join-Path $repoRoot ".cursor\rules"
 $consumerRules = @(
     "controlflow-core.mdc",
-    "controlflow-planning.mdc",
-    "controlflow-orchestration.mdc"
+    "controlflow-planning.mdc"
 )
 $targetRules = Join-Path $cursorDir "rules"
 New-Item -ItemType Directory -Path $targetRules -Force | Out-Null

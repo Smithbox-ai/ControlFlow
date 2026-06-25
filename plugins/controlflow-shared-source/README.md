@@ -1,62 +1,71 @@
 # ControlFlow Shared Source Generator
 
-This directory is the source-of-truth root for generated ControlFlow plugin skill and template assets shared by the Codex and Cursor plugin packages. The Claude Code plugin (`plugins/controlflow-claude-code/`) is standalone and hand-maintained — it is intentionally NOT generated or managed by this generator.
+This directory is the source of truth for the portable ControlFlow skills generated into
+the Cursor plugin package.
 
-Generated outputs remain tracked and standalone under:
+## Portable Surface
 
-- `plugins/controlflow-codex/skills/`
-- `plugins/controlflow-codex/templates/`
+- `controlflow-plan` — durable ControlFlow plan artifacts, complexity tiers, semantic-risk
+  review, and standalone plan-format fallback.
+- `controlflow-verify` — inline tier-gated structural audit, mirage detection, and
+  cold-start executability verification.
+- `controlflow-review` — plan-conformance and evidence layer over native host review.
+
+The generated portable surface is **3 skills, 0 plugin subagents**.
+
+## Native Host Boundary
+
+The portable plugins do not recreate host runtime behavior:
+
+- no router skill; the host already selects skills from descriptions or explicit
+  invocation
+- no spec skill; native planning and direct clarification own requirement discovery
+- no orchestration or strict-workflow skill; the host owns task execution and live state
+- no approval, sandbox, retry, subagent-lifecycle, model-routing, or memory engine
+- no separate plan-audit, assumption-verifier, or executability-verifier skills; their
+  useful checks are consolidated in `controlflow-verify`
+- no generic review replacement; `controlflow-review` adds plan drift and evidence
+  discipline
+
+## Standalone Planning
+
+`controlflow-plan` prefers repository-local
+`schemas/planner.plan.schema.json` and `plans/templates/plan-document-template.md` when
+present. Its bundled `references/plan-format.md` keeps the installed plugin useful in
+repositories that do not contain ControlFlow's canonical files.
+
+## Generated Outputs
+
 - `plugins/controlflow-cursor/skills/`
-- `plugins/controlflow-cursor/templates/`
 
-The generator is intentionally additive. It does not move, delete, or require any existing plugin package at runtime.
+Host-specific UI metadata files are package-specific and not part of the shared generated target.
 
-## Layout
-
-- `generation-manifest.json` declares canonical source paths and generated output targets.
-- `skills/` contains canonical shared skill sources.
-- `templates/` contains canonical shared report template sources.
-- `host-overrides/codex/` contains Codex-specific overlays when needed.
-- `host-overrides/cursor/` contains Cursor-specific skill overlays.
-- `scripts/sync-plugin-assets.ps1` validates or writes declared generated targets.
-- `scripts/validate-generated-assets.ps1` runs read-only drift validation.
+The Claude Code plugin is standalone and hand-maintained.
 
 ## Commands
 
-Validate without writing:
+Validate generated parity without writing:
 
 ```powershell
 powershell.exe -ExecutionPolicy Bypass -NoProfile -File plugins/controlflow-shared-source/scripts/validate-generated-assets.ps1 -RepoRoot .
 ```
 
-Write declared generated targets only:
+Synchronize declared outputs:
 
 ```powershell
 powershell.exe -ExecutionPolicy Bypass -NoProfile -File plugins/controlflow-shared-source/scripts/sync-plugin-assets.ps1 -RepoRoot . -Write
 ```
 
-Use `-Host codex` or `-Host cursor` to limit either command to one plugin output tree.
+Use `-Host cursor` to limit the operation.
 
 ## Safety Contract
 
-Write mode copies only the files declared by the manifest and any declared host override overlay. It does not delete unmanaged files or directories. Validation mode performs hash checks only and exits non-zero on drift.
+The generator writes only declared files and does not delete retired output directories.
+Package migrations must remove obsolete paths explicitly, then run parity validation.
 
-Host `generation-overrides.json` files may derive a generated text file from canonical source plus small declared insertions. Use this when a host needs a few invocation lines but a full file override would duplicate the canonical template.
+## Intentional Divergences
 
-## Selective Core Portability
-
-`core-portability-matrix.json` records which core ControlFlow invariants portable plugins adopt, adapt, or intentionally exclude. It stores evidence paths and short semantic anchors rather than copying core policy prose. The offline eval suite validates this contract in Pass 16.
-
-### Portable Runtime Policy Subset
-
-The portable runtime-policy snapshot keeps host-neutral review routing, retry discipline, batch approval, pre-wave cache recommendations, and transient-wave throttling. It does not attempt to mirror every top-level core runtime-policy block.
-
-### Portable Simplicity Discipline
-
-The Minimum Viable Change Ladder is portable: before adding code, phases, abstractions, or dependencies, agents check whether the accepted scope can be handled by existing project behavior, the standard library, a native platform feature, an already-installed dependency, or one localized line. Review and plan-audit skills treat avoidable over-engineering as a maintainability signal without weakening safety, validation, accessibility, rollback, or explicitly requested behavior.
-
-### Intentional Divergences
-
-- `model_unavailable` remains an intentional divergence because portable skills do not own model substitution.
-- VS Code model routing, tool grants, and the fixed agent roster remain core-only.
-- Core session telemetry, compaction, and budgets remain host-runtime concerns.
+- Host model routing and `model_unavailable` handling stay with the host.
+- Tool grants and fixed agent rosters stay with the core host configuration.
+- Session telemetry, compaction, budgets, approvals, sandboxing, and memories stay with
+  the host runtime.

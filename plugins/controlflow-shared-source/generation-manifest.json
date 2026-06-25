@@ -4,26 +4,8 @@
     {
       "source_path": "skills",
       "host_outputs": {
-        "codex": {
-          "dest_path": "skills",
-          "allowed_deltas": false
-        },
         "cursor": {
           "dest_path": "skills",
-          "override_path": "skills",
-          "allowed_deltas": true
-        }
-      }
-    },
-    {
-      "source_path": "templates",
-      "host_outputs": {
-        "codex": {
-          "dest_path": "templates",
-          "allowed_deltas": false
-        },
-        "cursor": {
-          "dest_path": "templates",
           "allowed_deltas": false
         }
       }

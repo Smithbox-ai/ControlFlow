@@ -16,7 +16,7 @@
  * (Phase 4 wires this file into the `npm test` chain.)
  */
 
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -226,45 +226,46 @@ console.log('\n=== skill-discoverability: resolver edge cases ===');
   );
 }
 
-// ── Suite: ControlFlow-Codex plugin workflow contract ────────────────────────
+// ── Suite: ControlFlow shared-source skill contract (slim 3-skill) ─────────
 
-console.log('\n=== skill-discoverability: ControlFlow-Codex plugin contract ===');
+console.log('\n=== skill-discoverability: shared-source skill contract ===');
 {
-  const codexPlanningSkill = readFileSync(
-    join(ROOT, 'plugins', 'controlflow-shared-source', 'skills', 'controlflow-planning', 'SKILL.md'),
-    'utf8'
-  );
-  const codexOrchestrationSkill = readFileSync(
-    join(ROOT, 'plugins', 'controlflow-shared-source', 'skills', 'controlflow-orchestration', 'SKILL.md'),
-    'utf8'
-  );
-  const codexReadme = readFileSync(
-    join(ROOT, 'plugins', 'controlflow-codex', 'README.md'),
-    'utf8'
+  const sharedSkillRoot = join(ROOT, 'plugins', 'controlflow-shared-source', 'skills');
+  const expectedSkills = ['controlflow-plan', 'controlflow-review', 'controlflow-verify'];
+  const sharedSkills = readdirSync(sharedSkillRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
+
+  const readOptional = (path) => existsSync(path) ? readFileSync(path, 'utf8') : '';
+  const codexPlanSkill = readOptional(join(sharedSkillRoot, 'controlflow-plan', 'SKILL.md'));
+  const codexVerifySkill = readOptional(join(sharedSkillRoot, 'controlflow-verify', 'SKILL.md'));
+  const codexReviewSkill = readOptional(join(sharedSkillRoot, 'controlflow-review', 'SKILL.md'));
+  assert(
+    JSON.stringify(sharedSkills) === JSON.stringify(expectedSkills),
+    'shared-source exposes exactly plan, review, and verify'
   );
 
   assert(
-    /Save to `plans\/<task-slug>-plan\.md`/i.test(codexPlanningSkill) &&
-    /references\/plan-template\.md/i.test(codexPlanningSkill),
-    'Codex planning skill saves strict Markdown plans under plans/'
+    /plans\/<task-slug>-plan\.md/i.test(codexPlanSkill) &&
+    /schemas\/planner\.plan\.schema\.json/i.test(codexPlanSkill) &&
+    /bundled|fallback/i.test(codexPlanSkill),
+    'Codex plan skill saves a strict plan and has a standalone bundled fallback'
   );
 
   assert(
-    /multi_agent_v1\.spawn_agent/i.test(codexOrchestrationSkill) &&
-    /explicitly asks|explicitly authorizes/i.test(codexOrchestrationSkill),
-    'Codex orchestration skill documents optional multi_agent_v1.spawn_agent delegation'
+    /zero subagent/i.test(codexVerifySkill) &&
+    /APPROVED/i.test(codexVerifySkill) &&
+    /NEEDS_REVISION/i.test(codexVerifySkill) &&
+    /REJECTED/i.test(codexVerifySkill),
+    'Codex verify skill combines inline adversarial checks with a terminal verdict'
   );
 
   assert(
-    /subagent outputs/i.test(codexOrchestrationSkill) &&
-    /plans\/artifacts\/<task-slug>\//i.test(codexOrchestrationSkill),
-    'Codex orchestration skill stores subagent outputs in plans/artifacts/'
-  );
-
-  assert(
-    /Subagent/i.test(codexReadme) &&
-    /multi_agent_v1\.spawn_agent/i.test(codexReadme),
-    'Codex README exposes the subagent delegation contract'
+    /\$controlflow-review/i.test(codexReviewSkill) &&
+    /native host[\s\S]*Codex[\s\S]*\/review/i.test(codexReviewSkill) &&
+    /scope[- ]drift/i.test(codexReviewSkill),
+    'Codex review skill layers plan conformance over native Codex review'
   );
 }
 

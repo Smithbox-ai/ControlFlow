@@ -42,6 +42,22 @@ If a mandatory gate fails, status cannot be `APPROVED`.
 ### Safety and Approval Signals
 Flag and escalate destructive operations, sensitive data exposure risks, and policy violations.
 
+### Code Documentation Review
+
+Check changed code documents non-obvious business intent rather than narrating syntax:
+
+- Comments must capture non-obvious business rules, invariants, exceptions, constraints,
+  and decision rationale that maintainers would not recover from syntax alone; do not
+  narrate the code.
+- For public or extensible symbols needing API documentation, confirm it uses the
+  language/ecosystem-native format and the project's existing level of detail (for example,
+  XML documentation comments in C#, docstrings in Python, or JSDoc/TSDoc in JS/TS).
+- Confirm the natural language matches the nearest existing code documentation: same
+  symbol or type, then current file/module, then the project's primary documentation
+  language. Do not mix languages within one block unless requested.
+- Reject comments by quota or boilerplate documentation for self-explanatory code; nearby
+  documentation should change only when the implementation change makes it inaccurate.
+
 ### Issue Validation Requirement
 For every CRITICAL or MAJOR issue, execute this 4-step validation protocol:
 

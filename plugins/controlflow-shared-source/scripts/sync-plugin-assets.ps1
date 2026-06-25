@@ -3,7 +3,7 @@ param(
     [string]$RepoRoot,
 
     [Alias("Host")]
-    [ValidateSet("all", "codex", "cursor")]
+    [ValidateSet("all", "cursor")]
     [string]$TargetHost = "all",
 
     [switch]$Write
@@ -66,14 +66,13 @@ function Get-HostNames([string]$RequestedHost) {
     # claude_code is a standalone, hand-maintained source-of-truth plugin and is
     # intentionally NOT managed by this generator. "all" covers only generated hosts.
     if ($RequestedHost -eq "all") {
-        return @("codex", "cursor")
+        return @("cursor")
     }
     return @($RequestedHost)
 }
 
 function Get-HostPluginRoot([string]$RepoRootPath, [string]$HostName) {
     switch ($HostName) {
-        "codex" { return Join-Path $RepoRootPath "plugins\controlflow-codex" }
         "cursor" { return Join-Path $RepoRootPath "plugins\controlflow-cursor" }
         default { throw "Unsupported host: $HostName (claude_code is standalone and not generated)" }
     }
@@ -81,7 +80,6 @@ function Get-HostPluginRoot([string]$RepoRootPath, [string]$HostName) {
 
 function Get-HostOverrideRoot([string]$SharedRootPath, [string]$HostName) {
     switch ($HostName) {
-        "codex" { return Join-Path $SharedRootPath "host-overrides\codex" }
         "cursor" { return Join-Path $SharedRootPath "host-overrides\cursor" }
         default { throw "Unsupported host: $HostName (claude_code is standalone and not generated)" }
     }

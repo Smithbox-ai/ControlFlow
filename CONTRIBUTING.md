@@ -115,17 +115,10 @@ The eval suite is the only verification gate (`cd evals && npm test`).
 
 ---
 
-## Contributing to Plugins (Codex and Claude Code)
+## Contributing to Plugins (Claude Code)
 
-Changes to files under `plugins/controlflow-codex/` and `plugins/controlflow-claude-code/` require their own validation in addition to the repository eval suite:
+Changes to files under `plugins/controlflow-claude-code/` require their own validation in addition to the repository eval suite:
 
-**For ControlFlow for Codex (`plugins/controlflow-codex/`):**
-
-1. Run the strict artifact validator to ensure contract compliance:
-
-   ```bash
-   powershell -ExecutionPolicy Bypass -NoProfile -File plugins/controlflow-codex/scripts/validate-strict-artifacts.ps1 -RepoRoot . -PlanPath plugins/controlflow-codex/tests/fixtures/strict-plan-lifecycle-valid-plan.md
-   ```
 
 **For ControlFlow for Claude Code (`plugins/controlflow-claude-code/`):**
 

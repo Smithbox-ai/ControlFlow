@@ -1,33 +1,46 @@
 ---
 name: controlflow-review
-description: "Use when asked to review code, a diff, or a completed phase, especially when the result should emphasize bugs, regressions, validation status, and evidence-backed findings instead of style commentary."
+description: "Use after implementation when a ControlFlow plan exists and review should focus on plan conformance, scope drift, evidence-backed correctness findings, and residual validation gaps rather than duplicating native Codex /review."
 ---
 
 # ControlFlow Review
 
 ## Overview
 
-Review changes by prioritizing correctness, regression risk, and evidence over style. Use this for code or completed-phase review; use `controlflow-plan-audit` or `controlflow-assumption-verifier` for pre-execution plan review.
+Add the ControlFlow-specific layer after implementation: compare the aggregate diff to the
+approved plan, reconcile scope drift, and require evidence-backed findings. Native host
+review remains the preferred mechanical and general code-review pass; in Codex, use
+`/review`.
+
+Select the skill explicitly. In Codex, invoke it with `$controlflow-review`.
 
 ## Local Contract
 
-- Findings first, ordered by severity, with file/line evidence and confidence.
-- Distinguish validated blockers from hypotheses; state validation gaps explicitly.
-- Compare implementation to the plan when one exists; scope drift is a review issue.
-- Use [references/review-checklist.md](references/review-checklist.md), [references/validation-status.md](references/validation-status.md), and [../controlflow-planning/references/llm-behavior-guidelines.md](../controlflow-planning/references/llm-behavior-guidelines.md) for shared checklist and evidence discipline.
+- Read the approved plan and aggregate diff.
+- If native review results are available, consume them rather than repeating the same
+  mechanical/style pass.
+- If native review has not run, recommend it separately and keep this pass focused on
+  ControlFlow-specific concerns.
+- Findings come first, ordered by severity, with file/line evidence and confidence.
+- Distinguish validated blockers from hypotheses and state validation gaps.
 
 ## Workflow
 
-1. Check correctness, regressions, security, data integrity, performance, and contract drift before style.
-2. Validate feasible suspicions with commands, file reads, or schema checks.
-3. Label each finding with severity, confidence, file, line, and user impact.
-4. For final review, compare the aggregate diff to the approved plan, reconcile out-of-scope changes, and distinguish novel findings from prior phase findings.
-5. Present findings first; if there are none, say so and name residual risks or test gaps.
-6. Use structured text, not raw JSON.
+1. Map each planned phase, file, acceptance criterion, quality gate, and deferred item.
+2. Compare the aggregate diff and test evidence to that map.
+3. Classify differences as approved follow-through, justified deviation, or blocking scope
+   drift.
+4. Search for correctness, security, data-integrity, rollback, and error-path defects that
+   the plan said it would handle.
+5. Validate feasible suspicions with commands, file reads, or schema checks.
+6. Apply a novelty filter against earlier findings and recheck verified items affected by
+   later revisions.
+7. Present findings first. If none exist, state residual risks and unverified areas.
 
 ## Review Axes
 
-Check correctness/functionality, security, architecture/design, maintainability/style, and test quality/coverage. Style comments should support behavioral risk, not bury it.
+Prioritize plan conformance, correctness, security, data integrity, regression risk, and
+test evidence. Leave formatting and rote style findings to native host review.
 
 ## Soft Comment Labels
 
@@ -42,6 +55,8 @@ Large reviews lose signal. When a diff is much larger than roughly 100 changed l
 - Do not lead with nits before behavior checks.
 - Do not mark missing tests as `FYI` when the untested behavior can regress.
 - Do not state a blocker without validation evidence or an explicit unconfirmed-risk label.
+- Do not duplicate native host review's mechanical findings.
+- Do not skip plan comparison when an approved plan exists.
 
 ## References
 
@@ -49,5 +64,4 @@ Large reviews lose signal. When a diff is much larger than roughly 100 changed l
 - `references/review-checklist.md`
 - `references/validation-status.md`
 - `references/security-review-discipline.md`
-- `../controlflow-orchestration/references/tdd-patterns.md`
-- `../controlflow-planning/references/llm-behavior-guidelines.md`
+- `../controlflow-plan/references/llm-behavior-guidelines.md`

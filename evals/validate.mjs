@@ -76,7 +76,6 @@ import {
   validateToolCountLabelConsistency,
   validatePatternFileLineBudget,
   validateDocCountConsistency,
-  validatePluginGenerationParity,
   validatePluginCorePortability,
   checkControlFlowContractDrift,
 } from './drift-checks.mjs';
@@ -2335,18 +2334,6 @@ try {
   }
 } catch (e) {
   fail(`Pass 15 (3/4): doc-count — ${e.message}`);
-}
-
-// (4) plugin generation parity — controlflow-codex output matches shared-source (verbatim, no-delta)
-try {
-  const r = validatePluginGenerationParity(PLUGINS_ROOT);
-  if (r.ok) {
-    pass(`Pass 15 (4/4): plugin generation parity — controlflow-codex matches shared-source for all ${r.checked} managed file(s)`);
-  } else {
-    for (const err of r.errors) fail(`Pass 15 (4/4): plugin generation parity — ${err}`);
-  }
-} catch (e) {
-  fail(`Pass 15 (4/4): plugin generation parity — ${e.message}`);
 }
 
 // ─── Pass 16: Drift Detection — Selective Plugin-Core Portability ───────────

@@ -771,18 +771,14 @@ console.log('\n=== Shared Policy — Behavioral Invariants ===');
   );
 
   const codexShared = readFileSync(
-    join(ROOT, 'plugins', 'controlflow-shared-source', 'skills', 'controlflow-planning', 'references', 'llm-behavior-guidelines.md'),
-    'utf8'
-  );
-  const codexGenerated = readFileSync(
-    join(ROOT, 'plugins', 'controlflow-codex', 'skills', 'controlflow-planning', 'references', 'llm-behavior-guidelines.md'),
+    join(ROOT, 'plugins', 'controlflow-shared-source', 'skills', 'controlflow-plan', 'references', 'llm-behavior-guidelines.md'),
     'utf8'
   );
   const claudeCode = readFileSync(
     join(ROOT, 'plugins', 'controlflow-claude-code', 'skills', 'controlflow-plan', 'references', 'llm-behavior-guidelines.md'),
     'utf8'
   );
-  const documentationSurfaces = [src, codexShared, codexGenerated, claudeCode];
+  const documentationSurfaces = [src, codexShared, claudeCode];
 
   check(
     'Code documentation: core, Codex, and Claude preserve business intent without narrating code',

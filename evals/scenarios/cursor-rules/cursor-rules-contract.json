@@ -49,7 +49,6 @@
       "alwaysApplied": false,
       "requiredActivationKeys": ["description", "globs"],
       "canonicalReferenceAnyOf": [
-        "plugins/controlflow-codex/README.md",
         "plugins/controlflow-claude-code/README.md",
         "plugins/controlflow-cursor/README.md",
         "plugins/controlflow-shared-source/README.md",

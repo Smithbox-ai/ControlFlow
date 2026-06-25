@@ -1,75 +1,37 @@
 # ControlFlow for Cursor
 
-**Version:** 0.1.0
+**Version:** 1.0.0
 
-Portable ControlFlow workflow for [Cursor IDE](https://cursor.com): strict planning, tiered plan review, phased orchestration, evidence-backed review, and memory hygiene — without VS Code Copilot or `agent/runSubagent`.
+Slim portable ControlFlow package for Cursor:
 
-## What This Package Provides
+- 3 skills: `controlflow-plan`, `controlflow-verify`, `controlflow-review`
+- 1 planner agent: `controlflow-planner`
+- no ControlFlow implementation, verifier, orchestration, or memory subagents
 
-- **10 workflow skills** under `skills/` (synced from `plugins/controlflow-shared-source/`)
-- **11 subagent definitions** under `agents/` (installed to `.cursor/agents/`)
-- **Report templates** under `templates/`
-- **Install script** for arbitrary repositories
+The skills preserve durable plan structure, inline adversarial verification, and
+plan-aware evidence review. Native Cursor remains responsible for execution, task tools,
+approvals, model behavior, and optional subagents.
 
-## Skills
-
-| Skill | ControlFlow role |
-| ----- | ---------------- |
-| `controlflow-router` | Entry dispatcher |
-| `controlflow-spec` | Spec-before-plan |
-| `controlflow-strict-workflow` | Full workflow entry |
-| `controlflow-planning` | Planner |
-| `controlflow-plan-audit` | PlanAuditor (inline) |
-| `controlflow-assumption-verifier` | AssumptionVerifier (inline) |
-| `controlflow-executability-verifier` | ExecutabilityVerifier (inline) |
-| `controlflow-orchestration` | Orchestrator |
-| `controlflow-review` | CodeReviewer (inline) |
-| `controlflow-memory-hygiene` | Memory hygiene |
-
-In Cursor Agent mode: `Follow the controlflow-strict-workflow skill for this task.`
-
-## Subagents
-
-Installed to `.cursor/agents/` — invoke via Task when available. See [USAGE.md](USAGE.md).
-
-## Install Into Another Repo
+## Install
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File plugins/controlflow-cursor/scripts/install-project.ps1 -TargetRepo C:\path\to\app
 ```
 
-## Validate Strict Plan Artifacts
-
-```powershell
-powershell -ExecutionPolicy Bypass -File plugins/controlflow-cursor/scripts/validate-strict-artifacts.ps1 `
-  -RepoRoot . `
-  -PlanPath plans/my-task-plan.md `
-  -RequirePlanAudit
-```
-
-## Sync From Shared Source
-
-Canonical one-step sync for this repository (shared source → plugin → `.cursor/`, strips Codex `openai.yaml`):
+## Sync in This Repository
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File plugins/controlflow-cursor/scripts/sync-to-dotcursor.ps1 -RepoRoot . -Force
 ```
 
-Manual alternative:
+The sync script removes Codex-only `agents/openai.yaml` UI metadata from the installed
+`.cursor/skills/` tree.
 
-```powershell
-powershell -ExecutionPolicy Bypass -File plugins/controlflow-shared-source/scripts/sync-plugin-assets.ps1 -RepoRoot . -Host cursor -Write
-# Then run sync-to-dotcursor.ps1 or copy skills/agents yourself; do not ship agents/openai.yaml under Cursor trees.
-```
+## Flow
 
-## Differences From VS Code
+1. Use the `controlflow-planner` agent or select `controlflow-plan`.
+2. Run `controlflow-verify` before implementation.
+3. Let native Cursor execute the approved plan.
+4. Use native review, then `controlflow-review` for plan conformance.
 
-- No `@Planner` / `@Orchestrator` or `runSubagent`.
-- Markdown artifacts instead of JSON gate-events in chat.
-- Model routing is guidance only (`model: inherit` on subagents).
-- Task tool may be unavailable — skills provide fallback.
-
-## References
-
-- [docs/agent-engineering/CURSOR-SUPPORT.md](../../docs/agent-engineering/CURSOR-SUPPORT.md)
-- [Main README — ControlFlow for Cursor](../../README.md#controlflow-for-cursor)
+See [USAGE.md](USAGE.md) for examples.

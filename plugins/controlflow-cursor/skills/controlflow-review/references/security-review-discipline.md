@@ -1,6 +1,11 @@
 # Security Review Discipline
 
-Use this reference when `controlflow-review` or `controlflow-plan-audit` enters a security-focused review pass.
+Use this reference only when `controlflow-review` or `controlflow-verify` enters a
+security-focused pass on a plan that touches authentication, authorization, secrets,
+or trust boundaries. General security review — finding and explaining auth,
+authorization, injection, crypto, and dependency issues — belongs to native host
+review (Codex `/review`); consume its results. This reference only adds the
+ControlFlow-specific anti-noise rules below.
 
 ## Confidence Threshold
 
@@ -19,33 +24,11 @@ Do NOT flag the following categories during a security review pass — they belo
 - Theoretical issues with no realistic exploitation path
 - Style or formatting issues
 
-## What to Focus On
-
-A security review should prioritise issues with a clear exploitation path against:
-
-- **Authentication & session handling** — token validation, expiry, replay, fixation.
-- **Authorization** — IDOR, missing scope checks, privilege escalation paths.
-- **Input handling** — injection (SQL, command, template, header, log), unsafe deserialisation, path traversal, SSRF.
-- **Secrets in code** — credentials, tokens, or keys hard-coded in source or test fixtures.
-- **Untrusted data crossing trust boundaries** — sanitisation, validation, encoding at the right layer.
-- **Cryptographic misuse** — weak primitives, missing IV/nonce, hard-coded keys, insecure randomness.
-- **Dependency risks** — known-vulnerable packages directly involved in the changed code paths.
-
-## Output Shape for Findings
-
-Each security finding should include:
-
-- **Severity** — `critical` / `high` / `medium` / `low`.
-- **Confidence** — explicit number or descriptor; below 80% means downgrade to observation.
-- **File and line** — concrete evidence.
-- **Exploitation path** — one or two sentences explaining how an attacker reaches the issue.
-- **Suggested fix** — concrete remediation, not generic advice.
-
-## When to Use This Skill vs. General Review
+## When to Use This Reference
 
 | Situation | Use |
 | --- | --- |
-| User asks for a security review specifically | This reference + `controlflow-review` |
-| Plan touches authentication, authorization, secrets, or trust boundaries | This reference during `controlflow-plan-audit` |
+| User asks for a security review specifically | Native `/review`, then this reference for plan conformance |
+| Plan touches authentication, authorization, secrets, or trust boundaries | This reference during `controlflow-verify` |
 | General code review with security only as one dimension | Apply the threshold and exclusion list, but do not gate the whole review on it |
 | Ordinary refactor with no trust-boundary impact | Skip this reference |

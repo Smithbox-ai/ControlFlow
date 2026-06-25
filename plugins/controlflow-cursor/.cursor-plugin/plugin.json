@@ -1,8 +1,8 @@
 {
-  "_comment": "Parity/version-tracking manifest. Cursor plugin install is still script-driven (see plugins/controlflow-cursor/scripts/install-project.ps1 and sync-to-dotcursor.ps1); this file mirrors the codex/.codex-plugin and claude-code/.claude-plugin manifest convention for tooling parity and version tracking, and is not consumed as a runtime plugin descriptor by Cursor itself.",
+  "_comment": "Parity/version-tracking manifest for the script-installed Cursor package.",
   "name": "controlflow-cursor",
-  "version": "0.1.0",
-  "description": "ControlFlow workflow skills and agents for Cursor: spec capture, strict planning, plan audit, assumption verification, executability verification, orchestration discipline, evidence-backed review, and memory hygiene.",
+  "version": "1.0.0",
+  "description": "Slim ControlFlow for Cursor: durable planning, inline adversarial plan verification, and plan-aware evidence review. 3 portable skills and one planner agent.",
   "author": {
     "name": "Local Workspace",
     "email": "local@example.invalid",
@@ -14,15 +14,9 @@
   "keywords": [
     "controlflow",
     "cursor",
-    "workflow",
-    "spec",
     "planning",
-    "plan-audit",
-    "assumption-verifier",
-    "executability-verifier",
-    "router",
+    "plan-verification",
     "review",
-    "orchestration",
-    "memory"
+    "evidence-backed"
   ]
 }

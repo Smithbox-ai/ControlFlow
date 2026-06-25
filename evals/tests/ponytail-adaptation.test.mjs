@@ -8,7 +8,7 @@
  *   - generated plugin parity for Codex, Claude Code, and Cursor
  */
 
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -29,7 +29,8 @@ function check(label, ok) {
 }
 
 function read(relPath) {
-  return readFileSync(join(ROOT, relPath), 'utf8');
+  const path = join(ROOT, relPath);
+  return existsSync(path) ? readFileSync(path, 'utf8') : '';
 }
 
 function includesAll(text, needles) {
@@ -69,10 +70,9 @@ console.log('\n=== ponytail-adaptation: core simplicity contract ===');
 console.log('\n=== ponytail-adaptation: portable plugin contract ===');
 {
   const guidelinePaths = [
-    'plugins/controlflow-shared-source/skills/controlflow-planning/references/llm-behavior-guidelines.md',
-    'plugins/controlflow-codex/skills/controlflow-planning/references/llm-behavior-guidelines.md',
+    'plugins/controlflow-shared-source/skills/controlflow-plan/references/llm-behavior-guidelines.md',
     'plugins/controlflow-claude-code/skills/controlflow-plan/references/llm-behavior-guidelines.md',
-    'plugins/controlflow-cursor/skills/controlflow-planning/references/llm-behavior-guidelines.md',
+    'plugins/controlflow-cursor/skills/controlflow-plan/references/llm-behavior-guidelines.md',
     '.cursor/skills/controlflow-planning/references/llm-behavior-guidelines.md',
   ];
 
@@ -87,7 +87,6 @@ console.log('\n=== ponytail-adaptation: portable plugin contract ===');
 
   const reviewPaths = [
     'plugins/controlflow-shared-source/skills/controlflow-review/references/review-checklist.md',
-    'plugins/controlflow-codex/skills/controlflow-review/references/review-checklist.md',
     'plugins/controlflow-claude-code/skills/controlflow-review/references/review-checklist.md',
     'plugins/controlflow-cursor/skills/controlflow-review/references/review-checklist.md',
     '.cursor/skills/controlflow-review/references/review-checklist.md',
@@ -102,10 +101,9 @@ console.log('\n=== ponytail-adaptation: portable plugin contract ===');
   }
 
   const auditPaths = [
-    'plugins/controlflow-shared-source/skills/controlflow-plan-audit/references/audit-checklist.md',
-    'plugins/controlflow-codex/skills/controlflow-plan-audit/references/audit-checklist.md',
+    'plugins/controlflow-shared-source/skills/controlflow-verify/references/verify-phases.md',
     'plugins/controlflow-claude-code/skills/controlflow-verify/references/verify-phases.md',
-    'plugins/controlflow-cursor/skills/controlflow-plan-audit/references/audit-checklist.md',
+    'plugins/controlflow-cursor/skills/controlflow-verify/references/verify-phases.md',
     '.cursor/skills/controlflow-plan-audit/references/audit-checklist.md',
   ];
 
@@ -126,7 +124,6 @@ console.log('\n=== ponytail-adaptation: plugin generation hosts ===');
 
   for (const target of manifest.targets) {
     const hosts = Object.keys(target.host_outputs ?? {});
-    check(`${target.source_path} target includes codex host output`, hosts.includes('codex'));
     check(`${target.source_path} target includes cursor host output`, hosts.includes('cursor'));
     // claude-code is standalone/hand-maintained and intentionally NOT generated —
     // locking the decoupling in prevents accidental re-coupling via the generator.

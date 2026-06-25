@@ -3,7 +3,7 @@ param(
     [string]$RepoRoot,
 
     [Alias("Host")]
-    [ValidateSet("all", "codex", "cursor")]
+    [ValidateSet("all", "cursor")]
     [string]$TargetHost = "all"
 )
 

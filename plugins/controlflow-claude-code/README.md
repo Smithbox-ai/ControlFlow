@@ -50,7 +50,7 @@ See USAGE.md for local development installation and validation commands.
 
 ## Related
 
-- Generated codex sibling: `plugins/controlflow-codex`
+- Codex sibling: standalone repo at `github.com/Smithbox-ai/ControlFlowCodex`
 - Generated cursor sibling: `plugins/controlflow-cursor`
 - Shared source of truth: `plugins/controlflow-shared-source`
 - [ControlFlow repo](https://github.com/Smithbox-ai/ControlFlow)

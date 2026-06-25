@@ -5,7 +5,6 @@
  * `version` field, and that the Cursor manifest version matches its README version.
  *
  * Covers the three plugin distributions:
- *   - plugins/controlflow-codex/.codex-plugin/plugin.json
  *   - plugins/controlflow-claude-code/.claude-plugin/plugin.json
  *   - plugins/controlflow-cursor/.cursor-plugin/plugin.json
  *
@@ -20,7 +19,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..', '..');
 
 const MANIFESTS = [
-  { label: 'codex', path: join(ROOT, 'plugins', 'controlflow-codex', '.codex-plugin', 'plugin.json') },
   { label: 'claude-code', path: join(ROOT, 'plugins', 'controlflow-claude-code', '.claude-plugin', 'plugin.json') },
   { label: 'cursor', path: join(ROOT, 'plugins', 'controlflow-cursor', '.cursor-plugin', 'plugin.json') },
 ];
@@ -41,6 +39,7 @@ function check(label, ok, detail = '') {
 console.log('\n=== Plugin Manifest Parity ===');
 
 const versions = {};
+const parsedManifests = {};
 
 for (const m of MANIFESTS) {
   const exists = existsSync(m.path);
@@ -60,6 +59,7 @@ for (const m of MANIFESTS) {
     continue;
   }
   check(`${m.label}: manifest parses as JSON`, parseOk);
+  if (parseOk) parsedManifests[m.label] = parsed;
 
   const hasVersion = parseOk && typeof parsed.version === 'string' && parsed.version.trim().length > 0;
   check(`${m.label}: manifest declares a non-empty string \`version\``, hasVersion, hasVersion ? `version=${parsed.version}` : 'missing/invalid');

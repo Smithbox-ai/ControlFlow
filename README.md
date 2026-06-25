@@ -1,4 +1,4 @@
-﻿# ControlFlow
+# ControlFlow
 
 [![CI](https://github.com/Smithbox-ai/ControlFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/Smithbox-ai/ControlFlow/actions/workflows/ci.yml)
 ![Agents](https://img.shields.io/badge/agents-13-blue)
@@ -28,14 +28,12 @@ A multi-agent orchestration system for VS Code Copilot, plus maintained Codex, C
   - [Documentation](#documentation)
   - [Installation](#installation)
     - [Adding Custom Agents](#adding-custom-agents)
-  - [ControlFlow for Codex (Plugin)](#controlflow-for-codex-plugin)
     - [Included Skills](#included-skills)
   - [ControlFlow for Claude Code (Plugin)](#controlflow-for-claude-code-plugin)
     - [Installing the Plugin](#installing-the-plugin)
     - [Skills](#skills)
     - [Intentional Differences from VS Code](#intentional-differences-from-vs-code)
   - [ControlFlow for Cursor](#controlflow-for-cursor)
-  - [ControlFlow for Codex Usage and Validation](#controlflow-for-codex-usage-and-validation)
     - [Plugin Installation](#plugin-installation)
     - [Usage](#usage)
     - [Validating Codex Strict-Plan Artifacts](#validating-codex-strict-plan-artifacts)
@@ -271,7 +269,7 @@ See [`evals/README.md`](evals/README.md) for pass descriptions and how to add sc
 │   └── scenarios/                 # Eval scenario fixtures
 ├── plans/                         # Plan artifacts and templates
 ├── plugins/
-│   ├── controlflow-codex/         # Codex CLI plugin (10 portable skills)
+│   ├── controlflow-cursor/        # Cursor plugin (three skills, one planner agent)
 │   └── controlflow-claude-code/   # Claude Code plugin (three skills, no plugin agents, standalone)
 └── NOTES.md                       # Active objective state (repo-persistent)
 ```
@@ -319,30 +317,6 @@ Create a new `.agent.md` file following the P.A.R.T structure (Prompt → Archiv
 
 ---
 
-## ControlFlow for Codex (Plugin)
-
-A portable adaptation of ControlFlow for [OpenAI Codex CLI](https://github.com/openai/codex), located in [`plugins/controlflow-codex/`](plugins/controlflow-codex/).
-
-The plugin brings the core ControlFlow disciplines — phased planning, pre-execution plan review, assumption verification, orchestration, evidence-backed code review, and memory hygiene — into Codex without depending on VS Code-specific tool contracts, fixed agent rosters, or `@Agent` syntax.
-
-Version `0.6.0` adds machine-checked selective parity through `plugins/controlflow-shared-source/core-portability-matrix.json`: portable workflow invariants are adopted or adapted, while model routing, tool grants, the fixed roster, session telemetry, compaction, budgets, and `model_unavailable` remain explicit divergences.
-
-### Included Skills
-
-| Skill | Analogous ControlFlow Role |
-| ----- | -------------------------- |
-| `$controlflow-router` | Entry-point dispatcher |
-| `$controlflow-spec` | Spec-before-plan capture |
-| `$controlflow-strict-workflow` | Orchestrator (full workflow entry point) |
-| `$controlflow-planning` | Planner — writes `plans/<task-slug>-plan.md` |
-| `$controlflow-plan-audit` | PlanAuditor |
-| `$controlflow-assumption-verifier` | AssumptionVerifier |
-| `$controlflow-executability-verifier` | ExecutabilityVerifier |
-| `$controlflow-orchestration` | Orchestrator (execution-only path) |
-| `$controlflow-review` | CodeReviewer |
-| `$controlflow-memory-hygiene` | Memory hygiene |
-
----
 
 ## ControlFlow for Claude Code (Plugin)
 
@@ -401,22 +375,22 @@ See [`plugins/controlflow-claude-code/README.md`](plugins/controlflow-claude-cod
 
 ## ControlFlow for Cursor
 
-ControlFlow ships a **Cursor plugin** (level 3 integration): Project Rules, workflow Skills, and 11 project Subagents — approximating the VS Code 13-agent system without `agent/runSubagent`.
+ControlFlow ships a slim Cursor plugin with three portable skills and one planner agent.
+Execution and optional subagents remain native Cursor responsibilities.
 
 | Surface | Location | Purpose |
 | ------- | -------- | ------- |
-| Project Rules | [`.cursor/rules/`](.cursor/rules/) | Conventions, orchestration discipline, eval gate |
-| Skills | [`.cursor/skills/`](.cursor/skills/) | Planner/Orchestrator workflow (`controlflow-strict-workflow`, planning, orchestration, review) |
-| Subagents | [`.cursor/agents/`](.cursor/agents/) | Isolated audit, research, implementer roles |
+| Project Rules | [`.cursor/rules/`](.cursor/rules/) | Existing repository conventions |
+| Skills | [`plugins/controlflow-cursor/skills/`](plugins/controlflow-cursor/skills/) | `controlflow-plan`, `controlflow-verify`, `controlflow-review` |
+| Agent | [`plugins/controlflow-cursor/agents/`](plugins/controlflow-cursor/agents/) | One `controlflow-planner` entry point |
 | Plugin package | [`plugins/controlflow-cursor/`](plugins/controlflow-cursor/) | Install into other repositories |
 
 ### Quick start (this repo)
 
 Open the project in Cursor (Agent mode). No extra install required.
 
-```text
-Follow the controlflow-strict-workflow skill. Task: <your goal>. Save the plan to plans/<task-slug>-plan.md.
-```
+Use the `controlflow-planner` agent or select `controlflow-plan`, then run
+`controlflow-verify` before implementation.
 
 ### Install into another repository
 
@@ -426,78 +400,11 @@ powershell -ExecutionPolicy Bypass -File plugins/controlflow-cursor/scripts/inst
 
 ### What Cursor does and does not do
 
-- **Does:** Tiered plan → review → phased execution → review; artifacts under `plans/`; delegation via `Task` when available.
-- **Does not:** `@Planner` / `@Orchestrator`, VS Code `runSubagent`, or deterministic model-routing enforcement.
+- **Does:** Durable plan → inline verify → native execution → plan-aware review.
+- **Does not:** Recreate the VS Code roster, orchestration runtime, approvals, retries, or model routing.
 
 See [docs/agent-engineering/CURSOR-SUPPORT.md](docs/agent-engineering/CURSOR-SUPPORT.md) and [plugins/controlflow-cursor/USAGE.md](plugins/controlflow-cursor/USAGE.md).
 
-## ControlFlow for Codex Usage and Validation
-
-### Plugin Installation
-
-From the repository root:
-
-```powershell
-# Windows — installs to ~/plugins/controlflow-codex/ and registers in ~/.agents/plugins/marketplace.json
-powershell -ExecutionPolicy Bypass -File plugins/controlflow-codex/scripts/install-home-local.ps1
-
-# Re-install (replace existing)
-powershell -ExecutionPolicy Bypass -File plugins/controlflow-codex/scripts/install-home-local.ps1 -Force
-```
-
-After installation, the plugin is available in Codex as `$controlflow-*` skills.
-
-### Usage
-
-Recommended entry point for any non-trivial task:
-
-```text
-Use $controlflow-strict-workflow to handle this repository task from plan through execution.
-```
-
-For individual steps:
-
-```text
-# Write a strict plan artifact
-Use $controlflow-planning to write a plan in plans/ for this task.
-
-# Audit an existing plan before coding
-Use $controlflow-plan-audit to review plans/my-task-plan.md.
-
-# Check for hidden assumptions
-Use $controlflow-assumption-verifier to find mirages in plans/my-task-plan.md.
-
-# Execute an approved plan in phases
-Use $controlflow-orchestration to execute plans/my-task-plan.md.
-
-# Review completed implementation
-Use $controlflow-review to review the completed implementation.
-```
-
-See [`plugins/controlflow-codex/USAGE.md`](plugins/controlflow-codex/USAGE.md) for the full prompt catalog and [`plugins/controlflow-codex/README.md`](plugins/controlflow-codex/README.md) for detailed documentation.
-
-### Validating Codex Strict-Plan Artifacts
-
-```powershell
-powershell -ExecutionPolicy Bypass -File plugins/controlflow-codex/scripts/validate-strict-artifacts.ps1 `
-  -RepoRoot . `
-  -PlanPath plans/my-task-plan.md `
-  -StrictReviewByTier
-```
-
-The `validate-strict-artifacts.ps1` script validates **Codex strict-plan artifacts only**. Do not use it for core VS Code plans. It enforces the mandatory lifecycle sections (`## Progress`, `## Discoveries`, `## Decision Log`, `## Outcomes`, `## Idempotence & Recovery`) in exact order. `-StrictReviewByTier` derives required review artifacts from tier and applicable unresolved `HIGH` risk; the existing `-Require*` switches remain additive compatibility controls.
-
-### Intentional Differences from the VS Code Version
-
-- Symphony daemon/runtime, Linear workflow, and Gem Team multi-plugin packaging were NOT imported.
-
-- No `@Agent` syntax or fixed subagent roster.
-- No `agent/runSubagent` dispatch or `governance/model-routing.json` — model selection is Codex's responsibility.
-- No VS Code-specific tool surfaces (`vscode/askQuestions`, `read/problems`, etc.).
-- Plan artifact structure (`plans/<task-slug>-plan.md`) and review artifact paths (`plans/artifacts/<task-slug>/`) are identical to the main project.
-- Skills use `update_plan` and local shell inspection rather than schema-driven chat payloads.
-
----
 
 ## License
 

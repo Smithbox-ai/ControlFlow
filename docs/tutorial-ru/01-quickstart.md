@@ -34,7 +34,6 @@ ControlFlow/
 │   └── artifacts/                   # task-episodic память
 ├── plugins/
 │   ├── controlflow-claude-code/     # Портативный плагин для Claude Code
-│   └── controlflow-codex/           # Портативный плагин для Codex CLI
 ├── README.md                        # верхнеуровневое описание
 ├── AGENTS.md                        # рабочие заметки для AI-агента
 ├── NOTES.md                         # repo-persistent состояние
