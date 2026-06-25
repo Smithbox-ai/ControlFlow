@@ -63,6 +63,12 @@ Agent engineering policies are in `docs/agent-engineering/`:
 - Adding/editing agents or skills: follow the agent-contribution process in `CONTRIBUTING.md` (create agent file, schema, eval scenarios, register in `plans/project-context.md`).
 - Tool and agent permission grants are in `governance/` (`agent-grants.json`, `tool-grants.json`, `runtime-policy.json`, `rename-allowlist.json`). Update these when changing an agent's tool profile.
 
+## Code Documentation and Language
+- Before completing an implementation phase, review the changed code for documentation that preserves non-obvious business rules, invariants, exceptions, constraints, and decision rationale. Comments should explain **why** the behavior exists or what business condition it protects, not narrate syntax or restate the code.
+- For new or materially changed public or extensible symbols that need API documentation, use the language/ecosystem-native format and the project's existing level of detail (for example, XML documentation comments in C#, docstrings in Python, or JSDoc/TSDoc in JavaScript/TypeScript). Document contract details such as parameters, return values, side effects, and expected exceptions only where they are meaningful and consistent with nearby code.
+- Match the natural language of the nearest existing code documentation. Use this precedence: the same symbol or type, then the current file/module, then the project's primary documentation language. If no reliable convention exists, use concise English. Do not mix languages within a local documentation block or translate unrelated existing comments unless the task explicitly requires it.
+- Do not add comments by quota, boilerplate documentation for self-explanatory code, or documentation churn in untouched areas. Update stale nearby documentation only when the code change makes it inaccurate.
+
 ## Agent System
 13 agents in the ControlFlow system:
 - **Orchestration:** Orchestrator

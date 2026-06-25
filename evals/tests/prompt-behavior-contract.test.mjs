@@ -769,6 +769,45 @@ console.log('\n=== Shared Policy — Behavioral Invariants ===');
     /TRIVIAL/i.test(src) && /SMALL/i.test(src) &&
     /MEDIUM/i.test(src) && /LARGE/i.test(src)
   );
+
+  const codexShared = readFileSync(
+    join(ROOT, 'plugins', 'controlflow-shared-source', 'skills', 'controlflow-planning', 'references', 'llm-behavior-guidelines.md'),
+    'utf8'
+  );
+  const codexGenerated = readFileSync(
+    join(ROOT, 'plugins', 'controlflow-codex', 'skills', 'controlflow-planning', 'references', 'llm-behavior-guidelines.md'),
+    'utf8'
+  );
+  const claudeCode = readFileSync(
+    join(ROOT, 'plugins', 'controlflow-claude-code', 'skills', 'controlflow-plan', 'references', 'llm-behavior-guidelines.md'),
+    'utf8'
+  );
+  const documentationSurfaces = [src, codexShared, codexGenerated, claudeCode];
+
+  check(
+    'Code documentation: core, Codex, and Claude preserve business intent without narrating code',
+    documentationSurfaces.every(text =>
+      /non-obvious business\s+rules/i.test(text) &&
+      /decision\s+rationale/i.test(text) &&
+      /(do not narrate|not narrate)/i.test(text)
+    )
+  );
+  check(
+    'Code documentation: native API docs include XML example and follow nearby documentation language',
+    documentationSurfaces.every(text =>
+      /language\/ecosystem-native\s+format/i.test(text) &&
+      /XML documentation comments in\s+C#/i.test(text) &&
+      /nearest existing code\s+documentation/i.test(text) &&
+      /project's primary documentation\s+language/i.test(text)
+    )
+  );
+  check(
+    'Code documentation: no comment quotas or boilerplate for self-explanatory code',
+    documentationSurfaces.every(text =>
+      /comments by quota/i.test(text) &&
+      /boilerplate documentation for self-explanatory code/i.test(text)
+    )
+  );
 }
 
 // ──────────────────────────────────────────────

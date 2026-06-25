@@ -47,6 +47,23 @@ main ControlFlow prompt set.
 - For multi-phase work, keep phase acceptance criteria and quality gates explicit.
 - Match verification strength to the completion claim, then state any residual gap.
 
+### 5. Preserve Business Intent in Code Documentation
+
+- Before completing an implementation phase, review changed code for non-obvious business
+  rules, invariants, exceptions, constraints, and decision rationale that future
+  maintainers would not recover safely from syntax alone. Explain why the behavior exists
+  or what business condition it protects; do not narrate the code.
+- For new or materially changed public or extensible symbols that need API documentation,
+  use the language/ecosystem-native format and the project's existing level of detail (for
+  example, XML documentation comments in C#, docstrings in Python, or JSDoc/TSDoc in
+  JavaScript/TypeScript).
+- Match the natural language of the nearest existing code documentation: prefer the same
+  symbol or type, then the current file/module, then the project's primary documentation
+  language. If no reliable convention exists, use concise English. Do not mix languages
+  within one local documentation block or translate unrelated comments unless requested.
+- Do not add comments by quota or boilerplate documentation for self-explanatory code.
+  Update nearby documentation only when the implementation change makes it inaccurate.
+
 ## Anti-Rationalization Table
 
 | Pattern | Required Action |
@@ -57,6 +74,7 @@ main ControlFlow prompt set.
 | Clean up adjacent code while editing nearby lines | Keep edits tied to task scope and report unrelated observations without changing them. |
 | Skip verification because a change is prompt-only or documentation-only | Run the smallest relevant check plus any workflow-required gate. |
 | Treat a narrow pass as proof of a broad claim | Match the command to the claim and state what remains unverified. |
+| Add comments to make the diff look documented | Document only non-obvious business intent or meaningful API contracts, using the nearest established documentation language and style. |
 
 ## Decision Table
 
